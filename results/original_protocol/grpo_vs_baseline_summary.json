@@ -1,0 +1,17 @@
+{
+  "n": 80,
+  "reference_mean": 6.7275,
+  "prediction_mean": 7.4612,
+  "delta": 0.7337,
+  "ci95": [
+    0.3725,
+    1.09
+  ],
+  "wins": 58,
+  "ties": 1,
+  "losses": 21,
+  "bootstrap_rounds": 20000,
+  "judge_model": "deepseek-v4-flash",
+  "reference_file": "test_output/output_qwen3_4b_instruct_baseline.jsonl",
+  "prediction_file": "test_output/output_qwen3_4b_grpo_epoch150.jsonl"
+}

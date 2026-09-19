@@ -1,0 +1,26 @@
+# 密钥与环境
+.env
+.env.*
+!.env.example
+
+# 运行产物与大文件
+saved/
+data/
+test_output/
+*.zip
+*.tar.gz
+*.safetensors
+*.pt
+*.pth
+
+# 第三方框架（保留本项目自研插件，见 .gitignore 例外规则）
+ms-swift/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# 系统
+.DS_Store
