@@ -138,7 +138,7 @@ SFT 的目标是让模型学会：
 | 起点 | SFT merged checkpoint |
 | Rollout | vLLM 在线多轮，最多 13 轮 |
 | 训练方法 | GRPO + DeepSpeed ZeRO-3 |
-| 训练任务 | 200 条多约束任务 |
+| 训练任务 | 1000 条多约束任务 |
 | 采样 | 每个 prompt 6 条轨迹 |
 | 温度 | 0.9 |
 | KL 系数 | 0.04 |
