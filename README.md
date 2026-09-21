@@ -94,7 +94,7 @@ flowchart TB
 
 ### 数据内容
 
-- 天气、POI、交通、酒店、餐饮与路线工具调用；
+- 天气、POI、周边、交通与路线工具调用；
 - 多轮工具依赖和参数传递；
 - 工具失败、空结果和重试轨迹；
 - 证据不足时的拒答与澄清；
@@ -199,7 +199,7 @@ flowchart TD
 
 ## 工具与运行时
 
-项目注册 11 个工具：
+项目注册 8 个工具：
 
 - 网页搜索与网页访问；
 - 天气查询；
@@ -207,7 +207,6 @@ flowchart TD
 - 周边搜索；
 - 路线规划；
 - 火车票与航班查询；
-- 酒店、餐饮和距离矩阵。
 
 运行时包含：
 
@@ -334,7 +333,7 @@ bash scripts/train_rl.sh
 ```text
 inference/                  ReAct、Tool DAG、Verifier 与交互式对话
 prompts/                    系统提示词、数据质检与 Judge Prompt
-tools/                      11 个旅行工具
+tools/                      8 个旅行工具
 utils/                      地图、地理计算、日志与文本工具
 data_pipeline/              轨迹蒸馏、AgentPRM、OPD 与数据清洗
 evaluation/                 LLM Judge、基线指标与 Tool DAG 基准

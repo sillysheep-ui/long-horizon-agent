@@ -31,8 +31,8 @@ Tool DAG 将旅行任务先编译成结构化工具依赖图，再由确定性�
       "retries": 1
     },
     {
-      "id": "hotel",
-      "tool": "hotel_search",
+      "id": "nearby",
+      "tool": "around_search",
       "arguments": {
         "location": "116.397,39.908",
         "radius": 5000,

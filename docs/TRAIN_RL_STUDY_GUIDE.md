@@ -450,12 +450,12 @@ Step 1:
   从 rl.jsonl 取 1 个 query "帮我规划北京三日游"
 
   模型用当前策略 + temperature 0.9，独立采样 6 次 →
-    轨迹 A: weather → hotel → route → answer "方案1..."  (reward = 7.2)
-    轨迹 B: hotel → search → answer "方案2..."           (reward = 5.8)
-    轨迹 C: weather → hotel → catering → route → answer "方案3..." (reward = 8.1)
+    轨迹 A: weather → around → route → answer "方案1..."  (reward = 7.2)
+    轨迹 B: around → search → answer "方案2..."           (reward = 5.8)
+    轨迹 C: weather → around → poi → route → answer "方案3..." (reward = 8.1)
     轨迹 D: 直接 answer "方案4..."                       (reward = 3.0)
     轨迹 E: search → visit → route → answer "方案5..."  (reward = 6.5)
-    轨迹 F: weather → poi → hotel → route → answer "方案6..." (reward = 7.8)
+    轨迹 F: weather → poi → around → route → answer "方案6..." (reward = 7.8)
 
   scale_rewards("group"):
     均值 avg ≈ 6.4, 标准差 std ≈ 1.72
@@ -465,7 +465,7 @@ Step 1:
   轨迹 D（不调工具直接答）获得负奖励 → 模型抑制这种行为
 
 Step 2:
-  下一个 query → 模型已经稍微更倾向于"先查天气再找酒店和餐厅再规划路线"
+  下一个 query → 模型已经稍微更倾向于"先查天气、再查周边与 POI、最后规划路线"
   继续采样 → 继续对比 → 继续优化...
 ```
 

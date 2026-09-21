@@ -30,7 +30,7 @@ except ModuleNotFoundError:
     sys.modules["qwen_agent.tools.base"] = base_module
 
 from tools.tool_around_search import AroundSearch
-from tools.tool_catering import CateringSearch
+
 from tools.tool_route_planning import resolve_point
 
 
@@ -81,19 +81,6 @@ class AroundSearchFallbackTest(unittest.IsolatedAsyncioTestCase):
             })
         self.assertIn("已按具体类别补查", result)
         self.assertIn("城市博物馆", result)
-
-    async def test_catering_resolves_destination_name(self):
-        responses = [
-            ({"status": "1", "geocodes": [{
-                "location": "113.293000,22.805000", "formatted_address": "广东省佛山市顺德区"
-            }]}, False),
-            ({"status": "1", "pois": [{"id": "f1", "name": "顺德鱼生"}]}, False),
-        ]
-        mocked = AsyncMock(side_effect=responses)
-        with patch("tools.tool_catering.amap_get", mocked):
-            result = await CateringSearch().call({"location": "顺德", "keyword": "顺德菜"})
-        self.assertIn("餐饮搜索中心解析为", result)
-        self.assertIn("顺德鱼生", result)
 
     async def test_route_resolves_named_point(self):
         mocked = AsyncMock(return_value=({"status": "1", "geocodes": [{
