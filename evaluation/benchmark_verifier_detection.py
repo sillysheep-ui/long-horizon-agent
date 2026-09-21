@@ -57,7 +57,7 @@ def mutations(record):
     if any(term in query for term in ("美食", "餐厅", "餐馆", "寻味", "小吃")):
         food_indices = [
             i for i, node in enumerate(base.get("nodes", []))
-            if node.get("tool") in {"catering_search", "around_search"}
+            if node.get("tool") == "around_search"
         ]
         if food_indices:
             broken = copy.deepcopy(base)

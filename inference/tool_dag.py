@@ -179,10 +179,8 @@ class ToolPlan:
         """按用户显式意图删除 Planner 擅自扩展的工具，并保持依赖闭包合法。"""
         text = str(query or "")
         food_terms = ("美食", "餐厅", "餐馆", "餐饮", "吃", "寻味", "小吃", "菜馆", "饭店")
-        hotel_terms = ("酒店", "住宿", "住哪", "民宿", "宾馆")
         weather_terms = ("天气", "气温", "下雨", "晴天", "温度")
         food_requested = any(term in text for term in food_terms)
-        hotel_requested = any(term in text for term in hotel_terms)
         weather_requested = any(term in text for term in weather_terms)
         bus_only = (
             any(term in text for term in ("大巴", "公交", "巴士"))
@@ -191,10 +189,6 @@ class ToolPlan:
 
         def is_irrelevant(node: ToolNode) -> bool:
             arguments = json.dumps(node.arguments, ensure_ascii=False)
-            if node.tool == "catering_search" and not food_requested:
-                return True
-            if node.tool == "hotel_search" and not hotel_requested:
-                return True
             if node.tool == "weather_search" and not weather_requested:
                 return True
             if node.tool == "around_search" and not food_requested:
