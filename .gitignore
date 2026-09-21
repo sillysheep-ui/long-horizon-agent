@@ -24,3 +24,9 @@ __pycache__/
 
 # 系统
 .DS_Store
+
+AGENTS.md
+
+# IDE
+.idea/
+.vscode/
