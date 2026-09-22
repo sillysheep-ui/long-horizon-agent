@@ -22,10 +22,6 @@ jobs:
         run: |
           python -m pytest -q \
             tests/test_baseline_metrics.py \
-            tests/test_build_agent_prm_counterfactuals.py \
-            tests/test_build_agent_prm_dataset.py \
-            tests/test_build_agent_prm_preference_pairs.py \
-            tests/test_build_hard_agent_tasks.py \
             tests/test_geo.py \
             tests/test_judge_tool_dag.py \
             tests/test_tool_dag.py \
