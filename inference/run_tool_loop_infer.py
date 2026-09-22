@@ -31,9 +31,6 @@ TOOL_CLASS_MAP = {
     "route_planning": ("tool_route_planning.py", "RoutePlanning"),
     "train_tickets_search": ("tool_train_ticket.py", "TrainTicketsSearch"),
     "flights_search": ("tool_transport.py", "FlightsSearch"),
-    "hotel_search": ("tool_hotel.py", "HotelSearch"),
-    "distance_matrix": ("tool_distance_matrix.py", "DistanceMatrix"),
-    "catering_search": ("tool_catering.py", "CateringSearch"),
 }
 
 

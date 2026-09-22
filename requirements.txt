@@ -11,3 +11,16 @@ langdetect==1.0.9
 tiktoken==0.12.0
 modelscope==1.36.0
 vllm==0.11.0
+
+# 代码直接导入但此前未登记的依赖，版本取自训练环境实测
+# torch 需从 CUDA 12.8 源安装：
+#   pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0
+transformers==4.56.1
+datasets==3.6.0
+peft==0.20.0
+numpy==2.2.6
+pydantic==2.12.3
+json5==0.12.0
+requests==2.34.2
+aiohttp==3.14.3

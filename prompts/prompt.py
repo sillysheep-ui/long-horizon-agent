@@ -140,9 +140,6 @@ COLDSTART_SYSTEM_PROMPT = """你是旅行规划助手，需要先用工具获取
 {"type": "function", "function": {"name": "route_planning", "description": "路线规划：驾车/步行/骑行/电动车/公交，支持地点名自动解析。", "parameters": {"type": "object", "properties": {"origin": {"type": "string", "description": "起点经纬度或明确地点名称；不确定坐标时传地点名"}, "destination": {"type": "string", "description": "终点经纬度或明确地点名称；不确定坐标时传地点名"}, "mode": {"type": "string", "enum": ["driving", "walking", "bicycling", "electrobike", "transit"], "description": "路线类型，默认 driving"}, "waypoints": {"type": "string", "description": "途经点，多个点以 ; 分隔，每点格式 lng,lat"}}, "required": ["origin", "destination"]}}}
 {"type": "function", "function": {"name": "poi_search", "description": "按文本搜索地点，返回地址、经纬度、商业信息。", "parameters": {"type": "object", "properties": {"address": {"type": "string", "description": "待检索地点文本（单个地址，<=80字符）"}, "region": {"type": "string", "description": "可选，城市级区域（中文）"}}, "required": ["address"]}}}
 {"type": "function", "function": {"name": "around_search", "description": "以圆心+半径搜索周边地点；支持自动解析地点名称。", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "中心点经纬度或明确地点名称；不知道坐标时传地点名，禁止猜坐标"}, "radius": {"type": "integer", "description": "半径（米），0-50000，默认5000"}, "keyword": {"type": "string", "description": "可选，单个具体关键词"}, "region": {"type": "string", "description": "可选，城市级区域（中文）"}}, "required": ["location"]}}}
-{"type": "function", "function": {"name": "hotel_search", "description": "搜索指定区域内的酒店信息，返回名称、地址、经纬度、电话、评分。", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "中心点经纬度，经度在前，格式 lng,lat"}, "radius": {"type": "integer", "description": "搜索半径（米），默认5000"}, "keyword": {"type": "string", "description": "可选，酒店名称关键词"}, "region": {"type": "string", "description": "可选，城市级区域（中文）"}}, "required": ["location"]}}}
-{"type": "function", "function": {"name": "distance_matrix", "description": "批量计算多个起点到一个终点的驾车距离和预估耗时。", "parameters": {"type": "object", "properties": {"origins": {"type": "string", "description": "起点经纬度串，多个点以 | 分隔，每点格式 lng,lat"}, "destination": {"type": "string", "description": "终点经纬度，格式 lng,lat"}, "type": {"type": "integer", "enum": [0, 1], "description": "0=直线距离，1=驾车距离，默认 1"}}, "required": ["origins", "destination"]}}}
-{"type": "function", "function": {"name": "catering_search", "description": "搜索指定区域内的餐饮美食信息，支持菜系过滤和地点名自动解析。", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "中心点经纬度或明确地点名称；不确定坐标时传目的地名称，禁止猜坐标"}, "radius": {"type": "integer", "description": "搜索半径（米），默认3000"}, "keyword": {"type": "string", "description": "可选，菜系或美食类型（如火锅、川菜、海鲜）"}, "region": {"type": "string", "description": "可选，城市级区域（中文）"}}, "required": ["location"]}}}
 </tools>
 
 当前日期：__CURRENT_DATE__
@@ -324,10 +321,7 @@ llm_judge_system_prompt = """你是一名深谙旅游行业、具有严谨逻辑
 - train_tickets_search工具用于根据日期查询从某个城市出发到达某个城市的火车票/动车票/高铁票情。
 - poi_search工具用于在一个指定的城市内搜索兴趣点（POI）的地理空间信息。
 - around_search工具通过设置圆心和半径，搜索圆形区域内的地点信息。
-- route_planning工具除提供多种路线规划服务。支持驾车、步行、骑行、电动车、公交路线规划。
-- hotel_search工具用于搜索指定区域或城市内的酒店信息。
-- distance_matrix工具用于批量计算多个地点到另一个地点的驾车距离和耗时。
-- catering_search工具用于搜索指定区域或城市内的餐饮美食信息。"""
+- route_planning工具除提供多种路线规划服务。支持驾车、步行、骑行、电动车、公交路线规划。"""
 
 
 # ---------- 交互式对话：记忆压缩 ----------

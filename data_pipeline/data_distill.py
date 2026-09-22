@@ -33,9 +33,6 @@ from tools.tool_train_ticket import TrainTicketsSearch
 from tools.tool_route_planning import RoutePlanning
 from tools.tool_poi_search import POISearch
 from tools.tool_around_search import AroundSearch
-from tools.tool_hotel import HotelSearch
-from tools.tool_distance_matrix import DistanceMatrix
-from tools.tool_catering import CateringSearch
 from prompts.prompt import AGENTIC_SYSTEM_PROMPT
 
 
@@ -80,9 +77,6 @@ class MultiTurnReactAgent(FnCallAgent):
             RoutePlanning(),
             POISearch(),
             AroundSearch(),
-            HotelSearch(),
-            DistanceMatrix(),
-            CateringSearch(),
         ]
         self.tool_map = {tool.name: tool for tool in self.tool_class}
         self.tools = []

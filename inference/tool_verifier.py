@@ -145,7 +145,7 @@ def assess_plan(query: str, plan: ToolPlan, max_nodes: int = 8) -> VerificationR
     destination_match = re.search(r"去([^，,。？?]{2,16})", query)
     if food_requested and destination_match:
         destination = re.split(r"(?:寻味|求|吃|美食|旅游|游玩)", destination_match.group(1))[0].strip()
-        food_nodes = [node for node in plan.nodes if node.tool in {"catering_search", "around_search"}]
+        food_nodes = [node for node in plan.nodes if node.tool ==  "around_search"]
         if destination and food_nodes and not any(
             destination in str(node.arguments.get("location", ""))
             or destination in str(node.arguments.get("region", ""))

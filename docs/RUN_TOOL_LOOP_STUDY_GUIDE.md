@@ -46,7 +46,7 @@
 第 1 轮（LLM 想搜酒店）:
   [system]
   [user]
-  [assistant]  ← "<tool_call>{\"name\":\"hotel_search\",\"arguments\":{...}}</tool_call>"
+  [assistant]  ← "<tool_call>{\"name\":\"around_search\",\"arguments\":{...}}</tool_call>"
   [tool]       ← "## 1\nname: 北京希尔顿..."（工具返回结果）
 
 第 2 轮（LLM 想搜天气）:
@@ -281,7 +281,7 @@ else:
     reset 计数  # 调了不同工具，或同一工具但结果不同，都不算重复
 ```
 
-这意味着：用户搜 `"火锅"` 后搜 `"川菜"`，虽然都调 `catering_search`，但参数不同，结果不同，不算重复。只有**真正的死循环**才会被拦截。
+这意味着：用户搜 `"火锅"` 后搜 `"川菜"`，虽然都调 `around_search`，但参数不同，结果不同，不算重复。只有**真正的死循环**才会被拦截。
 
 ---
 
@@ -351,7 +351,7 @@ def infer_once_vllm(llm, tokenizer, messages, args):
 
 turn=1: LLM → "先看看天气和酒店"
   <tool_call>{"name":"weather_search","arguments":{"city":"北京"}}</tool_call>
-  <tool_call>{"name":"hotel_search","arguments":{"location":"116.40,39.90","radius":5000}}</tool_call>
+  <tool_call>{"name":"around_search","arguments":{"location":"116.40,39.90","radius":5000}}</tool_call>
   → 两个工具并行返回结果 → messages 增长 3 条
 
 turn=2: LLM → "搜下景点和交通"

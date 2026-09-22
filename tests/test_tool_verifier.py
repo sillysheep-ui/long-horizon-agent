@@ -65,7 +65,7 @@ class ToolVerifierTest(unittest.TestCase):
 
     def test_detects_cross_city_food_destination_mismatch(self):
         plan = ToolPlan.from_dict({"nodes": [
-            {"id": "food", "tool": "catering_search", "arguments": {
+            {"id": "food", "tool": "around_search", "arguments": {
                 "location": "113.2644,23.1291", "keyword": "顺德菜"
             }},
         ]})
