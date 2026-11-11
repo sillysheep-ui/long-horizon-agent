@@ -35,3 +35,6 @@ product_data/
 web/node_modules/
 web/dist/
 *.tsbuildinfo
+
+# 本地模型推理环境
+.venv-local/

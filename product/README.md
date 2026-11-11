@@ -19,9 +19,30 @@ cd web && npm install && npm run build && cd ..
 
 后端读取仓库根目录 `.env`。模型路由依次支持本地 OpenAI 兼容服务、DeepSeek、任意 OpenAI 兼容 API。`MODEL_PROFILE` 可设为 `local_first`、`api_first` 或 `api_only`。如果未显式设置 `LOCAL_MODEL_BASE_URL` 且已有 API Key，会先尝试 API。仓库旧的 `OPENAI_API_KEY` / `OPENAI_BASE_URL` 配置可复用：若地址是 DeepSeek，会自动选用 `deepseek-flash`，避免把旧的其他厂商模型名发送给 DeepSeek。
 
-本地 RL 权重位于 `saved/output/grpo_parser_aligned_run/v8-20260514-140934/checkpoint-150`，是 Hugging Face 格式；该目录可作为后续 MLX 转换的输入，但当前产品层不直接加载它。要使用本地模型，需要先启动提供 `/v1/chat/completions` 的 MLX 服务，再在 `.env` 中设置 `LOCAL_MODEL_BASE_URL` 和 `LOCAL_MODEL_NAME`。API 模式可独立工作。
+本地 RL 权重位于 `saved/output/grpo_parser_aligned_run/v8-20260514-140934/checkpoint-150`，是 Hugging Face 格式，可由 MLX 服务直接加载，见下文「本地模型」。未启动本地服务时，产品层会回落到 DeepSeek；API 模式可独立工作。
 
 地点证据优先使用高德地图 POI v5。若地图 Key 不可用，会降级到 DeepSeek Search，返回可点击的网页来源。网页来源只能证明相关页面存在，不代表精确地址或营业状态已经核实；页面会区分“地图 POI”与“网页来源”。两种来源都不可用时，工作流会显示部分完成及失败原因。车票和机票尚未接入产品层，页面不会展示假价格或班次。
+
+## 本地模型
+
+`MODEL_PROFILE=local_first` 时，产品层先连本地 OpenAI 兼容服务，失败或超时才走 DeepSeek。启动本地 Qwen3-4B：
+
+```bash
+# 1. 起 MLX 服务（首次会自动建 .venv-local 并安装 mlx-lm）
+scripts/serve_local_model.sh /path/to/Qwen3-4B-checkpoint
+
+# 2. 让产品层走本地模型
+export MODEL_PROFILE=local_first
+export LOCAL_MODEL_BASE_URL=http://127.0.0.1:8080/v1
+export LOCAL_MODEL_NAME=/path/to/Qwen3-4B-checkpoint   # 必须与服务端加载的模型一致
+python3 -m uvicorn product.api:app --port 8000
+```
+
+注意：
+
+- `LOCAL_MODEL_NAME` 不能随便起别名。mlx-lm 会把未加载的名字当作 HuggingFace 仓库去下载，返回 404；填启动脚本传入的同一路径即可。
+- 服务启动后第一次请求要编译计算图，可能超过网关 40 秒超时并静默回落到 DeepSeek。先 `curl` 一句短请求预热，可避免第一段用错模型。
+- 实测（Apple Silicon 24G，bf16）：一句完整行程约 100 秒，DeepSeek 约 9 秒；4B 会直接拿网页片段当行程标题，质量低于 DeepSeek。
 
 ## 核心边界
 
