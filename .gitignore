@@ -28,3 +28,10 @@ __pycache__/
 # Codex 任务产物与本地会话目录
 .codex-home/
 .codex-runs/
+
+# 产品层本地运行产物
+product_data/
+.venv-product/
+web/node_modules/
+web/dist/
+*.tsbuildinfo

@@ -1,0 +1,124 @@
+"""浏览器可独立使用的旅行规划 API。"""
+
+import asyncio
+import json
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import AsyncIterator
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+from product.orchestrator import AgentWorkflow
+from product.store import Store
+
+load_dotenv()
+logger = logging.getLogger(__name__)
+store = Store()
+workflow = AgentWorkflow(store)
+
+
+async def _worker() -> None:
+    while True:
+        job = await asyncio.to_thread(store.claim)
+        if job is None:
+            await asyncio.sleep(0.5)
+            continue
+        store.event(job["id"], "running", {"message": "开始执行"})
+        try:
+            result = await workflow.run(job)
+            await asyncio.to_thread(store.finish, job, result)
+        except Exception as exc:
+            logger.exception("任务执行失败: %s", job["id"])
+            await asyncio.to_thread(store.finish, job, None, str(exc)[:300])
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    worker = asyncio.create_task(_worker())
+    try:
+        yield
+    finally:
+        worker.cancel()
+        try:
+            await worker
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(title="旅行规划 Agent", lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+                   allow_methods=["GET", "POST"], allow_headers=["*"], allow_credentials=False)
+
+
+class TripRequest(BaseModel):
+    query: str = Field(min_length=5, max_length=3000)
+
+
+class RevisionRequest(BaseModel):
+    instruction: str = Field(min_length=2, max_length=1000)
+
+
+@app.get("/api/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+@app.post("/api/trips")
+def create_trip(request: TripRequest) -> dict:
+    return store.create_trip(request.query.strip())
+
+
+@app.get("/api/trips/{trip_id}")
+def get_trip(trip_id: str) -> dict:
+    trip = store.trip(trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="行程不存在")
+    return trip
+
+
+@app.post("/api/trips/{trip_id}/revisions")
+def revise_trip(trip_id: str, request: RevisionRequest) -> dict:
+    result = store.revise(trip_id, request.instruction.strip())
+    if result is None:
+        raise HTTPException(status_code=404, detail="行程不存在")
+    return result
+
+
+@app.get("/api/jobs/{job_id}/events")
+async def stream_events(job_id: str, after: int = 0) -> StreamingResponse:
+    if store.job_status(job_id) is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    async def generate() -> AsyncIterator[str]:
+        last = max(0, after)
+        while True:
+            events = await asyncio.to_thread(store.events, job_id, last)
+            for event in events:
+                last = event["id"]
+                yield "id: %s\nevent: %s\ndata: %s\n\n" % (
+                    last, event["kind"], json.dumps(event, ensure_ascii=False))
+            if await asyncio.to_thread(store.job_status, job_id) in ("completed", "failed"):
+                break
+            yield ": heartbeat\n\n"
+            await asyncio.sleep(1)
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/jobs/{job_id}/events/list")
+def list_events(job_id: str, after: int = 0) -> list:
+    if store.job_status(job_id) is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return store.events(job_id, max(0, after))
+
+
+web_dist = Path(__file__).resolve().parents[1] / "web" / "dist"
+if web_dist.exists():
+    app.mount("/", StaticFiles(directory=str(web_dist), html=True), name="web")
