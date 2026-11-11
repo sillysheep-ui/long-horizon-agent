@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -17,6 +18,35 @@ from product.store import Store
 
 def _as_list(value: Any, limit: int) -> List[str]:
     return [str(x).strip()[:80] for x in value[:limit] if str(x).strip()] if isinstance(value, list) else []
+
+
+_TITLE_NOISE = re.compile(r"[\s\W_]+", re.UNICODE)
+
+
+def _norm_title(text: str) -> str:
+    """去掉空白、标点和大小写差异，便于和证据里的地点名比对。"""
+    return _TITLE_NOISE.sub("", str(text)).casefold()
+
+
+def match_activity(activity: Dict[str, Any], valid_names: Dict[str, set]) -> Optional[tuple]:
+    """把模型给出的活动标题对回证据里的地点名；对不上返回 None。
+
+    只放宽空白/标点/大小写和包含关系，不会接受证据里没有的地点。
+    """
+    evidence_id = activity.get("evidence_id")
+    if evidence_id not in valid_names:
+        return None
+    title = _norm_title(activity.get("title") or "")
+    if not title:
+        return None
+    for name in valid_names[evidence_id]:
+        if _norm_title(name) == title:
+            return evidence_id, name
+    for name in valid_names[evidence_id]:
+        normalized = _norm_title(name)
+        if len(normalized) >= 4 and (normalized in title or title in normalized):
+            return evidence_id, name
+    return None
 
 
 def _rank_search_items(hits: Any, keyword: str, city: str) -> List[Dict[str, Any]]:
@@ -214,7 +244,6 @@ class AgentWorkflow:
         except (ValueError, RuntimeError):
             answer_failed = True
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
-        valid_ids = {e["id"] for e in good}
         valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
         cleaned_days = []
         for day in answer.get("days", []) if isinstance(answer.get("days"), list) else []:
@@ -222,9 +251,9 @@ class AgentWorkflow:
             for activity in day.get("activities", []) if isinstance(day, dict) else []:
                 if not isinstance(activity, dict):
                     continue
-                evidence_id = activity.get("evidence_id")
-                if evidence_id in valid_ids and activity.get("title") in valid_names[evidence_id]:
-                    activities.append(activity)
+                matched = match_activity(activity, valid_names)
+                if matched:
+                    activities.append({**activity, "evidence_id": matched[0], "title": matched[1]})
             cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
                                  "activities": activities})
         if not any(d["activities"] for d in cleaned_days):
