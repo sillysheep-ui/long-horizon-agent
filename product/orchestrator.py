@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import httpx
 
 from product.model_gateway import ModelGateway, parse_json
+from product.provenance import build_evidence, normalize_all, normalize_evidence
 from product.store import Store
 
 
@@ -56,8 +57,9 @@ class ResearchTools:
 
     async def web_search(self, keyword: str, city: str, evidence_id: str) -> Dict[str, Any]:
         if not self.search_key:
-            return {"id": evidence_id, "kind": "web", "query": keyword, "city": city,
-                    "status": "unavailable", "reason": "未配置可用的地点搜索服务", "items": []}
+            return build_evidence(evidence_id, "web", keyword, city, "unavailable",
+                                  source="网页搜索", source_kind="none",
+                                  reason="未配置可用的地点搜索服务")
         try:
             async with httpx.AsyncClient(timeout=18) as client:
                 response = await client.post("https://api.deepseek.com/v1/tools/search",
@@ -67,13 +69,13 @@ class ResearchTools:
                 response.raise_for_status()
                 data = response.json()
             items = _rank_search_items(data.get("results"), keyword, city)
-            return {"id": evidence_id, "kind": "web", "query": keyword, "city": city,
-                    "status": "ok" if items else "empty", "items": items,
-                    "source": "DeepSeek 网页搜索", "fetched_at": datetime.now(timezone.utc).isoformat(),
-                    "simulated": False, "verification_level": "source_linked"}
+            return build_evidence(evidence_id, "web", keyword, city,
+                                  "ok" if items else "empty",
+                                  items=items, source="DeepSeek 网页搜索", source_kind="web_search")
         except (httpx.HTTPError, ValueError, KeyError):
-            return {"id": evidence_id, "kind": "web", "query": keyword, "city": city,
-                    "status": "failed", "reason": "网页搜索暂时不可用", "items": []}
+            return build_evidence(evidence_id, "web", keyword, city, "failed",
+                                  source="DeepSeek 网页搜索", source_kind="web_search",
+                                  reason="网页搜索暂时不可用")
 
     async def poi(self, keyword: str, city: str, evidence_id: str) -> Dict[str, Any]:
         if not self.amap_key:
@@ -98,10 +100,9 @@ class ResearchTools:
                 items.append({"name": poi.get("name", ""), "address": poi.get("address", ""),
                               "coordinates": coordinates, "city": poi.get("cityname") or city,
                               "adcode": poi.get("adcode", "")})
-            return {"id": evidence_id, "kind": "poi", "query": keyword, "city": city,
-                    "status": "ok" if items else "empty", "items": items,
-                    "source": "高德地图 POI", "fetched_at": datetime.now(timezone.utc).isoformat(),
-                    "simulated": False}
+            return build_evidence(evidence_id, "poi", keyword, city,
+                                  "ok" if items else "empty",
+                                  items=items, source="高德地图 POI", source_kind="map_poi")
         except (httpx.HTTPError, ValueError):
             return await self.web_search(keyword, city, evidence_id)
 
@@ -165,8 +166,8 @@ class AgentWorkflow:
             raise ValueError("计划超过工具调用预算")
 
         self._event(job, "research", "正在并行查询地点来源", {"tool_count": len(tasks)})
-        previous_evidence = { (e.get("city"), e.get("query")): e
-                              for e in prior.get("evidence", []) if e.get("status") == "ok" }
+        previous_evidence = {(e.get("city"), e.get("query")): e
+                             for e in normalize_all(prior.get("evidence", [])) if e.get("status") == "ok"}
         semaphore = asyncio.Semaphore(4)
         inflight: Dict[tuple, asyncio.Task] = {}
 
@@ -190,7 +191,7 @@ class AgentWorkflow:
             return {**item, "id": evidence_id,
                     "reused": bool(item.get("reused") or item["id"] != evidence_id)}
 
-        evidence = await asyncio.gather(*(research(*item) for item in tasks))
+        evidence = normalize_all(await asyncio.gather(*(research(*item) for item in tasks)))
         good = [e for e in evidence if e.get("status") == "ok"]
         self._event(job, "verification", "正在检查计划是否有可追溯的地点来源",
                     {"supported_queries": len(good), "total_queries": len(evidence)})

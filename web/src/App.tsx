@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Check, ChevronRight, Clock3, Compass, Database, LoaderCircle, MapPin, Plus, RotateCcw, Send, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { createTrip, getEvents, getTrip, reviseTrip } from './api'
-import type { JobEvent, Trip } from './types'
+import type { Evidence, JobEvent, Trip } from './types'
 
 const STORAGE_KEY = 'travel-agent-trip-ids'
 const examples = ['从上海出发，周末去杭州玩两天，喜欢自然风光和咖啡馆，预算 1500 元', '北京出发去苏州 3 天，想看园林和古镇，行程不要太赶', '带父母去成都玩 4 天，偏好美食和轻松的景点']
@@ -80,6 +80,17 @@ function App() {
   const result = trip?.result
   const verified = result?.evidence?.filter(item => item.status === 'ok').length || 0
   const sourceFor = (evidenceId: string, title: string) => result?.evidence?.find(item => item.id === evidenceId)?.items.find(item => item.name === title)?.url
+  const evidenceFor = (evidenceId: string) => result?.evidence?.find(item => item.id === evidenceId)
+  const provenanceText = (evidenceId: string) => {
+    const item = evidenceFor(evidenceId)
+    if (!item) return '来源未记录'
+    if (item.simulated) return '模拟来源，细节未核实'
+    return item.verification_level === 'address_verified' ? '地址已核实' : '来源可追溯，细节未核实'
+  }
+  const statusText = (item: Evidence) => item.status === 'ok' ? (item.source_kind === 'map_poi' || item.kind === 'poi' ? '地图 POI' : '网页来源') : item.status === 'empty' ? '无结果' : item.status === 'failed' ? '查询失败' : '服务不可用'
+  const sourceText = (item: Evidence) => item.source || (item.kind === 'poi' ? '地图 POI' : item.kind === 'web' ? '网页来源' : '来源未知')
+  const fetchedText = (item: Evidence) => item.fetched_at ? new Date(item.fetched_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '查询时间未知'
+  const levelText = (item: Evidence) => item.simulated ? '模拟数据' : item.verification_level === 'address_verified' ? '地址已核实' : item.verification_level === 'source_linked' ? '仅网页来源' : '未核实'
 
   return <div className="app-shell">
     <aside className="sidebar">
@@ -99,8 +110,18 @@ function App() {
         {error && <div className="error-box"><X size={16}/>{error}</div>}
         {trip && <section className="workspace"><div className="workspace-heading"><div><div className="section-kicker">YOUR JOURNEY</div><h2>旅行方案 <span>v{trip.version}</span></h2><p>{trip.query.split('\n')[0]}</p></div><span className={`job-badge ${job?.status || ''}`}>{processing ? <LoaderCircle size={14} className="spin"/> : job?.status === 'failed' ? <X size={14}/> : <Check size={14}/>} {job?.status === 'queued' ? '等待处理' : job?.status === 'running' ? '正在规划' : job?.status === 'failed' ? '执行失败' : result?.status === 'partial' ? '部分完成' : result?.status === 'needs_clarification' ? '需补充信息' : '已完成'}</span></div>
           <div className="tabs"><button className={activeTab === 'itinerary' ? 'selected' : ''} onClick={() => setActiveTab('itinerary')}><MapPin size={16}/> 行程方案</button><button className={activeTab === 'evidence' ? 'selected' : ''} onClick={() => setActiveTab('evidence')}><ShieldCheck size={16}/> 地点证据 {result && <b>{verified}</b>}</button><button className={activeTab === 'process' ? 'selected' : ''} onClick={() => setActiveTab('process')}><Clock3 size={16}/> 执行过程</button></div>
-          {activeTab === 'itinerary' && <div className="panel">{processing && <div className="notice">正在处理当前修改。下方若有行程，它属于上一版本。</div>}{processing && !result && <div className="placeholder"><LoaderCircle className="spin" size={28}/><strong>正在为你规划旅程</strong><span>完成后，行程会自动出现在这里</span></div>}{job?.status === 'failed' && <div className="notice failure">{job.error || '任务失败，请修改需求后重试'}</div>}{result?.question && <div className="notice">{result.question}</div>}{result?.summary && <p className="summary">{result.summary}</p>}{result?.days?.map(day => <div className="day" key={day.day}><div className="day-number">DAY {String(day.day).padStart(2, '0')}</div><div className="day-content"><h3>{day.city}</h3>{day.activities.length ? day.activities.map((activity, index) => <div className="activity" key={`${activity.evidence_id}-${index}`}><span className="activity-marker"/><div><strong>{activity.title}</strong><p>{activity.description}</p><small><ShieldCheck size={12}/> 已关联可追溯来源 · {activity.evidence_id}{sourceFor(activity.evidence_id, activity.title) && <a href={sourceFor(activity.evidence_id, activity.title)} target="_blank" rel="noopener noreferrer">查看来源</a>}</small></div></div>) : <p className="muted">这一天还没有可核实的地点安排</p>}</div></div>)}{result?.notes?.length ? <div className="notes"><strong>出行提醒</strong>{result.notes.map((note, index) => <p key={index}>· {note}</p>)}</div> : null}</div>}
-          {activeTab === 'evidence' && <div className="panel evidence-panel">{result?.evidence?.length ? result.evidence.map(item => <div className="evidence-card" key={item.id}><div className="evidence-head"><div><Database size={15}/><strong>{item.query}</strong><span>{item.city}</span></div><span className={`evidence-status ${item.status}`}>{item.status === 'ok' ? (item.kind === 'poi' ? '地图 POI' : '网页来源') : item.status === 'empty' ? '无结果' : '不可用'}</span></div>{item.items?.map((poi, index) => <p key={index}><MapPin size={13}/><b>{poi.url ? <a href={poi.url} target="_blank" rel="noopener noreferrer">{poi.name}</a> : poi.name}</b> {poi.address}</p>)}{item.reason && <small>{item.reason}</small>}{item.source && <small>来源：{item.source}{item.reused ? ' · 沿用最近查询' : ''}</small>}</div>) : <div className="placeholder">查询完成后会显示证据来源</div>}</div>}
+          {activeTab === 'itinerary' && <div className="panel">{processing && <div className="notice">正在处理当前修改。下方若有行程，它属于上一版本。</div>}{processing && !result && <div className="placeholder"><LoaderCircle className="spin" size={28}/><strong>正在为你规划旅程</strong><span>完成后，行程会自动出现在这里</span></div>}{job?.status === 'failed' && <div className="notice failure">{job.error || '任务失败，请修改需求后重试'}</div>}{result?.question && <div className="notice">{result.question}</div>}{result?.summary && <p className="summary">{result.summary}</p>}{result?.days?.map(day => <div className="day" key={day.day}><div className="day-number">DAY {String(day.day).padStart(2, '0')}</div><div className="day-content"><h3>{day.city}</h3>{day.activities.length ? day.activities.map((activity, index) => <div className="activity" key={`${activity.evidence_id}-${index}`}><span className="activity-marker"/><div><strong>{activity.title}</strong><p>{activity.description}</p><small><ShieldCheck size={12}/> {provenanceText(activity.evidence_id)} · {activity.evidence_id}{sourceFor(activity.evidence_id, activity.title) && <a href={sourceFor(activity.evidence_id, activity.title)} target="_blank" rel="noopener noreferrer">查看来源</a>}</small></div></div>) : <p className="muted">这一天还没有可核实的地点安排</p>}</div></div>)}{result?.notes?.length ? <div className="notes"><strong>出行提醒</strong>{result.notes.map((note, index) => <p key={index}>· {note}</p>)}</div> : null}</div>}
+          {activeTab === 'evidence' && <div className="panel evidence-panel">{result?.evidence?.length ? result.evidence.map(item => <div className="evidence-card" key={item.id}>
+            <div className="evidence-head"><div><Database size={15}/><strong>{item.query}</strong><span>{item.city}</span></div><span className={`evidence-status ${item.status}`}>{statusText(item)}</span></div>
+            <div className="evidence-meta">
+              <span>来源：{sourceText(item)}</span>
+              <span>查询于 {fetchedText(item)}</span>
+              <span className={item.simulated || item.verification_level === 'unverified' ? 'meta-warn' : ''}>{levelText(item)}</span>
+              {item.reused && <span>沿用上次查询</span>}
+            </div>
+            {item.items?.map((poi, index) => <p key={index}><MapPin size={13}/><b>{poi.url ? <a href={poi.url} target="_blank" rel="noopener noreferrer">{poi.name}</a> : poi.name}</b> {poi.address}</p>)}
+            {item.reason && <small>原因：{item.reason}</small>}
+          </div>) : <div className="placeholder">查询完成后会显示证据来源</div>}</div>}
           {activeTab === 'process' && <div className="panel process-panel">{events.length ? events.map(event => <div className="event" key={event.id}><span className={`event-dot ${event.kind}`}/><div><strong>{event.payload.stage ? stageNames[event.payload.stage] || event.payload.stage : event.kind === 'completed' ? '任务完成' : event.kind === 'failed' ? '执行失败' : '任务状态'}</strong><p>{event.payload.message}</p></div><time>{new Date(event.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</time></div>) : <div className="placeholder">正在读取执行记录</div>}{result?.model_calls?.length ? <div className="model-line">模型调用：{result.model_calls.map(call => `${call.role} · ${call.provider}/${call.model}`).join(' → ')}</div> : null}</div>}
           <div className="revision"><div><RotateCcw size={17}/><strong>需要调整？</strong><span>直接说出你想修改的地方</span></div><div className="revision-input"><input value={revision} onChange={event => setRevision(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void submitRevision() }} placeholder="例如：第二天轻松一些，增加咖啡馆"/><button disabled={busy || revision.trim().length < 2} onClick={() => void submitRevision()} aria-label="提交修改"><Send size={16}/></button></div></div>
         </section>}

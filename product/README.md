@@ -30,6 +30,21 @@ cd web && npm install && npm run build && cd ..
 - `store.py`：任务版本、状态和事件。新版本会淘汰尚未开始的旧任务，旧版本运行结果不能覆盖新版本。
 - `api.py`：任务 API、进度事件和构建后的前端静态文件。
 
+## 证据来源标记
+
+`provenance.py` 统一了每条查询结果的字段，页面按同一套规则展示：
+
+| 字段 | 含义 | 取值 |
+| --- | --- | --- |
+| `source` | 来源名称 | 高德地图 POI / DeepSeek 网页搜索 / 模拟数据 |
+| `source_kind` | 来源类型 | `map_poi` / `web_search` / `simulated` / `none` |
+| `status` | 查询结果 | `ok` / `empty` / `failed` / `unavailable` |
+| `fetched_at` | 查询时间（UTC ISO） | 历史记录缺失时为空，页面显示“查询时间未知” |
+| `simulated` | 是否模拟数据 | 布尔值；为真时页面显示“模拟数据” |
+| `verification_level` | 核实程度 | `address_verified`（地图 POI）/ `source_linked`（仅网页来源）/ `unverified` / `none` |
+
+模拟数据永远不会标成“已核实”；查询失败或服务不可用时保留原因，不展示地址或价格。
+
 ## 验证
 
 ```bash
