@@ -24,3 +24,7 @@ __pycache__/
 
 # 系统
 .DS_Store
+
+# Codex 任务产物与本地会话目录
+.codex-home/
+.codex-runs/

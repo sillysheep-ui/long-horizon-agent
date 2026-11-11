@@ -1,0 +1,48 @@
+{
+  "type": "object",
+  "properties": {
+    "goal": {
+      "type": "string",
+      "description": "一句话说明这次要达成的结果"
+    },
+    "assumptions": {
+      "type": "array",
+      "description": "计划依赖但需求里没写死的约定，例如语义边界、异常行为",
+      "items": { "type": "string" }
+    },
+    "steps": {
+      "type": "array",
+      "description": "按执行顺序排列的步骤，每步都要能独立验收",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "action": { "type": "string", "description": "具体改什么，不要写「优化一下」这类空话" },
+          "files": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "允许改动的文件路径"
+          },
+          "acceptance": {
+            "type": "string",
+            "description": "判定这步完成的可执行命令或可检查条件"
+          }
+        },
+        "required": ["id", "action", "files", "acceptance"],
+        "additionalProperties": false
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "可能翻车的地方，以及当前计划如何规避",
+      "items": { "type": "string" }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "description": "本次明确不做的事",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["goal", "assumptions", "steps", "risks", "out_of_scope"],
+  "additionalProperties": false
+}

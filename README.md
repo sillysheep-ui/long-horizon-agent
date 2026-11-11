@@ -327,6 +327,16 @@ bash scripts/train_rl.sh
 
 运行前需要根据 [`.env.example`](.env.example) 配置模型与工具服务。
 
+开发辅助（可选）：把自包含的编码任务派给 Codex CLI，产出与改动落盘后人工审查。
+
+```bash
+python3 scripts/codex_task.py "为 utils/text.py 补单元测试，只新增 tests/test_text_utils.py"
+python3 scripts/codex_task.py --mode review --uncommitted "重点看异常处理"
+python3 scripts/codex_task.py --mode plan --reasoning-effort xhigh "重构评测聚合逻辑"
+```
+
+实现与环境坑位见 [`docs/CODEX_INTEGRATION.md`](docs/CODEX_INTEGRATION.md)。
+
 ---
 
 ## 仓库结构
