@@ -6,7 +6,9 @@
 import re
 
 char_pattern = re.compile(r"[0-9a-zA-Z\u4e00-\u9fff]")
-cjk_char_pattern = re.compile(r"[一-龥]")
+# 与 char_pattern 保持一致，覆盖 CJK 基本区完整范围 U+4E00–U+9FFF；
+# 原来写作 [一-龥] 只到 U+9FA5，会漏掉 U+9FA6 之后的常用/扩展字。
+cjk_char_pattern = re.compile(r"[\u4e00-\u9fff]")
 
 
 def load_text(data_file, split: bool = False) -> str | list[str]:
