@@ -42,6 +42,7 @@ python3 -m uvicorn product.api:app --port 8000
 
 - `LOCAL_MODEL_NAME` 不能随便起别名。mlx-lm 会把未加载的名字当作 HuggingFace 仓库去下载，返回 404；填启动脚本传入的同一路径即可。
 - 服务启动后第一次请求要编译计算图，可能超过网关 40 秒超时并静默回落到 DeepSeek。先 `curl` 一句短请求预热，可避免第一段用错模型。
+- 本地 4B 生成较慢，建议设置 `MODEL_TIMEOUT_SECONDS=180`；不设置时每段超过 40 秒就会回落到 DeepSeek。
 - 实测（Apple Silicon 24G，bf16）：一句完整行程约 100 秒，DeepSeek 约 9 秒；4B 会直接拿网页片段当行程标题，质量低于 DeepSeek。
 
 ## 核心边界

@@ -36,6 +36,10 @@ class ModelGateway:
                 os.getenv("MODEL_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("DEEPSEEK_API_KEY")):
             # 本地服务未显式配置时，沿用项目已有 API 配置以避免每轮空等连接超时。
             self.routes = self.routes[1:] + self.routes[:1]
+        try:
+            self.timeout_seconds = float(os.getenv("MODEL_TIMEOUT_SECONDS", "40"))
+        except ValueError:
+            self.timeout_seconds = 40.0
 
     async def complete(self, role: str, system: str, user: str, max_tokens: int = 1200) -> Dict[str, str]:
         failures: List[str] = []
@@ -43,7 +47,8 @@ class ModelGateway:
             if not base or not model or (name != "local" and not key):
                 continue
             try:
-                async with httpx.AsyncClient(timeout=httpx.Timeout(40.0, connect=5.0)) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(
+                        self.timeout_seconds, connect=min(5.0, self.timeout_seconds))) as client:
                     body = {"model": model, "messages": [{"role": "system", "content": system},
                             {"role": "user", "content": user}], "temperature": 0,
                             "max_tokens": max_tokens}
