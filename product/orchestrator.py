@@ -1,19 +1,20 @@
 """明确职责和共享状态的旅行规划工作流。"""
 
-import asyncio
 import json
 import os
 import re
 import time
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import httpx
 
+from inference.tool_dag import ToolDAGScheduler
 from product.model_gateway import ModelGateway, parse_json
-from product.provenance import build_evidence, normalize_all, normalize_evidence
+from product.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan
+from product.provenance import build_evidence, normalize_all
 from product.store import Store
+from product.tool_runtime import ResearchExecutor
 
 
 def _as_list(value: Any, limit: int) -> List[str]:
@@ -170,58 +171,19 @@ class AgentWorkflow:
 
         self._event(job, "planning", "正在拆解每日行程和查询任务")
         prior = job.get("previous") or {}
-        plan_response = await self.model.complete("规划 Agent",
-            "你负责国内多日旅行的计划草案。只输出 JSON：{\"days\":[{\"day\":1,\"city\":\"城市\",\"poi_queries\":[\"准确地点或类型关键词\"]}]}。days 数量严格等于用户天数；每日至多 3 个 poi_queries，地点必须位于对应城市；不要编造价格、班次或经纬度。",
-            json.dumps({"query": query, "constraints": constraints,
-                        "previous_plan": prior.get("plan")}, ensure_ascii=False), max_tokens=1000)
+        plan_response = await self.model.complete("规划 Agent", PLANNER_SYSTEM_PROMPT,
+            build_planner_prompt(query, constraints, prior.get("plan")), max_tokens=1000)
         calls.append({k: plan_response[k] for k in ("role", "provider", "model")})
         plan = parse_json(plan_response["content"])
         days = plan.get("days")
-        if not isinstance(days, list) or len(days) != days_count:
-            raise ValueError("规划 Agent 返回的天数与需求不一致")
-        tasks = []
-        for day_index, day in enumerate(days, 1):
-            if not isinstance(day, dict):
-                raise ValueError("规划 Agent 返回了非法日期节点")
-            city = str(day.get("city") or destinations[0]).strip()[:40]
-            queries = _as_list(day.get("poi_queries"), 3)
-            if not queries:
-                queries = [city + " 景点"]
-            day["day"] = day_index
-            day["city"] = city
-            day["poi_queries"] = queries
-            for query_index, keyword in enumerate(queries, 1):
-                tasks.append((city, keyword, "d%d-p%d" % (day_index, query_index)))
-        if len(tasks) > 18:
-            raise ValueError("计划超过工具调用预算")
+        tool_plan = days_to_tool_plan(days, days_count, destinations)
 
-        self._event(job, "research", "正在并行查询地点来源", {"tool_count": len(tasks)})
-        previous_evidence = {(e.get("city"), e.get("query")): e
-                             for e in normalize_all(prior.get("evidence", [])) if e.get("status") == "ok"}
-        semaphore = asyncio.Semaphore(4)
-        inflight: Dict[tuple, asyncio.Task] = {}
+        self._event(job, "research", "正在并行查询地点来源", {"tool_count": len(tool_plan.nodes)})
+        executor = ResearchExecutor(self.tools, normalize_all(prior.get("evidence", [])))
+        scheduler = ToolDAGScheduler(executor=executor, max_concurrency=4, fail_fast=False)
+        dag_result = await scheduler.run(tool_plan)
+        evidence = normalize_all(executor.collect(dag_result, tool_plan))
 
-        async def fetch(city: str, keyword: str, evidence_id: str) -> Dict[str, Any]:
-            old = previous_evidence.get((city, keyword))
-            if old and old.get("fetched_at"):
-                try:
-                    age = datetime.now(timezone.utc) - datetime.fromisoformat(old["fetched_at"])
-                    if age.total_seconds() < 86400:
-                        return {**old, "id": evidence_id, "reused": True}
-                except ValueError:
-                    pass
-            async with semaphore:
-                return await self.tools.poi(keyword, city, evidence_id)
-
-        async def research(city: str, keyword: str, evidence_id: str) -> Dict[str, Any]:
-            key = (city, keyword)
-            if key not in inflight:
-                inflight[key] = asyncio.create_task(fetch(city, keyword, evidence_id))
-            item = await inflight[key]
-            return {**item, "id": evidence_id,
-                    "reused": bool(item.get("reused") or item["id"] != evidence_id)}
-
-        evidence = normalize_all(await asyncio.gather(*(research(*item) for item in tasks)))
         good = [e for e in evidence if e.get("status") == "ok"]
         self._event(job, "verification", "正在检查计划是否有可追溯的地点来源",
                     {"supported_queries": len(good), "total_queries": len(evidence)})
