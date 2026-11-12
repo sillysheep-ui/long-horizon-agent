@@ -33,9 +33,11 @@ async def _worker() -> None:
         try:
             result = await workflow.run(job)
             await asyncio.to_thread(store.finish, job, result)
+            await asyncio.to_thread(store.record_reply, job["id"], result)
         except Exception as exc:
             logger.exception("任务执行失败: %s", job["id"])
             await asyncio.to_thread(store.finish, job, None, str(exc)[:300])
+            await asyncio.to_thread(store.record_reply, job["id"], None, str(exc)[:300])
 
 
 @asynccontextmanager
@@ -62,6 +64,33 @@ class TripRequest(BaseModel):
 
 class RevisionRequest(BaseModel):
     instruction: str = Field(min_length=2, max_length=1000)
+
+
+class MessageRequest(BaseModel):
+    content: str = Field(min_length=2, max_length=3000)
+
+
+@app.post("/api/conversations")
+def create_conversation() -> dict:
+    return store.create_conversation()
+
+
+@app.get("/api/conversations/{conversation_id}")
+def get_conversation(conversation_id: str) -> dict:
+    conversation = store.conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    return conversation
+
+
+@app.post("/api/conversations/{conversation_id}/messages")
+def post_message(conversation_id: str, request: MessageRequest) -> dict:
+    if store.conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    result = store.continue_conversation(conversation_id, request.content.strip())
+    if result is None:
+        raise HTTPException(status_code=404, detail="行程不存在")
+    return result
 
 
 @app.get("/api/health")
