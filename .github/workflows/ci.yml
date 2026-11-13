@@ -14,10 +14,10 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install test dependencies
-        run: python -m pip install pytest numpy
+        run: python -m pip install pytest numpy fastapi httpx python-dotenv openai
       - name: Compile Python files
         run: |
-          python -m compileall -q inference prompts tools utils data_pipeline evaluation training tests
+          python -m compileall -q inference prompts tools utils data_pipeline evaluation training tests product scripts
       - name: Run lightweight tests
         run: |
           python -m pytest -q \
@@ -29,4 +29,15 @@ jobs:
             tests/test_geo.py \
             tests/test_judge_tool_dag.py \
             tests/test_tool_dag.py \
-            tests/test_tool_verifier.py
+            tests/test_tool_verifier.py \
+            tests/test_product_answer_filter.py \
+            tests/test_product_cases.py \
+            tests/test_product_checks.py \
+            tests/test_product_conversations.py \
+            tests/test_product_coverage.py \
+            tests/test_product_judge.py \
+            tests/test_product_names.py \
+            tests/test_product_planner.py \
+            tests/test_product_provenance.py \
+            tests/test_codex_task.py \
+            tests/test_text_utils.py
