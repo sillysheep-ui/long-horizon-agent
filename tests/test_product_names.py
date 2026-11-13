@@ -104,3 +104,18 @@ class IntakeGuardTests(unittest.TestCase):
         self.assertTrue(budget_conflict("人均预算五百还要住五星酒店", 2))
         self.assertFalse(budget_conflict("预算 8000 想住五星", 2))
         self.assertFalse(budget_conflict("预算 500 住青旅", 2))
+
+
+class FinalizeDaysTests(unittest.TestCase):
+    def test_dedupes_and_sorts(self):
+        from product.orchestrator import _finalize_days
+        days = [{"day": 1, "city": "杭州", "activities": [
+            {"title": "B", "start": "14:00"}, {"title": "A", "start": "09:00"}, {"title": "A", "start": "10:00"}]}]
+        out = _finalize_days(days, [], [{"day": 1, "city": "杭州"}])
+        self.assertEqual([a["title"] for a in out[0]["activities"]], ["A", "B"])
+
+    def test_fills_from_evidence(self):
+        from product.orchestrator import _finalize_days
+        good = [{"id": "d1-p1", "status": "ok", "items": [{"name": "九溪烟树"}]}]
+        out = _finalize_days([{"day": 1, "city": "杭州", "activities": []}], good, [{"day": 1, "city": "杭州"}])
+        self.assertEqual(out[0]["activities"][0]["title"], "九溪烟树")

@@ -170,6 +170,47 @@ def cities_fit_days(destinations: List[str], days: int) -> bool:
     return len(destinations) <= max(1, int(days))
 
 
+def _finalize_days(cleaned_days: List[Dict[str, Any]], good: List[Dict[str, Any]],
+                   plan_days: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。"""
+    by_day = {day.get("day"): day for day in cleaned_days if day.get("day")}
+    used = set()
+    result = []
+    for planned in plan_days:
+        day = by_day.get(planned.get("day")) or {"day": planned.get("day"), "city": planned.get("city")}
+        activities = []
+        for activity in day.get("activities", []):
+            title = str(activity.get("title") or "").strip()
+            if not title or title in used:
+                continue
+            used.add(title)
+            activities.append({**activity, "title": title})
+        if len(activities) < 2:
+            for evidence in good:
+                if not evidence["id"].startswith("d%d-" % planned["day"]):
+                    continue
+                for item in evidence.get("items", []):
+                    name = clean_place_name(item.get("name"))
+                    if not name or name in used:
+                        continue
+                    used.add(name)
+                    activities.append({
+                        "title": name,
+                        "start": DEFAULT_STARTS[min(len(activities), len(DEFAULT_STARTS) - 1)],
+                        "duration": "1.5 小时",
+                        "description": "备选地点，可作为当天的补充安排；请通过来源页面核对地址和开放时间。",
+                        "transport": "交通未核实",
+                        "cost": "未核实",
+                        "evidence_id": evidence["id"],
+                    })
+                    break
+                if len(activities) >= 2:
+                    break
+        activities.sort(key=lambda item: str(item.get("start") or "99:99"))
+        result.append({"day": planned["day"], "city": day.get("city") or planned.get("city"), "activities": activities[:3]})
+    return result
+
+
 class ResearchTools:
     def __init__(self) -> None:
         self.amap_key = os.getenv("AMAP_MAPS_API_KEY", "")
@@ -343,6 +384,7 @@ class AgentWorkflow:
                     "description": "可作为当天的候选地点；请通过来源页面核对地址、开放时间和交通。",
                     "transport": "交通未核实", "cost": "未核实"} for e in day_evidence])
                 cleaned_days.append({"day": day["day"], "city": day["city"], "activities": activities})
+        cleaned_days = _finalize_days(cleaned_days, good, days)
         notes = _as_list(answer.get("notes"), 8)
         if answer_failed:
             notes.insert(0, "回答阶段使用保守方案，安排基于可追溯来源，具体细节需出行前核对。")
