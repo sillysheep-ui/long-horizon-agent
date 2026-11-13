@@ -89,3 +89,18 @@ class CityLoadTests(unittest.TestCase):
         self.assertTrue(cities_fit_days(["杭州", "苏州"], 2))
         self.assertFalse(cities_fit_days(["北京", "上海", "成都", "广州", "西安"], 3))
         self.assertFalse(cities_fit_days(["杭州", "苏州"], 1))
+
+
+class IntakeGuardTests(unittest.TestCase):
+    def test_declares_duration(self):
+        from product.orchestrator import _declares_duration
+        self.assertTrue(_declares_duration("去杭州玩两天"))
+        self.assertTrue(_declares_duration("周末去苏州"))
+        self.assertTrue(_declares_duration("一日游"))
+        self.assertFalse(_declares_duration("想去北京玩，喜欢博物馆"))
+
+    def test_budget_conflict(self):
+        from product.orchestrator import budget_conflict
+        self.assertTrue(budget_conflict("人均预算五百还要住五星酒店", 2))
+        self.assertFalse(budget_conflict("预算 8000 想住五星", 2))
+        self.assertFalse(budget_conflict("预算 500 住青旅", 2))

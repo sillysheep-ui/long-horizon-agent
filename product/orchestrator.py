@@ -119,6 +119,52 @@ def _clean_activities(activities: List[Dict[str, Any]], limit: int = 3,
     return result
 
 
+DURATION_PATTERN = re.compile(r"(\d+|[一二两三四五六七八九十])\s*(天|日|晚)|周末|半天|一日游")
+BUDGET_PATTERN = re.compile(r"(预算|人均)[^\d一二三四五六七八九十]{0,6}(\d+(?:\.\d+)?|[一二三四五六七八九十百千]+)\s*(万|千|w|k)?")
+
+
+def _declares_duration(text: str) -> bool:
+    return bool(DURATION_PATTERN.search(str(text or "")))
+
+
+_CN_DIGITS = "零一二三四五六七八九"
+
+
+def chinese_number(text: str) -> int:
+    """把“五百”“一千二”这类写法转成整数，失败返回 0。"""
+    total, section, number = 0, 0, 0
+    for char in text or "":
+        if char in _CN_DIGITS:
+            number = _CN_DIGITS.index(char)
+        elif char == "十":
+            section += (number or 1) * 10
+            number = 0
+        elif char == "百":
+            section += (number or 1) * 100
+            number = 0
+        elif char == "千":
+            section += (number or 1) * 1000
+            number = 0
+        else:
+            return 0
+    return total + section + number
+
+
+def budget_conflict(query: str, days: int) -> bool:
+    """预算与“五星/豪华”明显不匹配时算冲突。"""
+    match = BUDGET_PATTERN.search(query or "")
+    if not match or not any(word in query for word in ("五星", "豪华", "高档", "别墅")):
+        return False
+    raw = match.group(2)
+    amount = chinese_number(raw) if raw[0] in _CN_DIGITS else float(raw)
+    unit = match.group(3) or ""
+    if unit in ("万", "w"):
+        amount *= 10000
+    elif unit in ("千", "k"):
+        amount *= 1000
+    return amount / max(1, days) < 600
+
+
 def cities_fit_days(destinations: List[str], days: int) -> bool:
     """一天最多跨一个城市，城市数超过天数就认为约束矛盾。"""
     return len(destinations) <= max(1, int(days))
@@ -199,7 +245,7 @@ class AgentWorkflow:
         calls: List[Dict[str, str]] = []
         self._event(job, "intake", "正在理解日期、目的地和预算")
         intake = await self.model.complete("需求 Agent",
-            "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组。未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；只有完全看不出目的地时才留空。",
+            "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组、conflicts 字符串数组。未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；只有完全看不出目的地时才留空。conflicts 用一句话列出需求中的硬冲突（例如“五天带老人孩子预算 1000 元”“人均五百还想住五星酒店”“没说明玩几天”），没有冲突就给空数组。",
             query, max_tokens=500)
         calls.append({k: intake[k] for k in ("role", "provider", "model")})
         constraints = parse_json(intake["content"])
@@ -212,6 +258,14 @@ class AgentWorkflow:
         except (TypeError, ValueError):
             days_count = 1
         constraints["days"] = days_count
+        conflicts = _as_list(constraints.get("conflicts"), 3)
+        if not _declares_duration(query):
+            return {"status": "needs_clarification", "question": "打算玩几天？",
+                    "constraints": constraints, "model_calls": calls, "days": [], "evidence": []}
+        if conflicts or budget_conflict(query, days_count):
+            reason = "；".join(conflicts[:2]) or "预算和住宿标准对不上"
+            return {"status": "needs_clarification", "question": "需求里有冲突：%s。想先调整哪一项？" % reason,
+                    "constraints": constraints, "model_calls": calls, "days": [], "evidence": []}
         if not cities_fit_days(destinations, days_count):
             return {"status": "needs_clarification",
                     "question": "%d 天安排 %d 个城市太紧，想保留哪几个？" % (days_count, len(destinations)),
