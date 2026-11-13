@@ -12,6 +12,7 @@ import httpx
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
+from product.names import clean_place_name, dedupe_names, looks_like_place
 from product.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan
 from product.provenance import build_evidence, normalize_all
 from product.store import Store
@@ -67,18 +68,49 @@ def _rank_search_items(hits: Any, keyword: str, city: str) -> List[Dict[str, Any
         short = keyword[:2]
         if not (keyword in title or short in title or city in title or keyword in snippet):
             continue
-        name = title
-        for suffix in ("_百度百科", " - 百度百科", " - 搜词条", "-百度百科"):
-            if suffix in name:
-                name = name.split(suffix, 1)[0]
+        name = clean_place_name(title)
+        if not name:
+            continue
         score = (6 if keyword in title else 0) + (3 if short in title else 0)
         score += (2 if city in title else 0) + (1 if keyword in snippet else 0)
         score += (4 if parsed.hostname.endswith("gov.cn") else 0)
-        candidates.append((score, {"name": name[:100], "source_title": title[:140],
+        score += (3 if looks_like_place(name, keyword, city) else -2)
+        score += (2 if len(name) <= 12 else 0)
+        score -= (3 if len(name) > 24 else 0)
+        candidates.append((score, {"name": name[:60], "source_title": title[:140],
                                    "address": "", "url": url, "snippet": snippet,
                                    "coordinates": None}))
     candidates.sort(key=lambda pair: pair[0], reverse=True)
-    return [item for _, item in candidates[:3]]
+    return dedupe_names([item for _, item in candidates])[:3]
+
+
+DEFAULT_STARTS = ("09:30", "13:30", "16:30")
+_TIME_PATTERN = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d$")
+
+
+def _clip(value: Any, limit: int, fallback: str) -> str:
+    text = str(value or "").strip()
+    return text[:limit] if text else fallback
+
+
+def _clean_activities(activities: List[Dict[str, Any]], limit: int = 3) -> List[Dict[str, Any]]:
+    """统一活动字段：时间缺失就按顺序给默认值，避免前端出现空白。"""
+    result = []
+    for position, activity in enumerate(activities[:limit]):
+        start = str(activity.get("start") or "").strip()
+        if not _TIME_PATTERN.match(start):
+            start = DEFAULT_STARTS[min(position, len(DEFAULT_STARTS) - 1)]
+        title = str(activity.get("display_title") or "").strip()[:24] or _clip(activity.get("title"), 80, "候选地点")
+        result.append({
+            "title": title,
+            "start": start,
+            "duration": _clip(activity.get("duration"), 20, "1.5 小时"),
+            "description": _clip(activity.get("description"), 400, "请通过来源页面核对细节。"),
+            "transport": _clip(activity.get("transport"), 60, "交通未核实"),
+            "cost": _clip(activity.get("cost"), 40, "未核实"),
+            "evidence_id": activity.get("evidence_id"),
+        })
+    return result
 
 
 class ResearchTools:
@@ -208,7 +240,7 @@ class AgentWorkflow:
         answer_failed = False
         try:
             answer_response = await self.model.complete("回答 Agent",
-                "根据给定证据生成行程。只输出 JSON：{\"summary\":\"简短概述\",\"days\":[{\"day\":1,\"city\":\"城市\",\"activities\":[{\"title\":\"地点\",\"description\":\"安排\",\"evidence_id\":\"d1-p1\"}]}],\"notes\":[\"未核实事项\"]}。title 必须精确等于证据 items 中一个 name；evidence_id 必须指向成功证据。kind=web 仅代表有可追溯网页来源，不代表精确地址或营业状态已核实；不要据此声称地理位置已验证。没有可靠价格、营业时间、路线或票务证据时明确写未知，不得编造。火车/飞机模拟数据如出现必须明确标注模拟。",
+                "根据给定证据生成行程。只输出 JSON：{\"summary\":\"概述这趟行程的安排思路和取舍\",\"days\":[{\"day\":1,\"city\":\"城市\",\"activities\":[{\"title\":\"证据里的地点名\",\"display_title\":\"展示用短名\",\"start\":\"09:30\",\"duration\":\"2.5 小时\",\"description\":\"具体做什么、为什么适合用户\",\"transport\":\"从上一站怎么过来\",\"cost\":\"门票或人均\",\"evidence_id\":\"d1-p1\"}]}],\"notes\":[\"出行前需核对的事项\"]}。规则：1) title 必须精确等于证据 items 中一个 name，evidence_id 必须指向该条成功证据；display_title 是展示用的简短中文名（不超过 16 字，如“湖滨咖啡馆”），不得虚构新地点；2) 每天 2-3 个活动，按当天时间顺序排列，start 用 24 小时制，跨天不要重复同一地点；3) description 写具体动作与理由（看什么、走哪段、为什么符合用户偏好），不要写“感受氛围”“湖光山色”这类空话；4) transport 根据证据里的地址和城市信息给出行建议，推断不了就写“交通未核实”；5) cost 只写证据里出现的价格，没有就写“未核实”，不得编造价格、营业时间、班次；6) kind=web 只代表有可追溯网页来源，不代表地址或营业状态已核实；7) notes 最多 6 条，写出行前必须核对的事项。",
                 json.dumps({"query": query, "constraints": constraints, "plan": plan,
                             "evidence": good}, ensure_ascii=False), max_tokens=3000)
             calls.append({k: answer_response[k] for k in ("role", "provider", "model")})
@@ -218,24 +250,29 @@ class AgentWorkflow:
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
         valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
         cleaned_days = []
+        seen_titles = set()
         for day in answer.get("days", []) if isinstance(answer.get("days"), list) else []:
-            activities = []
-            for activity in day.get("activities", []) if isinstance(day, dict) else []:
+            raw_activities = day.get("activities", []) if isinstance(day, dict) else []
+            matched_activities = []
+            for activity in raw_activities:
                 if not isinstance(activity, dict):
                     continue
                 matched = match_activity(activity, valid_names)
-                if matched:
-                    activities.append({**activity, "evidence_id": matched[0], "title": matched[1]})
+                if not matched or matched[1] in seen_titles:
+                    continue
+                seen_titles.add(matched[1])
+                matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1]})
             cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
-                                 "activities": activities})
+                                 "activities": _clean_activities(matched_activities)})
         if not any(d["activities"] for d in cleaned_days):
             answer_failed = True
             cleaned_days = []
             for day in days:
                 day_evidence = [e for e in good if e["id"].startswith("d%d-" % day["day"]) and e.get("items")]
-                activities = [{"title": e["items"][0]["name"], "evidence_id": e["id"],
-                               "description": "可作为当天的候选地点；请通过来源页面核对地址、开放时间和交通。"}
-                              for e in day_evidence]
+                activities = _clean_activities([{
+                    "title": e["items"][0]["name"], "evidence_id": e["id"],
+                    "description": "可作为当天的候选地点；请通过来源页面核对地址、开放时间和交通。",
+                    "transport": "交通未核实", "cost": "未核实"} for e in day_evidence])
                 cleaned_days.append({"day": day["day"], "city": day["city"], "activities": activities})
         notes = _as_list(answer.get("notes"), 8)
         if answer_failed:
