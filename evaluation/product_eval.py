@@ -1,4 +1,4 @@
-"""产品行程生成质量评测：固定场景 + 确定性检查 + 裁判打分。
+"""产品行程生成质量评测：固定场景 + 确定性检查 + rubric 裁判。
 
 用法：
     python3 -m evaluation.product_eval --profile api_only --limit 8
@@ -11,43 +11,18 @@ import argparse
 import asyncio
 import json
 import os
-import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from openai import AsyncOpenAI
 
-from evaluation.product_checks import check_result, summarize
-from product.model_gateway import parse_json
+from evaluation.product_checks import check_result, combined_score, summarize
+from evaluation.product_judge import judge as judge_itinerary
 from product.orchestrator import AgentWorkflow
 from product.store import Store
 
 CASES_PATH = Path(__file__).with_name("product_cases.json")
-
-JUDGE_SYSTEM_PROMPT = """你是旅行规划评审。只根据给定行程文本和证据统计打分，不补充外部知识，不臆测。
-五个维度各 1-5 分，锚点如下（2、4 取相邻两档之间）：
-1. concreteness 具体性
-   5 = 每个活动都写清几点、停留多久、具体看什么/做什么，且前后衔接；
-   3 = 约一半活动有这些细节；
-   1 = 只有地点名或口号式描述。
-2. feasibility 可执行性
-   5 = 路线顺序合理，交通与转场有交代，单日强度适中；
-   3 = 有一处明显偏紧、绕路或时间冲突；
-   1 = 时间线根本走不完。
-3. preference_fit 偏好匹配
-   5 = 每条偏好（兴趣、预算、同行人、节奏）都有对应安排；
-   3 = 只覆盖主要偏好，预算或同行人缺失；
-   1 = 答非所问。
-4. fact_boundary 事实边界
-   5 = 所有未核实的价格、营业时间、班次都明确标注，零编造；
-   3 = 有若干未标注的确定断言；
-   1 = 大量编造具体价格/时间/班次。
-5. richness 丰富度
-   5 = 每天有变化、有主次、不重复，篇幅与天数匹配；
-   3 = 略显单调或某天凑数；
-   1 = 复制粘贴、空行程。
-只输出 JSON：{"scores":{"concreteness":4,"feasibility":4,"preference_fit":3,"fact_boundary":5,"richness":3},"overall":3.8,"comments":["一句话点评","最需要改的一点"]}。overall 取五项均值，保留一位小数。"""
 
 
 def _compact(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -60,6 +35,7 @@ def _compact(result: Dict[str, Any]) -> Dict[str, Any]:
                 "start": a.get("start"), "duration": a.get("duration"),
                 "title": a.get("title"), "description": a.get("description"),
                 "transport": a.get("transport"), "cost": a.get("cost"),
+                "evidence_id": a.get("evidence_id"),
             } for a in day.get("activities") or []],
         })
     evidence = result.get("evidence") or []
@@ -74,32 +50,6 @@ def _compact(result: Dict[str, Any]) -> Dict[str, Any]:
             "sources": sorted({str(e.get("source")) for e in evidence}),
         },
     }
-
-
-async def judge(client: AsyncOpenAI, model: str, case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-    payload = json.dumps({"query": case["query"], "itinerary": _compact(result)}, ensure_ascii=False)
-    try:
-        for attempt in range(2):
-            response = await client.chat.completions.create(
-                model=model, temperature=0.0,
-                messages=[{"role": "system", "content": JUDGE_SYSTEM_PROMPT},
-                          {"role": "user", "content": payload + "\n\n只输出 JSON，不要解释。"
-                                                        + ("直接给分数，不要分析。" if attempt else "")}],
-                max_tokens=4000,
-            )
-            content = response.choices[0].message.content or ""
-            if response.choices[0].finish_reason != "length":
-                break
-        if response.choices[0].finish_reason == "length":
-            return {"error": "裁判输出被截断", "overall": None, "raw": content[:200]}
-        parsed = parse_json(content)
-        scores = parsed.get("scores") or {}
-        overall = parsed.get("overall")
-        if overall is None and scores:
-            overall = round(sum(float(v) for v in scores.values()) / len(scores), 2)
-        return {"scores": scores, "overall": overall, "comments": parsed.get("comments") or []}
-    except Exception as error:  # 裁判失败不能拖垮整轮评测
-        return {"error": str(error)[:300], "overall": None}
 
 
 async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) -> Dict[str, Any]:
@@ -121,24 +71,30 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) 
 
 def write_report(target: Path, profile: str, summary: Dict[str, Any], records: List[Dict[str, Any]]) -> None:
     lines = [f"# 产品行程评测 · {profile}", "", f"- 用例：{summary['cases']}",
-             f"- 全部检查通过：{summary['all_checks_passed']}/{summary['cases']}",
-             f"- 可交付（检查全过且裁判≥3.5）：{summary['deliverable']}/{summary['cases']}",
-             f"- 裁判均分：{summary['judge_mean']}", f"- 平均耗时：{summary['latency_mean']}s", "",
+             f"- 确定性检查全过：{summary['all_checks_passed']}/{summary['cases']}（平均通过率 {summary['hard_mean']}）",
+             f"- rubric 均分：{summary['rubric_mean']}（0–1，10 条清单）",
+             f"- 综合分均值：{summary['score_mean']}（0.6×硬检查 + 0.4×rubric − 编造扣分）",
+             f"- 可交付：{summary['deliverable']}/{summary['cases']}",
+             f"- 平均耗时：{summary['latency_mean']}s", "",
              "## 检查通过率", "", "| 检查 | 通过率 |", "|---|---|"]
     lines += [f"| {name} | {rate:.0%} |" for name, rate in summary["check_pass_rate"].items()]
-    lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | 裁判分 | 判定 |", "|---|---|---|---|---|---|"]
+    lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | rubric | 综合分 | 判定 |",
+              "|---|---|---|---|---|---|---|"]
     for record in records:
         failed = ",".join(name for name, ok in record["checks"].items() if not ok) or "-"
-        judge_score = (record.get("judge") or {}).get("overall")
-        passed = all(record["checks"].values()) and judge_score is not None and judge_score >= 3.5
-        verdict = "可交付" if passed else ("待改进" if judge_score is not None else "待人工")
+        judge_info = record.get("judge") or {}
+        rubric = judge_info.get("rubric")
+        score = record.get("score")
+        hard_ok = all(record["checks"].values()) if record["checks"] else False
+        verdict = "可交付" if (hard_ok and rubric is not None and rubric >= 0.7 and not judge_info.get("fabrication")) \
+            else ("待改进" if rubric is not None else "待人工")
         lines.append(f"| {record['id']} | {record.get('status') or record.get('error', '错误')[:20]} | "
-                     f"{record['elapsed']}s | {failed} | {judge_score} | {verdict} |")
-    lines += ["", "## 裁判点评", ""]
+                     f"{record['elapsed']}s | {failed} | {rubric} | {score} | {verdict} |")
+    lines += ["", "## 裁判未通过的条目", ""]
     for record in records:
         judge_info = record.get("judge") or {}
-        if judge_info.get("comments"):
-            lines.append(f"- **{record['id']}**：" + "；".join(judge_info["comments"][:2]))
+        if judge_info.get("failed"):
+            lines.append(f"- **{record['id']}**：未通过 {', '.join(judge_info['failed'])}")
         if judge_info.get("error"):
             lines.append(f"- **{record['id']}**：裁判失败 {judge_info['error']}")
     target.mkdir(parents=True, exist_ok=True)
@@ -153,6 +109,7 @@ async def main() -> None:
     parser.add_argument("--db", default="")
     parser.add_argument("--out", default="")
     parser.add_argument("--skip-judge", action="store_true")
+    parser.add_argument("--judge2-model", default="", help="第二裁判模型，用于估计裁判一致性")
     args = parser.parse_args()
 
     os.environ["MODEL_PROFILE"] = args.profile
@@ -160,8 +117,7 @@ async def main() -> None:
     if args.limit:
         cases = cases[:args.limit]
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
-    for stale in (db_path,):
-        Path(stale).unlink(missing_ok=True)
+    Path(db_path).unlink(missing_ok=True)
 
     store = Store(db_path)
     workflow = AgentWorkflow(store)
@@ -173,10 +129,20 @@ async def main() -> None:
     for index, case in enumerate(cases, 1):
         record = await run_case(workflow, store, case)
         if not args.skip_judge and record.get("result") and case.get("expect") != "needs_clarification":
-            record["judge"] = await judge(client, judge_model, case, record["result"])
+            record["judge"] = await judge_itinerary(client, judge_model, case, record["result"])
+            if args.judge2_model:
+                second = await judge_itinerary(client, args.judge2_model, case, record["result"])
+                first_rubric = record["judge"].get("rubric")
+                second_rubric = second.get("rubric")
+                record["judge"]["second_rubric"] = second_rubric
+                record["judge"]["agreement"] = round(abs(first_rubric - second_rubric), 3) \
+                    if first_rubric is not None and second_rubric is not None else None
+            record["score"] = combined_score(record["checks"], (record.get("judge") or {}).get("rubric"),
+                                             bool((record.get("judge") or {}).get("fabrication")))
         records.append(record)
         print(f"[{index}/{len(cases)}] {case['id']} status={record.get('status')} "
-              f"elapsed={record['elapsed']}s failed={[k for k, v in record['checks'].items() if not v]}")
+              f"elapsed={record['elapsed']}s failed={[k for k, v in record['checks'].items() if not v]} "
+              f"rubric={(record.get('judge') or {}).get('rubric')} score={record.get('score')}")
 
     summary = summarize(records)
     stamp = time.strftime("%Y%m%d-%H%M%S")

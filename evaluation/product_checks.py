@@ -1,9 +1,15 @@
-"""产品行程的确定性检查：不依赖裁判模型，先卡结构与可追溯性。"""
+"""产品行程的确定性检查：不依赖裁判模型，先卡结构与可追溯性。
 
+这一层对应 TravelPlanner（arXiv:2402.01622）里的 constraint pass rate：
+能程序化验证的约束就不交给模型判，既省钱，也能直接当 RL 的 dense reward。
+"""
+
+import re
 from typing import Any, Dict, List
 
 NOISE_TOKENS = ("攻略", "门票", "地址", "图片", "开放时间", "营业时间", "【", "】", "｜", "点评", "简介")
 TIME_ORDER_TOLERANCE = 0  # 只比较字符串顺序，HH:MM 定长可直接比
+DIGITS = re.compile(r"\d+")
 
 
 def _days(result: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -20,6 +26,56 @@ def _evidence_map(result: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     return {e.get("id"): e for e in result.get("evidence") or [] if isinstance(e, dict)}
 
 
+def _norm(text: Any) -> str:
+    return re.sub(r"[\s\W_]+", "", str(text or ""))
+
+
+def _item_names(evidence: Dict[str, Any]) -> List[str]:
+    items = evidence.get("items")
+    if not isinstance(items, list):
+        return []
+    return [str(item.get("name") or "") for item in items if isinstance(item, dict)]
+
+
+def _bigrams(text: str) -> set:
+    return {text[index:index + 2] for index in range(len(text) - 1)}
+
+
+def _title_matches(title: str, names: List[str]) -> bool:
+    """标题与证据地点名：包含关系，或 2-gram 重合度 ≥60%（容忍“熊猫基地”这类简称）。"""
+    normalized = _norm(title)
+    if not normalized:
+        return False
+    grams = _bigrams(normalized)
+    for name in names:
+        candidate = _norm(name)
+        if not candidate:
+            continue
+        if normalized in candidate or candidate in normalized:
+            return True
+        if grams and len(grams & _bigrams(candidate)) / len(grams) >= 0.6:
+            return True
+    return False
+
+
+def _evidence_text(evidence: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    items = evidence.get("items")
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            parts += [str(item.get("name") or ""), str(item.get("snippet") or "")]
+    return "".join(parts)
+
+
+def hard_pass_rate(checks: Dict[str, bool]) -> float:
+    """确定性检查的通过比例，供打分与 RL 奖励使用。"""
+    if not checks:
+        return 0.0
+    return sum(1 for value in checks.values() if value) / len(checks)
+
+
 def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool]:
     """返回逐项检查结果；键名会直接进报告。"""
     if case.get("expect") == "needs_clarification":
@@ -29,6 +85,33 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
     titles = [str(a.get("title") or "") for a in activities]
     evidence = _evidence_map(result)
     expected_days = case.get("days")
+    expected_cities = [str(c).strip().rstrip("市") for c in case.get("cities") or [] if str(c).strip()]
+
+    city_coverage = True
+    if expected_cities:
+        city_coverage = bool(days) and all(
+            str(d.get("city") or "").strip().rstrip("市") in expected_cities for d in days)
+
+    title_matches_evidence = True
+    for activity in activities:
+        names = _item_names(evidence.get(activity.get("evidence_id")) or {})
+        if not names:
+            continue
+        if not _title_matches(str(activity.get("title") or ""), names):
+            title_matches_evidence = False
+            break
+
+    # 行程里出现的数字（票价、时长金额）必须能在证据原文里找到，否则视为编造。
+    no_fabricated_cost = True
+    for activity in activities:
+        numbers = DIGITS.findall(str(activity.get("cost") or ""))
+        if not numbers:
+            continue
+        source = _evidence_text(evidence.get(activity.get("evidence_id")) or {}) + str(activity.get("description") or "")
+        if any(number not in source for number in numbers):
+            no_fabricated_cost = False
+            break
+
     return {
         "complete": result.get("status") == "complete",
         "day_count": bool(days) and (expected_days is None or len(days) == expected_days),
@@ -43,7 +126,18 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
             a.get("start") and a.get("duration") and a.get("transport") and a.get("cost") for a in activities),
         "evidence_ok": bool(activities) and all(
             (evidence.get(a.get("evidence_id")) or {}).get("status") == "ok" for a in activities),
+        "city_coverage": city_coverage,
+        "title_matches_evidence": title_matches_evidence,
+        "no_fabricated_cost": no_fabricated_cost,
     }
+
+
+def combined_score(checks: Dict[str, bool], rubric: Any, fabrication: bool = False) -> Any:
+    """0–1 综合分：硬约束 60% + rubric 40%，编造再扣 0.2。"""
+    if rubric is None:
+        return None
+    score = 0.6 * hard_pass_rate(checks) + 0.4 * float(rubric) - (0.2 if fabrication else 0.0)
+    return round(max(0.0, min(1.0, score)), 3)
 
 
 def summarize(records: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -52,15 +146,21 @@ def summarize(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     passed = {name: sum(1 for r in records if r["checks"].get(name)) for name in check_names}
     applicable = {name: sum(1 for r in records if name in r["checks"]) for name in check_names}
     total = len(records)
-    scores = [r["judge"]["overall"] for r in records if r.get("judge", {}).get("overall") is not None]
-    judged = [r for r in records if r.get("judge", {}).get("overall") is not None]
-    deliverable = sum(1 for r in judged
-                      if all(r["checks"].values()) and r["judge"]["overall"] >= 3.5)
+    rubrics = [(r.get("judge") or {}).get("rubric") for r in records]
+    rubrics = [float(value) for value in rubrics if value is not None]
+    scores = [r["score"] for r in records if r.get("score") is not None]
+    deliverable = sum(1 for r in records
+                      if r.get("score") is not None
+                      and all(r["checks"].values())
+                      and (r.get("judge") or {}).get("rubric", 0) >= 0.7
+                      and not (r.get("judge") or {}).get("fabrication"))
     return {
         "cases": total,
         "check_pass_rate": {name: round(passed[name] / applicable[name], 3) for name in check_names},
         "all_checks_passed": sum(1 for r in records if all(r["checks"].values())),
-        "judge_mean": round(sum(scores) / len(scores), 2) if scores else None,
+        "hard_mean": round(sum(hard_pass_rate(r["checks"]) for r in records) / total, 3) if total else None,
+        "rubric_mean": round(sum(rubrics) / len(rubrics), 3) if rubrics else None,
+        "score_mean": round(sum(scores) / len(scores), 3) if scores else None,
         "deliverable": deliverable,
         "latency_mean": round(sum(r["elapsed"] for r in records) / total, 2) if total else None,
     }

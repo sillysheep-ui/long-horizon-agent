@@ -1,15 +1,15 @@
 import unittest
 
-from evaluation.product_checks import check_result, summarize
+from evaluation.product_checks import check_result, combined_score, hard_pass_rate, summarize
 
 
-def make_day(day, activities):
-    return {"day": day, "city": "杭州", "activities": activities}
+def make_day(day, activities, city="杭州"):
+    return {"day": day, "city": city, "activities": activities}
 
 
-def make_activity(title="西湖", start="09:30", evidence_id="d1-p1"):
+def make_activity(title="西湖", start="09:30", evidence_id="d1-p1", cost="未核实"):
     return {"title": title, "start": start, "duration": "2 小时", "description": "沿湖步行",
-            "transport": "地铁", "cost": "未核实", "evidence_id": evidence_id}
+            "transport": "地铁", "cost": cost, "evidence_id": evidence_id}
 
 
 def make_result(days, evidence=None):
@@ -39,23 +39,73 @@ class CheckResultTests(unittest.TestCase):
         self.assertFalse(checks["unique_titles"])
         self.assertFalse(checks["time_order"])
         self.assertFalse(checks["evidence_ok"])
-        self.assertTrue(checks["density"] is False)
+        self.assertFalse(checks["density"])
 
     def test_flags_missing_days(self):
         checks = check_result({"days": 2}, make_result([make_day(1, [make_activity()])]))
         self.assertFalse(checks["day_count"])
 
+    def test_flags_wrong_city(self):
+        result = make_result([make_day(1, [make_activity(), make_activity("灵隐寺", "14:00")], city="苏州")])
+        checks = check_result({"days": 1, "cities": ["杭州"]}, result)
+        self.assertFalse(checks["city_coverage"])
+
+    def test_accepts_city_with_suffix(self):
+        result = make_result([make_day(1, [make_activity(), make_activity("灵隐寺", "14:00")], city="杭州市")])
+        checks = check_result({"days": 1, "cities": ["杭州"]}, result)
+        self.assertTrue(checks["city_coverage"])
+
+    def test_flags_fabricated_cost(self):
+        result = make_result([make_day(1, [make_activity(cost="门票 60 元"), make_activity("灵隐寺", "14:00")])],
+                             evidence=[{"id": "d1-p1", "status": "ok", "items": [{"name": "西湖"}]}])
+        checks = check_result({"days": 1}, result)
+        self.assertFalse(checks["no_fabricated_cost"])
+
+    def test_passes_cost_found_in_evidence(self):
+        result = make_result([make_day(1, [make_activity(cost="60 元"), make_activity("灵隐寺", "14:00")])],
+                             evidence=[{"id": "d1-p1", "status": "ok",
+                                        "items": [{"name": "西湖", "snippet": "门票 60 元"}]}])
+        checks = check_result({"days": 1}, result)
+        self.assertTrue(checks["no_fabricated_cost"])
+
+    def test_flags_title_not_in_evidence(self):
+        result = make_result([make_day(1, [make_activity("某个不存在的地方"), make_activity("灵隐寺", "14:00")])],
+                             evidence=[{"id": "d1-p1", "status": "ok", "items": [{"name": "西湖"}]}])
+        checks = check_result({"days": 1}, result)
+        self.assertFalse(checks["title_matches_evidence"])
+
+    def test_accepts_abbreviated_title(self):
+        result = make_result([make_day(1, [make_activity("熊猫基地"), make_activity("灵隐寺", "14:00")])],
+                             evidence=[{"id": "d1-p1", "status": "ok",
+                                        "items": [{"name": "成都大熊猫繁育研究基地"}, {"name": "灵隐寺"}]}])
+        checks = check_result({"days": 1}, result)
+        self.assertTrue(checks["title_matches_evidence"])
+
+
+class ScoreTests(unittest.TestCase):
+    def test_hard_pass_rate(self):
+        self.assertEqual(hard_pass_rate({"a": True, "b": False}), 0.5)
+        self.assertEqual(hard_pass_rate({}), 0.0)
+
+    def test_combined_score(self):
+        checks = {"a": True, "b": True}
+        self.assertEqual(combined_score(checks, 0.5), 0.8)
+        self.assertEqual(combined_score(checks, 1.0, fabrication=True), 0.8)
+        self.assertIsNone(combined_score(checks, None))
+
 
 class SummarizeTests(unittest.TestCase):
     def test_aggregates(self):
         records = [
-            {"checks": {"complete": True, "density": True}, "judge": {"overall": 4.0}, "elapsed": 10},
-            {"checks": {"complete": False, "density": True}, "judge": {"overall": 3.0}, "elapsed": 20},
+            {"checks": {"complete": True, "density": True}, "judge": {"rubric": 0.8}, "score": 0.92, "elapsed": 10},
+            {"checks": {"complete": False, "density": True}, "judge": {"rubric": 0.5}, "score": 0.5, "elapsed": 20},
         ]
         summary = summarize(records)
         self.assertEqual(summary["check_pass_rate"]["complete"], 0.5)
         self.assertEqual(summary["all_checks_passed"], 1)
-        self.assertEqual(summary["judge_mean"], 3.5)
+        self.assertEqual(summary["hard_mean"], 0.75)
+        self.assertEqual(summary["rubric_mean"], 0.65)
+        self.assertEqual(summary["score_mean"], 0.71)
         self.assertEqual(summary["latency_mean"], 15.0)
 
 
