@@ -80,14 +80,14 @@ async def judge(client: AsyncOpenAI, model: str, case: Dict[str, Any], compact: 
                 messages=[{"role": "system", "content": JUDGE_SYSTEM_PROMPT},
                           {"role": "user", "content": payload + "\n\n只输出 JSON。"
                            + ("字符串内不要换行，直接给判定。" if attempt else "")}],
-                max_tokens=6000,
+                max_tokens=12000,
             )
         except Exception as error:  # 裁判失败不能拖垮整轮评测
             return {"error": str(error)[:300], "rubric": None}
         content = response.choices[0].message.content or ""
         if response.choices[0].finish_reason == "length":
             last_error = "裁判输出被截断"
-            continue
+            break
         try:
             parsed = _parse_loose(content)
         except Exception as error:

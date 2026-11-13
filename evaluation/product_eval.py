@@ -112,6 +112,7 @@ async def main() -> None:
     parser.add_argument("--skip-judge", action="store_true")
     parser.add_argument("--split", default="all", choices=["all", "dev", "test", "holdout"])
     parser.add_argument("--judge2-model", default="", help="第二裁判模型，用于估计裁判一致性")
+    parser.add_argument("--judge-model", default="", help="覆盖 JUDGE_MODEL_ID")
     args = parser.parse_args()
 
     os.environ["MODEL_PROFILE"] = args.profile
@@ -126,7 +127,7 @@ async def main() -> None:
     workflow = AgentWorkflow(store)
     client = AsyncOpenAI(base_url=os.environ.get("OPENAI_BASE_URL"), api_key=os.environ.get("OPENAI_API_KEY"),
                          timeout=120)
-    judge_model = os.environ.get("JUDGE_MODEL_ID") or "deepseek-chat"
+    judge_model = args.judge_model or os.environ.get("JUDGE_MODEL_ID") or "deepseek-chat"
 
     records = []
     for index, case in enumerate(cases, 1):
