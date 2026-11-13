@@ -119,6 +119,11 @@ def _clean_activities(activities: List[Dict[str, Any]], limit: int = 3,
     return result
 
 
+def cities_fit_days(destinations: List[str], days: int) -> bool:
+    """一天最多跨一个城市，城市数超过天数就认为约束矛盾。"""
+    return len(destinations) <= max(1, int(days))
+
+
 class ResearchTools:
     def __init__(self) -> None:
         self.amap_key = os.getenv("AMAP_MAPS_API_KEY", "")
@@ -194,7 +199,7 @@ class AgentWorkflow:
         calls: List[Dict[str, str]] = []
         self._event(job, "intake", "正在理解日期、目的地和预算")
         intake = await self.model.complete("需求 Agent",
-            "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组。未给出的值用空字符串或空数组；绝不猜测城市。",
+            "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组。未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；只有完全看不出目的地时才留空。",
             query, max_tokens=500)
         calls.append({k: intake[k] for k in ("role", "provider", "model")})
         constraints = parse_json(intake["content"])
@@ -207,6 +212,10 @@ class AgentWorkflow:
         except (TypeError, ValueError):
             days_count = 1
         constraints["days"] = days_count
+        if not cities_fit_days(destinations, days_count):
+            return {"status": "needs_clarification",
+                    "question": "%d 天安排 %d 个城市太紧，想保留哪几个？" % (days_count, len(destinations)),
+                    "constraints": constraints, "model_calls": calls, "days": [], "evidence": []}
 
         self._event(job, "planning", "正在拆解每日行程和查询任务")
         prior = job.get("previous") or {}

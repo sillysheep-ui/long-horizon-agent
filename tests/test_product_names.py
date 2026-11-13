@@ -80,3 +80,12 @@ class TitleMatchTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CityLoadTests(unittest.TestCase):
+    def test_one_city_per_day(self):
+        from product.orchestrator import cities_fit_days
+        self.assertTrue(cities_fit_days(["杭州"], 1))
+        self.assertTrue(cities_fit_days(["杭州", "苏州"], 2))
+        self.assertFalse(cities_fit_days(["北京", "上海", "成都", "广州", "西安"], 3))
+        self.assertFalse(cities_fit_days(["杭州", "苏州"], 1))
