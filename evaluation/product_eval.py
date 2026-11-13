@@ -69,8 +69,9 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) 
                 "checks": {}, "elapsed": 0.0}
 
 
-def write_report(target: Path, profile: str, summary: Dict[str, Any], records: List[Dict[str, Any]]) -> None:
-    lines = [f"# 产品行程评测 · {profile}", "", f"- 用例：{summary['cases']}",
+def write_report(target: Path, profile: str, summary: Dict[str, Any], records: List[Dict[str, Any]],
+                 split: str = "all") -> None:
+    lines = [f"# 产品行程评测 · {profile} · {split}", "", f"- 用例：{summary['cases']}",
              f"- 确定性检查全过：{summary['all_checks_passed']}/{summary['cases']}（平均通过率 {summary['hard_mean']}）",
              f"- rubric 均分：{summary['rubric_mean']}（0–1，10 条清单）",
              f"- 综合分均值：{summary['score_mean']}（0.6×硬检查 + 0.4×rubric − 编造扣分）",
@@ -109,11 +110,13 @@ async def main() -> None:
     parser.add_argument("--db", default="")
     parser.add_argument("--out", default="")
     parser.add_argument("--skip-judge", action="store_true")
+    parser.add_argument("--split", default="all", choices=["all", "dev", "test", "holdout"])
     parser.add_argument("--judge2-model", default="", help="第二裁判模型，用于估计裁判一致性")
     args = parser.parse_args()
 
     os.environ["MODEL_PROFILE"] = args.profile
-    cases = json.loads(CASES_PATH.read_text())
+    cases = [c for c in json.loads(CASES_PATH.read_text())
+             if args.split == "all" or c.get("split") == args.split]
     if args.limit:
         cases = cases[:args.limit]
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
@@ -147,7 +150,7 @@ async def main() -> None:
     summary = summarize(records)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = Path(args.out or f"results/product_eval/{stamp}-{args.profile}")
-    write_report(target, args.profile, summary, records)
+    write_report(target, args.profile, summary, records, args.split)
     print(json.dumps(summary, ensure_ascii=False))
     print(f"报告：{target/'report.md'}")
 

@@ -28,7 +28,7 @@ CRITERIA: List[Dict[str, str]] = [
 ]
 
 JUDGE_SYSTEM_PROMPT = """你是旅行行程评审。只根据给定的用户需求和行程文本判断，不补充外部知识。
-逐条回答下面 10 个问题，每条只判 pass=true/false，并用一句话说明理由，理由里必须引用行程中的原句或数字。
+逐条回答下面 10 个问题，每条只判 pass=true/false，并用一句话说明理由（不超过 40 字），理由里必须引用行程中的原句或数字。
 
 清单：
 {c1} 具体性：每个活动都写明了开始时间和停留时长
@@ -80,7 +80,7 @@ async def judge(client: AsyncOpenAI, model: str, case: Dict[str, Any], compact: 
                 messages=[{"role": "system", "content": JUDGE_SYSTEM_PROMPT},
                           {"role": "user", "content": payload + "\n\n只输出 JSON。"
                            + ("字符串内不要换行，直接给判定。" if attempt else "")}],
-                max_tokens=4000,
+                max_tokens=6000,
             )
         except Exception as error:  # 裁判失败不能拖垮整轮评测
             return {"error": str(error)[:300], "rubric": None}
