@@ -25,14 +25,29 @@ from product.store import Store
 
 CASES_PATH = Path(__file__).with_name("product_cases.json")
 
-JUDGE_SYSTEM_PROMPT = """你是旅行规划评审。只根据给定行程文本和证据统计打分，不要补充外部知识。
-评分维度（各 1-5 分，5 最好）：
-1. concreteness 具体性：是否写清每天几点、停留多久、具体看什么，而不是空泛描述。
-2. feasibility 可执行性：路线顺序、交通衔接、单日强度是否合理。
-3. preference_fit 偏好匹配：是否回应了用户的偏好、预算、同行人。
-4. fact_boundary 事实边界：是否把没核实的价格/营业时间/班次标为未核实，是否编造。
-5. richness 丰富度：两天以上的行程是否有足够变化，不重复、不空洞。
-只输出 JSON：{"scores":{"concreteness":4,"feasibility":4,"preference_fit":3,"fact_boundary":5,"richness":3},"overall":3.8,"comments":["一句话点评","最需要改的一点"]}。overall 取五项均值。"""
+JUDGE_SYSTEM_PROMPT = """你是旅行规划评审。只根据给定行程文本和证据统计打分，不补充外部知识，不臆测。
+五个维度各 1-5 分，锚点如下（2、4 取相邻两档之间）：
+1. concreteness 具体性
+   5 = 每个活动都写清几点、停留多久、具体看什么/做什么，且前后衔接；
+   3 = 约一半活动有这些细节；
+   1 = 只有地点名或口号式描述。
+2. feasibility 可执行性
+   5 = 路线顺序合理，交通与转场有交代，单日强度适中；
+   3 = 有一处明显偏紧、绕路或时间冲突；
+   1 = 时间线根本走不完。
+3. preference_fit 偏好匹配
+   5 = 每条偏好（兴趣、预算、同行人、节奏）都有对应安排；
+   3 = 只覆盖主要偏好，预算或同行人缺失；
+   1 = 答非所问。
+4. fact_boundary 事实边界
+   5 = 所有未核实的价格、营业时间、班次都明确标注，零编造；
+   3 = 有若干未标注的确定断言；
+   1 = 大量编造具体价格/时间/班次。
+5. richness 丰富度
+   5 = 每天有变化、有主次、不重复，篇幅与天数匹配；
+   3 = 略显单调或某天凑数；
+   1 = 复制粘贴、空行程。
+只输出 JSON：{"scores":{"concreteness":4,"feasibility":4,"preference_fit":3,"fact_boundary":5,"richness":3},"overall":3.8,"comments":["一句话点评","最需要改的一点"]}。overall 取五项均值，保留一位小数。"""
 
 
 def _compact(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -107,15 +122,18 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) 
 def write_report(target: Path, profile: str, summary: Dict[str, Any], records: List[Dict[str, Any]]) -> None:
     lines = [f"# 产品行程评测 · {profile}", "", f"- 用例：{summary['cases']}",
              f"- 全部检查通过：{summary['all_checks_passed']}/{summary['cases']}",
+             f"- 可交付（检查全过且裁判≥3.5）：{summary['deliverable']}/{summary['cases']}",
              f"- 裁判均分：{summary['judge_mean']}", f"- 平均耗时：{summary['latency_mean']}s", "",
              "## 检查通过率", "", "| 检查 | 通过率 |", "|---|---|"]
     lines += [f"| {name} | {rate:.0%} |" for name, rate in summary["check_pass_rate"].items()]
-    lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | 裁判分 |", "|---|---|---|---|---|"]
+    lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | 裁判分 | 判定 |", "|---|---|---|---|---|---|"]
     for record in records:
         failed = ",".join(name for name, ok in record["checks"].items() if not ok) or "-"
         judge_score = (record.get("judge") or {}).get("overall")
+        passed = all(record["checks"].values()) and judge_score is not None and judge_score >= 3.5
+        verdict = "可交付" if passed else ("待改进" if judge_score is not None else "待人工")
         lines.append(f"| {record['id']} | {record.get('status') or record.get('error', '错误')[:20]} | "
-                     f"{record['elapsed']}s | {failed} | {judge_score} |")
+                     f"{record['elapsed']}s | {failed} | {judge_score} | {verdict} |")
     lines += ["", "## 裁判点评", ""]
     for record in records:
         judge_info = record.get("judge") or {}

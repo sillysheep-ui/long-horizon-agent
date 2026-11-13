@@ -53,10 +53,14 @@ def summarize(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     applicable = {name: sum(1 for r in records if name in r["checks"]) for name in check_names}
     total = len(records)
     scores = [r["judge"]["overall"] for r in records if r.get("judge", {}).get("overall") is not None]
+    judged = [r for r in records if r.get("judge", {}).get("overall") is not None]
+    deliverable = sum(1 for r in judged
+                      if all(r["checks"].values()) and r["judge"]["overall"] >= 3.5)
     return {
         "cases": total,
         "check_pass_rate": {name: round(passed[name] / applicable[name], 3) for name in check_names},
         "all_checks_passed": sum(1 for r in records if all(r["checks"].values())),
         "judge_mean": round(sum(scores) / len(scores), 2) if scores else None,
+        "deliverable": deliverable,
         "latency_mean": round(sum(r["elapsed"] for r in records) / total, 2) if total else None,
     }
