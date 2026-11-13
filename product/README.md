@@ -15,6 +15,18 @@ cd web && npm install && npm run build && cd ..
 
 打开 `http://127.0.0.1:8000`。开发时可以另开终端在 `web` 目录运行 `npm run dev`，浏览器访问 `http://127.0.0.1:5173`。
 
+## 会话接口
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| `POST` | `/api/conversations` | 新建对话 |
+| `GET` | `/api/conversations/{id}` | 取对话及其消息、行程 |
+| `POST` | `/api/conversations/{id}/messages` | 发一条消息；没有行程时新建，有行程时作为修改请求 |
+| `GET` | `/api/trips/{id}` | 取行程版本 |
+| `GET` | `/api/jobs/{job_id}/events/list` | 轮询阶段进度 |
+
+修改请求会保留历史版本，旧版本的结果不会覆盖新版本。
+
 ## 配置
 
 后端读取仓库根目录 `.env`。模型路由依次支持本地 OpenAI 兼容服务、DeepSeek、任意 OpenAI 兼容 API。`MODEL_PROFILE` 可设为 `local_first`、`api_first` 或 `api_only`。如果未显式设置 `LOCAL_MODEL_BASE_URL` 且已有 API Key，会先尝试 API。仓库旧的 `OPENAI_API_KEY` / `OPENAI_BASE_URL` 配置可复用：若地址是 DeepSeek，会自动选用 `deepseek-flash`，避免把旧的其他厂商模型名发送给 DeepSeek。
@@ -48,7 +60,10 @@ python3 -m uvicorn product.api:app --port 8000
 ## 核心边界
 
 - `model_gateway.py`：模型适配与回退。Agent 职责不等于模型实例，多个角色可以复用一个模型。
-- `orchestrator.py`：阶段间传递结构化状态；POI 查询最多并发 4 个；回答中的地点名称和证据 ID 必须匹配查询结果。
+- `orchestrator.py`：阶段间传递结构化状态；回答中的地点名称和证据 ID 必须匹配查询结果；缺天数、城市数超过天数、预算与住宿标准冲突时先追问。
+- `planner.py` / `tool_runtime.py`：把每日查询编译成 Tool DAG，由 `inference/tool_dag.py` 的调度器按依赖并发执行，节点级超时 45 秒；单节点失败只影响该条证据。
+- `coverage.py`：按天统计可追溯来源，未覆盖的日期会触发一次定向补查。
+- `names.py`：清洗网页标题里的地点名，并校验回答标题确实落在证据地点名上。
 - `store.py`：任务版本、状态和事件。新版本会淘汰尚未开始的旧任务，旧版本运行结果不能覆盖新版本。
 - `api.py`：任务 API、进度事件和构建后的前端静态文件。
 
@@ -67,10 +82,22 @@ python3 -m uvicorn product.api:app --port 8000
 
 模拟数据永远不会标成“已核实”；查询失败或服务不可用时保留原因，不展示地址或价格。
 
+## 评测
+
+固定场景在 `evaluation/product_cases.json`：152 条，`dev` 12 / `test` 100 / `holdout` 40。检查逻辑与裁判见 `docs/PRODUCT_EVAL.md`。
+
+```bash
+# 结构与约束检查 + 二值 rubric 裁判（需要可用的模型 Key）
+python3 -m evaluation.product_eval --profile api_only --split test
+python3 -m evaluation.product_eval --profile local_first --split test --judge-model deepseek-v4-flash
+```
+
+结果写入 `results/product_eval/<时间戳>-<profile>/`（`report.md` 与 `records.json`），该目录不入库。
+
 ## 验证
 
 ```bash
-PYTHONPYCACHEPREFIX=/private/tmp/travel-pycache .venv-product/bin/python -m unittest product.test_product -v
+python3 -m pytest tests -q
 cd web && npm run build
 ```
 
