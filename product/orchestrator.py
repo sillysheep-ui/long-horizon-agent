@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import httpx
 
 from inference.tool_dag import ToolDAGScheduler
+from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
 from product.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan
 from product.provenance import build_evidence, normalize_all
@@ -183,14 +184,23 @@ class AgentWorkflow:
         scheduler = ToolDAGScheduler(executor=executor, max_concurrency=4, fail_fast=False)
         dag_result = await scheduler.run(tool_plan)
         evidence = normalize_all(executor.collect(dag_result, tool_plan))
+        verification = assess_days(days, evidence)
+        repair_plan = build_repair_plan(days, evidence)
+        if repair_plan is not None:
+            self._event(job, "verification", "正在补查没有可追溯来源的日期",
+                        {"uncovered_days": verification["uncovered_days"]})
+            repair_result = await scheduler.run(repair_plan)
+            evidence = normalize_all(evidence + executor.collect(repair_result, repair_plan))
+            verification = assess_days(days, evidence)
 
         good = [e for e in evidence if e.get("status") == "ok"]
         self._event(job, "verification", "正在检查计划是否有可追溯的地点来源",
-                    {"supported_queries": len(good), "total_queries": len(evidence)})
+                    {"supported_queries": len(good), "total_queries": len(evidence),
+                     "risk": verification["risk"], "uncovered_days": verification["uncovered_days"]})
         if not good:
             return {"status": "partial", "question": "地点查询暂不可用，无法给出可信的具体行程。",
                     "constraints": constraints, "plan": plan, "days": [],
-                    "evidence": evidence, "model_calls": calls,
+                    "evidence": evidence, "model_calls": calls, "verification": verification,
                     "elapsed_seconds": round(time.monotonic() - started, 2)}
 
         self._event(job, "answer", "正在根据已核实地点组织行程")
@@ -230,8 +240,13 @@ class AgentWorkflow:
         notes = _as_list(answer.get("notes"), 8)
         if answer_failed:
             notes.insert(0, "回答阶段使用保守方案，安排基于可追溯来源，具体细节需出行前核对。")
+        for item in verification["days"]:
+            if item["uncovered"]:
+                notes.append("第%d天没有获取到可追溯来源，当天安排仅作参考。" % item["day"])
+        notes = notes[:8]
         return {"status": "complete" if any(d["activities"] for d in cleaned_days) else "partial",
                 "summary": str(answer.get("summary") or "已根据可追溯地点来源整理行程。"), "days": cleaned_days,
                 "notes": notes, "constraints": constraints,
                 "plan": plan, "evidence": evidence, "model_calls": calls,
+                "verification": verification,
                 "elapsed_seconds": round(time.monotonic() - started, 2)}
