@@ -12,7 +12,7 @@ import httpx
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
-from product.names import clean_place_name, dedupe_names, looks_like_place
+from product.names import clean_place_name, dedupe_names, looks_like_place, title_matches
 from product.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan
 from product.provenance import build_evidence, normalize_all
 from product.store import Store
@@ -93,14 +93,20 @@ def _clip(value: Any, limit: int, fallback: str) -> str:
     return text[:limit] if text else fallback
 
 
-def _clean_activities(activities: List[Dict[str, Any]], limit: int = 3) -> List[Dict[str, Any]]:
-    """统一活动字段：时间缺失就按顺序给默认值，避免前端出现空白。"""
+def _clean_activities(activities: List[Dict[str, Any]], limit: int = 3,
+                      evidence: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    """统一活动字段：时间缺失就按顺序给默认值，标题必须落在证据地点名上。"""
     result = []
     for position, activity in enumerate(activities[:limit]):
         start = str(activity.get("start") or "").strip()
         if not _TIME_PATTERN.match(start):
             start = DEFAULT_STARTS[min(position, len(DEFAULT_STARTS) - 1)]
-        title = str(activity.get("display_title") or "").strip()[:24] or _clip(activity.get("title"), 80, "候选地点")
+        source = (evidence or {}).get(activity.get("evidence_id")) or {}
+        names = [str(item.get("name") or "") for item in source.get("items", []) if item.get("name")]
+        display = str(activity.get("display_title") or "").strip()[:24]
+        if display and names and not title_matches(display, names):
+            display = ""
+        title = display or (clean_place_name(names[0]) if names else clean_place_name(activity.get("title")) )
         result.append({
             "title": title,
             "start": start,
@@ -263,7 +269,7 @@ class AgentWorkflow:
                 seen_titles.add(matched[1])
                 matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1]})
             cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
-                                 "activities": _clean_activities(matched_activities)})
+                                 "activities": _clean_activities(matched_activities, evidence={e["id"]: e for e in evidence})})
         if not any(d["activities"] for d in cleaned_days):
             answer_failed = True
             cleaned_days = []

@@ -13,6 +13,7 @@ TRAILING_WORDS = (
     "游玩攻略简介", "游玩攻略", "旅游攻略", "自由行攻略", "攻略简介", "攻略",
     "门票价格", "门票", "开放时间", "营业时间", "地址", "图片", "照片",
     "点评", "怎么样", "好玩吗", "一日游", "简介", "大全", "预订",
+    "探店指南", "探店", "指南", "推荐", "合集", "必去", "打卡",
 )
 TRAILING_PUNCT = " ·-—~～、。!！?？:："
 
@@ -62,3 +63,25 @@ def dedupe_names(items: List[dict]) -> List[dict]:
         seen.add(name)
         result.append(item)
     return result
+
+
+def _bigrams(text: str) -> set:
+    cleaned = "".join(ch for ch in text if ch.isalnum())
+    return {cleaned[i:i + 2] for i in range(len(cleaned) - 1)}
+
+
+def title_matches(title: str, names: List[str], threshold: float = 0.6) -> bool:
+    """标题是否落在证据地点名上：包含关系，或 2-gram 重合度达到阈值。"""
+    normalized = "".join(ch for ch in str(title or "") if ch.isalnum())
+    if not normalized:
+        return False
+    grams = _bigrams(normalized)
+    for name in names:
+        candidate = "".join(ch for ch in str(name or "") if ch.isalnum())
+        if not candidate:
+            continue
+        if normalized in candidate or candidate in normalized:
+            return True
+        if grams and len(grams & _bigrams(candidate)) / len(grams) >= threshold:
+            return True
+    return False

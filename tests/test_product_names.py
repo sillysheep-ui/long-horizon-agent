@@ -1,6 +1,6 @@
 import unittest
 
-from product.names import clean_place_name, dedupe_names, looks_like_place
+from product.names import title_matches, clean_place_name, dedupe_names, looks_like_place
 from product.orchestrator import _clean_activities
 
 
@@ -64,6 +64,18 @@ class CleanActivitiesTests(unittest.TestCase):
     def test_invalid_start_falls_back(self):
         activities = _clean_activities([{"title": "西湖", "start": "上午"}])
         self.assertEqual(activities[0]["start"], "09:30")
+
+
+class TitleMatchTests(unittest.TestCase):
+    def test_exact_and_contained(self):
+        self.assertTrue(title_matches("龙井村", ["杭州龙井村", "龙井村"]))
+        self.assertTrue(title_matches("西湖苏堤段", ["西湖", "杭州西湖风景名胜区"]))
+
+    def test_weak_overlap_is_rejected(self):
+        self.assertFalse(title_matches("西湖景区咖啡馆", ["西湖边文艺咖啡馆探店指南"]))
+
+    def test_unrelated_title_rejected(self):
+        self.assertFalse(title_matches("外滩夜景", ["杭州西湖风景名胜区"]))
 
 
 if __name__ == "__main__":
