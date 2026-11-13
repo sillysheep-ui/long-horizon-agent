@@ -9,8 +9,8 @@ SPLITS = Counter(case.get("split") for case in CASES)
 
 class CaseSetTests(unittest.TestCase):
     def test_expected_size_and_splits(self):
-        self.assertEqual(len(CASES), 44)
-        self.assertEqual(SPLITS, {"dev": 12, "test": 24, "holdout": 8})
+        self.assertEqual(len(CASES), 152)
+        self.assertEqual(SPLITS, {"dev": 12, "test": 100, "holdout": 40})
 
     def test_ids_are_unique(self):
         ids = [case["id"] for case in CASES]
@@ -38,7 +38,11 @@ class CaseSetTests(unittest.TestCase):
 
     def test_clarification_cases_are_marked(self):
         clarify = {case["id"] for case in CASES if case.get("expect") == "needs_clarification"}
-        self.assertEqual(clarify, {"ambiguous", "no-destination", "contradictory"})
+        self.assertGreaterEqual(len(clarify), 3)
+        self.assertTrue({"ambiguous", "no-destination", "contradictory"} <= clarify)
+        for case in CASES:
+            if case["id"] in clarify:
+                self.assertIn(case.get("days"), (None,))
 
 
 if __name__ == "__main__":
