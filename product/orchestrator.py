@@ -15,6 +15,10 @@ from product.model_gateway import ModelGateway, parse_json
 from product.names import clean_place_name, dedupe_names, looks_like_place, title_matches
 from product.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan
 from product.provenance import build_evidence, normalize_all
+from product.revision import (
+    day_of_evidence, days_to_revision_plan, describe_targets, merge_days,
+    parse_target_days, split_by_targets,
+)
 from product.store import Store
 from product.tool_runtime import ResearchExecutor
 
@@ -384,6 +388,13 @@ class AgentWorkflow:
         query = job["query"]
         calls: List[Dict[str, str]] = []
         stages: List[Dict[str, Any]] = []
+        prior = job.get("previous") or {}
+        revision_text = str(job.get("revision") or "").strip()
+        prior_days = prior.get("days") if isinstance(prior.get("days"), list) else []
+        targets = (
+            parse_target_days(revision_text, len(prior_days))
+            if revision_text and prior_days and prior.get("constraints") else []
+        )
 
         def finish(trace_status: str, **result: Any) -> Dict[str, Any]:
             trace = _span("run", "run", trace_status, (time.monotonic() - started) * 1000,
@@ -391,77 +402,103 @@ class AgentWorkflow:
             return {**result, "trace": trace,
                     "elapsed_seconds": round(time.monotonic() - started, 2)}
 
-        self._event(job, "intake", "正在理解日期、目的地和预算")
-        intake_started = time.monotonic()
-        intake = await self.model.complete("需求 Agent",
-            "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组、conflicts 字符串数组。未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；只有完全看不出目的地时才留空。conflicts 用一句话列出需求中的硬冲突（例如“五天带老人孩子预算 1000 元”“人均五百还想住五星酒店”“没说明玩几天”），没有冲突就给空数组。",
-            query, max_tokens=500)
-        calls.append({k: intake[k] for k in ("role", "provider", "model")})
-        constraints = parse_json(intake["content"])
-        destinations = _as_list(constraints.get("destinations"), 4)
-        declared = _declares_duration(query)
-        intake_attributes = {"days": constraints.get("days"), "cities": destinations,
-                             "days_declared": declared}
-        if not destinations:
-            stages.append(_span("intake", "stage", "failed",
-                                (time.monotonic() - intake_started) * 1000,
-                                {**intake_attributes, "decision": "clarify"}, error_type="wrong_city"))
-            return finish("ok", status="needs_clarification", question="你想去哪个城市或地区？",
-                          constraints=constraints, model_calls=calls, days=[], evidence=[])
-        try:
-            days_count = min(7, max(1, int(constraints.get("days") or 1)))
-        except (TypeError, ValueError):
-            days_count = 1
-        constraints["days"] = days_count
-        conflicts = _as_list(constraints.get("conflicts"), 3)
-        if not declared:
-            stages.append(_span("intake", "stage", "failed",
-                                (time.monotonic() - intake_started) * 1000,
-                                {**intake_attributes, "days": days_count, "decision": "clarify"},
-                                error_type="missing_days"))
-            return finish("ok", status="needs_clarification", question="打算玩几天？",
-                          constraints=constraints, model_calls=calls, days=[], evidence=[])
-        budget_clash = budget_conflict(query, days_count)
-        if conflicts or budget_clash:
-            reason = "；".join(conflicts[:2]) or "预算和住宿标准对不上"
-            stages.append(_span("intake", "stage", "failed",
-                                (time.monotonic() - intake_started) * 1000,
-                                {**intake_attributes, "days": days_count, "decision": "clarify",
-                                 "conflicts": conflicts},
-                                error_type="missed_budget" if budget_clash else "should_clarify"))
-            return finish("ok", status="needs_clarification", question="需求里有冲突：%s。想先调整哪一项？" % reason,
-                          constraints=constraints, model_calls=calls, days=[], evidence=[])
-        if not cities_fit_days(destinations, days_count):
-            stages.append(_span("intake", "stage", "failed",
-                                (time.monotonic() - intake_started) * 1000,
-                                {**intake_attributes, "days": days_count, "decision": "clarify"},
-                                error_type="should_clarify"))
-            return finish("ok", status="needs_clarification",
-                          question="%d 天安排 %d 个城市太紧，想保留哪几个？" % (days_count, len(destinations)),
-                          constraints=constraints, model_calls=calls, days=[], evidence=[])
-        stages.append(_span("intake", "stage", "ok", (time.monotonic() - intake_started) * 1000,
-                            {**intake_attributes, "days": days_count, "decision": "proceed"}))
+        if targets:
+            constraints = dict(prior["constraints"])
+            days_count = len(prior_days)
+            destinations = _as_list(constraints.get("destinations"), 4)
+            self._event(job, "intake", "沿用原需求，只重排%s" % describe_targets(targets))
+            stages.append(_span("intake", "stage", "ok", 0.0,
+                                {"revision": True, "target_days": targets, "days": days_count,
+                                 "decision": "proceed"}))
+        else:
+            self._event(job, "intake", "正在理解日期、目的地和预算")
+            intake_started = time.monotonic()
+            intake = await self.model.complete("需求 Agent",
+                "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组、conflicts 字符串数组。未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；只有完全看不出目的地时才留空。conflicts 用一句话列出需求中的硬冲突（例如“五天带老人孩子预算 1000 元”“人均五百还想住五星酒店”“没说明玩几天”），没有冲突就给空数组。",
+                query, max_tokens=500)
+            calls.append({k: intake[k] for k in ("role", "provider", "model")})
+            constraints = parse_json(intake["content"])
+            destinations = _as_list(constraints.get("destinations"), 4)
+            declared = _declares_duration(query)
+            intake_attributes = {"days": constraints.get("days"), "cities": destinations,
+                                 "days_declared": declared}
+            if not destinations:
+                stages.append(_span("intake", "stage", "failed",
+                                    (time.monotonic() - intake_started) * 1000,
+                                    {**intake_attributes, "decision": "clarify"}, error_type="wrong_city"))
+                return finish("ok", status="needs_clarification", question="你想去哪个城市或地区？",
+                              constraints=constraints, model_calls=calls, days=[], evidence=[])
+            try:
+                days_count = min(7, max(1, int(constraints.get("days") or 1)))
+            except (TypeError, ValueError):
+                days_count = 1
+            constraints["days"] = days_count
+            conflicts = _as_list(constraints.get("conflicts"), 3)
+            if not declared:
+                stages.append(_span("intake", "stage", "failed",
+                                    (time.monotonic() - intake_started) * 1000,
+                                    {**intake_attributes, "days": days_count, "decision": "clarify"},
+                                    error_type="missing_days"))
+                return finish("ok", status="needs_clarification", question="打算玩几天？",
+                              constraints=constraints, model_calls=calls, days=[], evidence=[])
+            budget_clash = budget_conflict(query, days_count)
+            if conflicts or budget_clash:
+                reason = "；".join(conflicts[:2]) or "预算和住宿标准对不上"
+                stages.append(_span("intake", "stage", "failed",
+                                    (time.monotonic() - intake_started) * 1000,
+                                    {**intake_attributes, "days": days_count, "decision": "clarify",
+                                     "conflicts": conflicts},
+                                    error_type="missed_budget" if budget_clash else "should_clarify"))
+                return finish("ok", status="needs_clarification", question="需求里有冲突：%s。想先调整哪一项？" % reason,
+                              constraints=constraints, model_calls=calls, days=[], evidence=[])
+            if not cities_fit_days(destinations, days_count):
+                stages.append(_span("intake", "stage", "failed",
+                                    (time.monotonic() - intake_started) * 1000,
+                                    {**intake_attributes, "days": days_count, "decision": "clarify"},
+                                    error_type="should_clarify"))
+                return finish("ok", status="needs_clarification",
+                              question="%d 天安排 %d 个城市太紧，想保留哪几个？" % (days_count, len(destinations)),
+                              constraints=constraints, model_calls=calls, days=[], evidence=[])
+            stages.append(_span("intake", "stage", "ok", (time.monotonic() - intake_started) * 1000,
+                                {**intake_attributes, "days": days_count, "decision": "proceed"}))
 
         self._event(job, "planning", "正在拆解每日行程和查询任务")
         planning_started = time.monotonic()
-        prior = job.get("previous") or {}
         plan_response = await self.model.complete("规划 Agent", PLANNER_SYSTEM_PROMPT,
-            build_planner_prompt(query, constraints, prior.get("plan")), max_tokens=1000)
+            build_planner_prompt(
+                query, constraints, prior.get("plan"),
+                {"days": targets, "instruction": revision_text} if targets else None),
+            max_tokens=1000)
         calls.append({k: plan_response[k] for k in ("role", "provider", "model")})
         plan = parse_json(plan_response["content"])
         days = plan.get("days")
-        tool_plan = days_to_tool_plan(days, days_count, destinations)
+        if targets:
+            tool_plan = days_to_revision_plan(days, targets, days_count, destinations)
+            kept_plan_days = [d for d in (prior.get("plan") or {}).get("days", [])
+                              if int(d.get("day") or 0) not in targets]
+            plan = {**(prior.get("plan") or {}),
+                    "days": sorted(kept_plan_days + [d for d in days if int(d.get("day") or 0) in targets],
+                                   key=lambda d: int(d.get("day") or 0))}
+            days = plan["days"]
+        else:
+            tool_plan = days_to_tool_plan(days, days_count, destinations)
         per_day_queries = [len(day.get("poi_queries") or []) for day in days if isinstance(day, dict)]
         stages.append(_span("planning", "stage", "ok", (time.monotonic() - planning_started) * 1000,
                             {"days_planned": len(per_day_queries), "per_day_queries": per_day_queries,
                              "nodes": len(tool_plan.nodes)}))
 
         self._event(job, "research", "正在并行查询地点来源", {"tool_count": len(tool_plan.nodes)})
-        executor = ResearchExecutor(self.tools, normalize_all(prior.get("evidence", [])))
+        prior_evidence = normalize_all(prior.get("evidence", []))
+        keep_evidence: List[Dict[str, Any]] = []
+        if targets:
+            keep_evidence, _ = split_by_targets(prior_evidence, targets)
+        executor = ResearchExecutor(self.tools, keep_evidence if targets else prior_evidence)
         scheduler = ToolDAGScheduler(executor=executor, max_concurrency=4, fail_fast=False)
         retrieval_started = time.monotonic()
         dag_result = await scheduler.run(tool_plan)
         evidence = normalize_all(executor.collect(dag_result, tool_plan))
+        if targets:
+            evidence = normalize_all(keep_evidence + evidence)
         tool_spans = _tool_spans(dag_result, tool_plan)
         critical_ms = _critical_path_ms(tool_plan, dag_result)
         node_ms = sum(float(item.get("latency_ms") or 0.0) for item in dag_result.get("results", []))
@@ -514,11 +551,30 @@ class AgentWorkflow:
         answer_started = time.monotonic()
         answer = {}
         answer_failed = False
+        answer_system = (
+            "根据给定证据生成行程。只输出 JSON：{\"summary\":\"概述这趟行程的安排思路和取舍\","
+            "\"days\":[{\"day\":1,\"city\":\"城市\",\"activities\":[{\"title\":\"证据里的地点名\","
+            "\"display_title\":\"展示用短名\",\"start\":\"09:30\",\"duration\":\"2.5 小时\","
+            "\"description\":\"具体做什么、为什么适合用户\",\"transport\":\"从上一站怎么过来\","
+            "\"cost\":\"门票或人均\",\"evidence_id\":\"d1-p1\"}]}],\"notes\":[\"出行前需核对的事项\"]}。"
+            "规则：1) title 必须精确等于证据 items 中一个 name，evidence_id 必须指向该条成功证据；"
+            "display_title 是展示用的简短中文名（不超过 16 字，如“湖滨咖啡馆”），不得虚构新地点；"
+            "2) 每天 2-3 个活动，按当天时间顺序排列，start 用 24 小时制，跨天不要重复同一地点；"
+            "3) description 写具体动作与理由（看什么、走哪段、为什么符合用户偏好），不要写“感受氛围”“湖光山色”这类空话；"
+            "4) transport 根据证据里的地址和城市信息给出行建议，推断不了就写“交通未核实”；"
+            "5) cost 只写证据里出现的价格，没有就写“未核实”，不得编造价格、营业时间、班次；"
+            "6) kind=web 只代表有可追溯网页来源，不代表地址或营业状态已核实；"
+            "7) notes 最多 6 条，写出行前必须核对的事项。"
+        )
+        if targets:
+            answer_system += " 本次只修改%s：只输出这些天的 days 条目，其他天不要输出。" % describe_targets(targets)
         try:
-            answer_response = await self.model.complete("回答 Agent",
-                "根据给定证据生成行程。只输出 JSON：{\"summary\":\"概述这趟行程的安排思路和取舍\",\"days\":[{\"day\":1,\"city\":\"城市\",\"activities\":[{\"title\":\"证据里的地点名\",\"display_title\":\"展示用短名\",\"start\":\"09:30\",\"duration\":\"2.5 小时\",\"description\":\"具体做什么、为什么适合用户\",\"transport\":\"从上一站怎么过来\",\"cost\":\"门票或人均\",\"evidence_id\":\"d1-p1\"}]}],\"notes\":[\"出行前需核对的事项\"]}。规则：1) title 必须精确等于证据 items 中一个 name，evidence_id 必须指向该条成功证据；display_title 是展示用的简短中文名（不超过 16 字，如“湖滨咖啡馆”），不得虚构新地点；2) 每天 2-3 个活动，按当天时间顺序排列，start 用 24 小时制，跨天不要重复同一地点；3) description 写具体动作与理由（看什么、走哪段、为什么符合用户偏好），不要写“感受氛围”“湖光山色”这类空话；4) transport 根据证据里的地址和城市信息给出行建议，推断不了就写“交通未核实”；5) cost 只写证据里出现的价格，没有就写“未核实”，不得编造价格、营业时间、班次；6) kind=web 只代表有可追溯网页来源，不代表地址或营业状态已核实；7) notes 最多 6 条，写出行前必须核对的事项。",
-                json.dumps({"query": query, "constraints": constraints, "plan": plan,
-                            "evidence": good}, ensure_ascii=False), max_tokens=3000)
+            answer_payload = {"query": query, "constraints": constraints, "plan": plan, "evidence": good}
+            if targets:
+                answer_payload["revision"] = revision_text
+                answer_payload["target_days"] = targets
+            answer_response = await self.model.complete("回答 Agent", answer_system,
+                json.dumps(answer_payload, ensure_ascii=False), max_tokens=3000)
             calls.append({k: answer_response[k] for k in ("role", "provider", "model")})
             answer = parse_json(answer_response["content"])
         except (ValueError, RuntimeError):
@@ -555,6 +611,9 @@ class AgentWorkflow:
                     "transport": "交通未核实", "cost": "未核实"} for e in day_evidence])
                 cleaned_days.append({"day": day["day"], "city": day["city"], "activities": activities})
         order_ok = _time_order_ok(cleaned_days)
+        if targets:
+            cleaned_days = merge_days(prior_days, cleaned_days, targets)
+            order_ok = _time_order_ok(cleaned_days)
         cleaned_days = _finalize_days(cleaned_days, good, days)
         final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
         fabricated = _fabricated_costs(cleaned_days, evidence)

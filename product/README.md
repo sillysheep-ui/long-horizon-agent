@@ -27,6 +27,9 @@ cd web && npm install && npm run build && cd ..
 
 修改请求会保留历史版本，旧版本的结果不会覆盖新版本。
 
+修改请求如果点名了日期（如“第二天换成安静的景点”“最后一天别排太满”），只重排这些天：
+其余天沿用上一版的活动，只重新查询被点名的日期；没点名日期或日期越界时退回整单重排。
+
 ## 配置
 
 后端读取仓库根目录 `.env`。模型路由依次支持本地 OpenAI 兼容服务、DeepSeek、任意 OpenAI 兼容 API。`MODEL_PROFILE` 可设为 `local_first`、`api_first` 或 `api_only`。如果未显式设置 `LOCAL_MODEL_BASE_URL` 且已有 API Key，会先尝试 API。仓库旧的 `OPENAI_API_KEY` / `OPENAI_BASE_URL` 配置可复用：若地址是 DeepSeek，会自动选用 `deepseek-flash`，避免把旧的其他厂商模型名发送给 DeepSeek。

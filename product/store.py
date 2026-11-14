@@ -61,6 +61,9 @@ class Store:
             columns = {row["name"] for row in db.execute("PRAGMA table_info(trips)")}
             if "conversation_id" not in columns:
                 db.execute("ALTER TABLE trips ADD COLUMN conversation_id TEXT")
+            job_columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
+            if "revision" not in job_columns:
+                db.execute("ALTER TABLE jobs ADD COLUMN revision TEXT")
             # 进程意外退出后允许任务重跑；工作流必须是只读工具调用。
             db.execute("UPDATE jobs SET status='queued', updated_at=? WHERE status='running'", (_now(),))
 
@@ -86,15 +89,15 @@ class Store:
                        (now, trip_id))
             db.execute("UPDATE trips SET query=?,version=?,updated_at=? WHERE id=?",
                        (query, version, now, trip_id))
-            db.execute("INSERT INTO jobs(id,trip_id,version,status,created_at,updated_at) VALUES(?,?,?,'queued',?,?)",
-                       (job_id, trip_id, version, now, now))
+            db.execute("INSERT INTO jobs(id,trip_id,version,status,created_at,updated_at,revision) VALUES(?,?,?,'queued',?,?,?)",
+                       (job_id, trip_id, version, now, now, instruction))
         self.event(job_id, "queued", {"message": "修改已提交，正在更新方案"})
         return {"trip_id": trip_id, "job_id": job_id}
 
     def claim(self) -> Optional[Dict[str, Any]]:
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("""SELECT j.id,j.trip_id,j.version,t.query,t.result_json
+            row = db.execute("""SELECT j.id,j.trip_id,j.version,j.revision,t.query,t.result_json
                 FROM jobs j JOIN trips t ON j.trip_id=t.id
                 WHERE j.status='queued' AND j.version=t.version
                 ORDER BY j.created_at,j.id LIMIT 1""").fetchone()

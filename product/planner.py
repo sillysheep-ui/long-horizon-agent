@@ -13,7 +13,7 @@ PLANNER_SYSTEM_PROMPT = (
     "你负责国内多日旅行的计划草案。只输出 JSON："
     '{"days":[{"day":1,"city":"城市","poi_queries":["准确地点或类型关键词"]}]}。'
     "days 数量严格等于用户天数；每日至多 3 个 poi_queries，地点必须位于对应城市；"
-    "不要编造价格、班次或经纬度。"
+    "不要编造价格、班次或经纬度。若出现 revision 字段，只重写 revision.days 这些天的 poi_queries 以体现修改意见；其他天原样照抄 previous_plan。"
 )
 
 MAX_QUERIES_PER_DAY = 3
@@ -31,11 +31,14 @@ def build_planner_prompt(
     query: str,
     constraints: Dict[str, Any],
     previous_plan: Optional[Dict[str, Any]] = None,
+    revision: Optional[Dict[str, Any]] = None,
 ) -> str:
-    return json.dumps(
-        {"query": query, "constraints": constraints, "previous_plan": previous_plan},
-        ensure_ascii=False,
-    )
+    payload: Dict[str, Any] = {
+        "query": query, "constraints": constraints, "previous_plan": previous_plan,
+    }
+    if revision:
+        payload["revision"] = revision
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def days_to_tool_plan(
