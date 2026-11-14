@@ -648,7 +648,20 @@ class AgentWorkflow:
                              "filled": filled, "final": final_count,
                              "fabricated_cost": fabricated, "time_order_ok": order_ok},
                             error_type="density_miss" if dropped else None))
+        revision_applied: Optional[bool] = None
+        if targets:
+            unchanged = 0
+            for day_number in targets:
+                old_day = next((d for d in prior_days if int(d.get("day") or 0) == day_number), {})
+                new_day = next((d for d in cleaned_days if int(d.get("day") or 0) == day_number), {})
+                old_titles = [a.get("title") for a in old_day.get("activities", [])]
+                new_titles = [a.get("title") for a in new_day.get("activities", [])]
+                if old_titles and old_titles == new_titles:
+                    unchanged += 1
+            revision_applied = unchanged < len(targets)
         notes = _as_list(answer.get("notes"), 8)
+        if revision_applied is False:
+            notes.insert(0, "本次修改没有找到新的可追溯地点，暂时保留了原安排；可以换个说法再试。")
         if answer_failed:
             notes.insert(0, "回答阶段使用保守方案，安排基于可追溯来源，具体细节需出行前核对。")
         for item in verification["days"]:
@@ -660,4 +673,5 @@ class AgentWorkflow:
                       status="complete" if any(d["activities"] for d in cleaned_days) else "partial",
                       summary=str(answer.get("summary") or "已根据可追溯地点来源整理行程。"),
                       days=cleaned_days, notes=notes, constraints=constraints,
-                      plan=plan, evidence=evidence, model_calls=calls, verification=verification)
+                      plan=plan, evidence=evidence, model_calls=calls, verification=verification,
+                      revision_applied=revision_applied)

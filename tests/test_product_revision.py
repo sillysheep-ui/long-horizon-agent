@@ -121,6 +121,28 @@ class StubbornModel(FakeModel):
         return "灵隐寺" if index <= 2 else "九溪烟树"
 
 
+class LazyModel(FakeModel):
+    """两次规划都照抄旧计划。"""
+
+    def _second_query(self, index):
+        return "灵隐寺"
+
+
+def test_revision_marks_noop_when_nothing_changed(tmp_path):
+    store = Store(str(tmp_path / "noop.db"))
+    tools = FakeTools()
+    workflow = AgentWorkflow(store, LazyModel(), tools)
+    trip = store.create_trip("从上海去杭州玩两天")
+    job = store.claim()
+    store.finish(job, asyncio.run(workflow.run(job)))
+
+    store.revise(trip["trip_id"], "第二天换成安静的地方")
+    job = store.claim()
+    result = asyncio.run(workflow.run(job))
+    assert result["revision_applied"] is False
+    assert "没有找到新的可追溯地点" in result["notes"][0]
+
+
 def test_planner_retries_when_revision_changes_nothing(tmp_path):
     store = Store(str(tmp_path / "retry.db"))
     tools = FakeTools()
@@ -190,6 +212,7 @@ def test_workflow_only_replans_named_day(tmp_path):
     assert second["days"][0]["activities"] == first["days"][0]["activities"]
     titles = [activity["title"] for activity in second["days"][1]["activities"]]
     assert any("九溪" in title for title in titles)
+    assert second["revision_applied"] is True
     # 回答阶段能看到未修改日期的成品，避免重复和节奏冲突。
     kept = model.answer_payloads[-1]["keep_days"]
     assert [day["day"] for day in kept] == [1]
