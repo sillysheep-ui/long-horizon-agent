@@ -7,7 +7,7 @@
 import re
 from typing import Any, Dict, List
 
-from product.pace import PACE_LIMITS, detect_pace
+from product.pace import PACE_LIMITS, PACE_PLAN, detect_pace
 
 NOISE_TOKENS = ("攻略", "门票", "地址", "图片", "开放时间", "营业时间", "【", "】", "｜", "点评", "简介")
 TIME_ORDER_TOLERANCE = 0  # 只比较字符串顺序，HH:MM 定长可直接比
@@ -117,6 +117,19 @@ PERIODS = (("morning", 6 * 60, 12 * 60), ("afternoon", 12 * 60, 17 * 60 + 30),
            ("evening", 17 * 60 + 30, 24 * 60))
 
 
+def _free_ratio(activities: List[Dict[str, Any]]) -> float:
+    """一天里“没被活动占用的时间”占比；活动越少、停留越短，留白越大。"""
+    if len(activities) < 2:
+        return 1.0
+    ordered = sorted(activities, key=lambda a: _start_minutes(a.get("start")))
+    start = _start_minutes(ordered[0].get("start"))
+    end = max(_start_minutes(a.get("start")) + (_duration_minutes(a.get("duration")) or 90)
+              for a in ordered)
+    span = max(end - start, 1)
+    busy = sum(_duration_minutes(a.get("duration")) or 90 for a in ordered)
+    return round(max(0.0, 1 - busy / span), 2)
+
+
 def _periods(activities: List[Dict[str, Any]]) -> set:
     """按活动占用区间判断覆盖时段：跨 17:30 的活动算下午+晚上。"""
     buckets = set()
@@ -139,7 +152,9 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
     if case.get("expect") == "needs_clarification":
         return {"clarification": result.get("status") == "needs_clarification"}
     days = _days(result)
-    min_count, max_count, min_hours, max_hours = PACE_LIMITS[detect_pace(case.get("query"))]
+    pace = detect_pace(case.get("query"))
+    min_count, max_count, min_hours, max_hours = PACE_LIMITS[pace]
+    plan = PACE_PLAN[pace]
     activities = [a for d in days for a in _activities(d)]
     titles = [str(a.get("title") or "") for a in activities]
     evidence = _evidence_map(result)
@@ -177,6 +192,12 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
         "density": bool(days) and all(min_count <= len(_activities(d)) <= max_count for d in days),
         "periods": bool(days) and all(len(_periods(_activities(d))) >= 2 for d in days),
         "day_load": bool(days) and all(min_hours <= _total_hours(_activities(d)) <= max_hours for d in days),
+        "activity_length": bool(days) and all(
+            plan["activity"][0] - 1.0 <= _duration_minutes(a.get("duration")) / 60 <= plan["activity"][1] + 1.0
+            for a in activities),
+        "free_time": bool(days) and all(
+            _free_ratio(_activities(d)) >= plan["free"][0] and _free_ratio(_activities(d)) <= plan["free"][1]
+            for d in days),
         "unique_titles": len(titles) == len(set(titles)),
         "no_overlap": _schedule_ok(days),
         "title_clean": bool(titles) and all(

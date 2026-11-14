@@ -60,6 +60,12 @@ class PaceAwareChecksTests(unittest.TestCase):
         self.assertTrue(checks["density"])
         self.assertTrue(checks["day_load"])
 
+    def test_relaxed_activity_length_requires_longer_stays(self):
+        activities = [self._activity("西湖", "09:30", "0.5 小时", 1),
+                      self._activity("龙井村", "13:30", "0.5 小时", 2)]
+        checks = check_result(_case("轻松一点，慢慢玩"), _result(activities))
+        self.assertFalse(checks["activity_length"])
+
     def test_relaxed_day_with_three_activities_passes_limits(self):
         activities = [self._activity("西湖", "09:30", "1.5 小时", 1),
                       self._activity("咖啡馆", "13:00", "1.5 小时", 2),

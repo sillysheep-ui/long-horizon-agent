@@ -10,7 +10,7 @@
 
 ## 第一层：确定性检查（不花模型调用）
 
-`evaluation/product_checks.py` 对每条行程做 14 项检查，全部来自结构化字段。其中 `density` 与 `day_load` 的边界按用户节奏（`product/pace.py` 的 relaxed/normal/packed，从 query 关键词识别）分档：
+`evaluation/product_checks.py` 对每条行程做 16 项检查，全部来自结构化字段。其中 `density`、`day_load`、`activity_length`、`free_time` 按用户节奏（`product/pace.py` 的 relaxed/normal/packed，从 query 关键词识别）分档。节奏的主口径是“每件事干多久”：relaxed 每个活动 2–3.5 小时、packed 1–1.5 小时，活动数量由可用时间自然决定：
 
 | 检查 | 含义 |
 |---|---|
@@ -22,7 +22,9 @@
 | `time_order` | 同一天时间升序 |
 | `no_overlap` | 前一项 start + duration 不晚于后一项 start |
 | `periods` | 按活动占用区间，每天覆盖上午/下午/晚上中的至少两个时段 |
-| `day_load` | 全天活动总时长符合 pace 档位（relaxed 3–6 / normal 3–8 / packed 5–10 小时） |
+| `day_load` | 全天活动总时长符合 pace 档位（relaxed 3–8 / normal 3–8.5 / packed 3.5–10 小时） |
+| `activity_length` | 每个活动的停留时长落在 pace 档位内（relaxed 2–3.5 / normal 1.5–2.5 / packed 1–1.5 小时，±1 小时容差） |
+| `free_time` | 一天里未被活动占用的时间占比符合 pace（relaxed ≥0.18 / normal 0.10–0.65 / packed ≤0.55） |
 | `fields_filled` | start/duration/transport/cost 都有值 |
 | `evidence_ok` | 每个活动都能指回一条 ok 证据 |
 | `city_coverage` | 每天的城市都在用户要求的城市里（`杭州` 与 `杭州市` 等价） |
@@ -54,7 +56,7 @@ score = 0.6 × 硬检查通过率 + 0.4 × rubric − 0.2 × 是否编造   （�
 
 一条结果同时满足以下三条才算**可交付**：
 
-1. 14 项确定性检查全部通过；
+1. 16 项确定性检查全部通过；
 2. rubric ≥ 0.7（10 条里至少对 7 条）；
 3. 没有编造数字。
 
