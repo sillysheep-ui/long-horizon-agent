@@ -12,6 +12,7 @@ import httpx
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
+from product.pace import PACE_RULES, detect_pace
 from product.names import clean_place_name, dedupe_names, looks_like_place, title_matches
 from product.planner import (
     PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan, queries_for_day,
@@ -497,6 +498,7 @@ class AgentWorkflow:
             except (TypeError, ValueError):
                 days_count = 1
             constraints["days"] = days_count
+            constraints["pace"] = detect_pace(query, revision_text)
             conflicts = _as_list(constraints.get("conflicts"), 3)
             if not declared:
                 stages.append(_span("intake", "stage", "failed",
@@ -629,6 +631,7 @@ class AgentWorkflow:
         answer_started = time.monotonic()
         answer = {}
         answer_failed = False
+        pace = constraints.get("pace") or detect_pace(query, revision_text)
         answer_system = (
             "根据给定证据生成行程。只输出 JSON：{\"summary\":\"概述这趟行程的安排思路和取舍\","
             "\"days\":[{\"day\":1,\"city\":\"城市\",\"activities\":[{\"title\":\"证据里的地点名\","
@@ -637,15 +640,15 @@ class AgentWorkflow:
             "\"cost\":\"门票或人均\",\"evidence_id\":\"d1-p1\"}]}],\"notes\":[\"出行前需核对的事项\"]}。"
             "规则：1) title 必须精确等于证据 items 中一个 name，evidence_id 必须指向该条成功证据；"
             "display_title 是展示用的简短中文名（不超过 16 字，如“湖滨咖啡馆”），不得虚构新地点；"
-            "2) 每天 2-4 个活动，覆盖上午/下午/晚上中的至少 2 个时段；按当天时间顺序排列，start 用 24 小时制，"
+            "2) 活动数量与全天总时长按 pace 规则安排（见 7），覆盖上午/下午/晚上中的至少 2 个时段；按当天时间顺序排列，start 用 24 小时制，"
             "相邻活动不能重叠（前一项 start + duration 不得晚于后一项 start），跨天不要重复同一地点；"
             "3) description 写具体动作与理由（看什么、走哪段、为什么符合用户偏好），不要写“感受氛围”“湖光山色”这类空话；"
             "4) transport 根据证据里的地址和城市信息给出行建议，推断不了就写“交通未核实”；"
             "5) cost 只写证据里出现的价格，没有就写“未核实”，不得编造价格、营业时间、班次；"
             "6) kind=web 只代表有可追溯网页来源，不代表地址或营业状态已核实；"
-            "7) 全天活动总时长控制在 3-10 小时，给交通和吃饭留出空档，不要为凑数硬加同类地点；"
+            "7) pace=%s：%s；不要为凑数硬加同类地点；"
             "8) notes 最多 6 条，写出行前必须核对的事项。"
-        )
+        ) % (pace, PACE_RULES[pace])
         if targets:
             answer_system += (
                 " 本次只修改%s：只输出这些天的 days 条目，其他天不要输出。"

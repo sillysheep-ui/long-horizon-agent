@@ -10,7 +10,7 @@
 
 ## 第一层：确定性检查（不花模型调用）
 
-`evaluation/product_checks.py` 对每条行程做 14 项检查，全部来自结构化字段：
+`evaluation/product_checks.py` 对每条行程做 14 项检查，全部来自结构化字段。其中 `density` 与 `day_load` 的边界按用户节奏（`product/pace.py` 的 relaxed/normal/packed，从 query 关键词识别）分档：
 
 | 检查 | 含义 |
 |---|---|
@@ -21,8 +21,8 @@
 | `title_clean` | 标题短且不含“攻略/门票/图片”等网页噪声 |
 | `time_order` | 同一天时间升序 |
 | `no_overlap` | 前一项 start + duration 不晚于后一项 start |
-| `periods` | 每天覆盖上午/下午/晚上中的至少两个时段 |
-| `day_load` | 每天活动总时长在 3–10 小时之间 |
+| `periods` | 按活动占用区间，每天覆盖上午/下午/晚上中的至少两个时段 |
+| `day_load` | 全天活动总时长符合 pace 档位（relaxed 3–6 / normal 3–8 / packed 5–10 小时） |
 | `fields_filled` | start/duration/transport/cost 都有值 |
 | `evidence_ok` | 每个活动都能指回一条 ok 证据 |
 | `city_coverage` | 每天的城市都在用户要求的城市里（`杭州` 与 `杭州市` 等价） |

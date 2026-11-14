@@ -7,6 +7,8 @@
 import re
 from typing import Any, Dict, List
 
+from product.pace import PACE_LIMITS, detect_pace
+
 NOISE_TOKENS = ("攻略", "门票", "地址", "图片", "开放时间", "营业时间", "【", "】", "｜", "点评", "简介")
 TIME_ORDER_TOLERANCE = 0  # 只比较字符串顺序，HH:MM 定长可直接比
 DIGITS = re.compile(r"\d+")
@@ -111,16 +113,20 @@ def _schedule_ok(days: List[Dict[str, Any]]) -> bool:
     return True
 
 
+PERIODS = (("morning", 6 * 60, 12 * 60), ("afternoon", 12 * 60, 17 * 60 + 30),
+           ("evening", 17 * 60 + 30, 24 * 60))
+
+
 def _periods(activities: List[Dict[str, Any]]) -> set:
+    """按活动占用区间判断覆盖时段：跨 17:30 的活动算下午+晚上。"""
     buckets = set()
     for activity in activities:
-        minutes = _start_minutes(activity.get("start"))
-        if minutes < 12 * 60:
-            buckets.add("morning")
-        elif minutes < 17 * 60 + 30:
-            buckets.add("afternoon")
-        else:
-            buckets.add("evening")
+        start = _start_minutes(activity.get("start"))
+        duration = _duration_minutes(activity.get("duration")) or 90
+        end = start + duration
+        for name, begin, finish in PERIODS:
+            if start < finish and end > begin:
+                buckets.add(name)
     return buckets
 
 
@@ -133,6 +139,7 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
     if case.get("expect") == "needs_clarification":
         return {"clarification": result.get("status") == "needs_clarification"}
     days = _days(result)
+    min_count, max_count, min_hours, max_hours = PACE_LIMITS[detect_pace(case.get("query"))]
     activities = [a for d in days for a in _activities(d)]
     titles = [str(a.get("title") or "") for a in activities]
     evidence = _evidence_map(result)
@@ -167,9 +174,9 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
     return {
         "complete": result.get("status") == "complete",
         "day_count": bool(days) and (expected_days is None or len(days) == expected_days),
-        "density": bool(days) and all(2 <= len(_activities(d)) <= 4 for d in days),
+        "density": bool(days) and all(min_count <= len(_activities(d)) <= max_count for d in days),
         "periods": bool(days) and all(len(_periods(_activities(d))) >= 2 for d in days),
-        "day_load": bool(days) and all(3 <= _total_hours(_activities(d)) <= 10 for d in days),
+        "day_load": bool(days) and all(min_hours <= _total_hours(_activities(d)) <= max_hours for d in days),
         "unique_titles": len(titles) == len(set(titles)),
         "no_overlap": _schedule_ok(days),
         "title_clean": bool(titles) and all(
