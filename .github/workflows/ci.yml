@@ -39,6 +39,7 @@ jobs:
             tests/test_product_names.py \
             tests/test_product_planner.py \
             tests/test_product_provenance.py \
+            tests/test_product_revision.py \
             tests/test_stage_checks.py \
             tests/test_codex_task.py \
             tests/test_text_utils.py
