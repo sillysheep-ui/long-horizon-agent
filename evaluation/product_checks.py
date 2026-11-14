@@ -111,6 +111,23 @@ def _schedule_ok(days: List[Dict[str, Any]]) -> bool:
     return True
 
 
+def _periods(activities: List[Dict[str, Any]]) -> set:
+    buckets = set()
+    for activity in activities:
+        minutes = _start_minutes(activity.get("start"))
+        if minutes < 12 * 60:
+            buckets.add("morning")
+        elif minutes < 17 * 60 + 30:
+            buckets.add("afternoon")
+        else:
+            buckets.add("evening")
+    return buckets
+
+
+def _total_hours(activities: List[Dict[str, Any]]) -> float:
+    return round(sum(_duration_minutes(activity.get("duration")) for activity in activities) / 60, 2)
+
+
 def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool]:
     """返回逐项检查结果；键名会直接进报告。"""
     if case.get("expect") == "needs_clarification":
@@ -150,7 +167,9 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
     return {
         "complete": result.get("status") == "complete",
         "day_count": bool(days) and (expected_days is None or len(days) == expected_days),
-        "density": bool(days) and all(2 <= len(_activities(d)) <= 3 for d in days),
+        "density": bool(days) and all(2 <= len(_activities(d)) <= 4 for d in days),
+        "periods": bool(days) and all(len(_periods(_activities(d))) >= 2 for d in days),
+        "day_load": bool(days) and all(3 <= _total_hours(_activities(d)) <= 10 for d in days),
         "unique_titles": len(titles) == len(set(titles)),
         "no_overlap": _schedule_ok(days),
         "title_clean": bool(titles) and all(

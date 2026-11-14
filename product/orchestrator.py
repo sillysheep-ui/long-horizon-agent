@@ -140,7 +140,7 @@ def _clip(value: Any, limit: int, fallback: str) -> str:
     return text[:limit] if text else fallback
 
 
-def _clean_activities(activities: List[Dict[str, Any]], limit: int = 3,
+def _clean_activities(activities: List[Dict[str, Any]], limit: int = 4,
                       evidence: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
     """统一活动字段：时间缺失就按顺序给默认值，标题必须落在证据地点名上。"""
     result = []
@@ -238,7 +238,7 @@ def _finalize_days(cleaned_days: List[Dict[str, Any]], good: List[Dict[str, Any]
                 continue
             used.add(title)
             activities.append({**activity, "title": title})
-        if len(activities) < 3:
+        if len(activities) < 2:
             for evidence in good:
                 if not evidence["id"].startswith("d%d-" % planned["day"]):
                     continue
@@ -256,12 +256,12 @@ def _finalize_days(cleaned_days: List[Dict[str, Any]], good: List[Dict[str, Any]
                         "cost": "未核实",
                         "evidence_id": evidence["id"],
                     })
-                    if len(activities) >= 3:
+                    if len(activities) >= 2:
                         break
-                if len(activities) >= 3:
+                if len(activities) >= 2:
                     break
         result.append({"day": planned["day"], "city": day.get("city") or planned.get("city"),
-                       "activities": _fit_schedule(activities)[:3]})
+                       "activities": _fit_schedule(activities)[:4]})
     result.extend(kept)
     result.sort(key=lambda item: int(item.get("day") or 0))
     return result
@@ -637,13 +637,14 @@ class AgentWorkflow:
             "\"cost\":\"门票或人均\",\"evidence_id\":\"d1-p1\"}]}],\"notes\":[\"出行前需核对的事项\"]}。"
             "规则：1) title 必须精确等于证据 items 中一个 name，evidence_id 必须指向该条成功证据；"
             "display_title 是展示用的简短中文名（不超过 16 字，如“湖滨咖啡馆”），不得虚构新地点；"
-            "2) 每天 3 个活动（当天证据不足时可少于 3 个），按当天时间顺序排列，start 用 24 小时制，"
+            "2) 每天 2-4 个活动，覆盖上午/下午/晚上中的至少 2 个时段；按当天时间顺序排列，start 用 24 小时制，"
             "相邻活动不能重叠（前一项 start + duration 不得晚于后一项 start），跨天不要重复同一地点；"
             "3) description 写具体动作与理由（看什么、走哪段、为什么符合用户偏好），不要写“感受氛围”“湖光山色”这类空话；"
             "4) transport 根据证据里的地址和城市信息给出行建议，推断不了就写“交通未核实”；"
             "5) cost 只写证据里出现的价格，没有就写“未核实”，不得编造价格、营业时间、班次；"
             "6) kind=web 只代表有可追溯网页来源，不代表地址或营业状态已核实；"
-            "7) notes 最多 6 条，写出行前必须核对的事项。"
+            "7) 全天活动总时长控制在 3-10 小时，给交通和吃饭留出空档，不要为凑数硬加同类地点；"
+            "8) notes 最多 6 条，写出行前必须核对的事项。"
         )
         if targets:
             answer_system += (

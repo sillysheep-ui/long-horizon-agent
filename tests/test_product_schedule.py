@@ -27,7 +27,7 @@ def test_out_of_order_activities_are_sorted():
     assert [item["title"] for item in _fit_schedule(activities)] == ["A", "B"]
 
 
-def test_day_is_filled_to_three_when_evidence_allows():
+def test_day_is_filled_to_at_least_two_when_evidence_allows():
     evidence = [{
         "id": "d1-p1", "status": "ok",
         "items": [{"name": "西湖"}, {"name": "灵隐寺"}, {"name": "九溪"}],
@@ -36,5 +36,5 @@ def test_day_is_filled_to_three_when_evidence_allows():
         [{"day": 1, "city": "杭州", "activities": [{"title": "西湖", "start": "09:30", "evidence_id": "d1-p1"}]}],
         evidence, [{"day": 1, "city": "杭州"}])
     titles = [activity["title"] for activity in days[0]["activities"]]
-    assert len(titles) == 3
+    assert len(titles) == 2
     assert titles[0] == "西湖"

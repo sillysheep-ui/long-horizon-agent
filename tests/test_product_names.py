@@ -50,7 +50,7 @@ class CleanActivitiesTests(unittest.TestCase):
             {"title": "龙井村", "evidence_id": "d1-p3"},
             {"title": "被截断", "evidence_id": "d1-p4"},
         ])
-        self.assertEqual(len(activities), 3)
+        self.assertEqual(len(activities), 4)
         self.assertEqual(activities[0]["start"], "09:30")
         self.assertEqual(activities[1]["start"], "14:00")
         self.assertEqual(activities[2]["start"], "16:30")
