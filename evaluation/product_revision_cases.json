@@ -1,0 +1,138 @@
+[
+  {
+    "id": "rev-hangzhou-day2-quiet",
+    "query": "从上海出发，周末去杭州玩两天，喜欢自然风光和咖啡馆，预算1500元",
+    "revision": "第二天换成更安静的景点",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "easy",
+    "tags": [
+      "day2",
+      "replace"
+    ]
+  },
+  {
+    "id": "rev-hangzhou-day1-museum",
+    "query": "从上海去杭州玩两天，喜欢历史和建筑，预算1200元",
+    "revision": "第一天换成博物馆",
+    "target_days": [
+      1
+    ],
+    "expect": "targeted",
+    "difficulty": "easy",
+    "tags": [
+      "day1",
+      "replace"
+    ]
+  },
+  {
+    "id": "rev-chengdu-day3-light",
+    "query": "成都玩三天，喜欢美食和熊猫，带父母，预算4000元",
+    "revision": "第三天全部换成博物馆和茶馆，不要户外景点",
+    "target_days": [
+      3
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": [
+      "day3",
+      "constraint"
+    ]
+  },
+  {
+    "id": "rev-xian-day1-no-warriors",
+    "query": "西安一日游，想看历史遗迹，预算600元",
+    "revision": "第一天别去兵马俑，换个博物馆",
+    "target_days": [
+      1
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": [
+      "day1",
+      "avoid"
+    ]
+  },
+  {
+    "id": "rev-suzhou-lastday-museum",
+    "query": "苏州两天，园林和评弹，预算1000元",
+    "revision": "最后一天加一个博物馆",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "easy",
+    "tags": [
+      "lastday",
+      "add"
+    ]
+  },
+  {
+    "id": "rev-beijing-day2-kids",
+    "query": "北京三天，带孩子，预算5000元",
+    "revision": "第二天带孩子去动物园",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "easy",
+    "tags": [
+      "day2",
+      "family"
+    ]
+  },
+  {
+    "id": "rev-xiamen-day2-rain",
+    "query": "厦门两天，喜欢海边和小吃，预算1500元",
+    "revision": "第二天可能下雨，换成室内的地方",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": [
+      "day2",
+      "weather"
+    ]
+  },
+  {
+    "id": "rev-qingdao-day1-seafood",
+    "query": "青岛两天，啤酒和海鲜，预算1800元",
+    "revision": "第一天不要啤酒博物馆，全部换成吃海鲜的地方",
+    "target_days": [
+      1
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": [
+      "day1",
+      "add"
+    ]
+  },
+  {
+    "id": "rev-chengdu-budget-full",
+    "query": "成都两天，美食为主，预算2000元",
+    "revision": "预算改成4000，多安排点特色餐厅",
+    "target_days": [],
+    "expect": "full",
+    "difficulty": "easy",
+    "tags": [
+      "full",
+      "budget"
+    ]
+  },
+  {
+    "id": "rev-hangzhou-day5-out-of-range",
+    "query": "杭州两天，轻松一点，预算1000元",
+    "revision": "第五天去乌镇",
+    "target_days": [],
+    "expect": "clarify",
+    "difficulty": "hard",
+    "tags": [
+      "fallback",
+      "outofrange"
+    ]
+  }
+]

@@ -301,7 +301,8 @@ flowchart TD
 - 行程质量评测（152 条固定场景 + 结构检查 + 裁判打分）：`docs/PRODUCT_EVAL.md`
 
 ```bash
-python3 -m evaluation.product_eval --profile api_only --split test
+python3 -m evaluation.product_eval --profile api_only --split test     # 单次规划质量
+python3 -m evaluation.revision_eval --profile api_only                  # 多轮修改
 ```
 
 ## 快速开始

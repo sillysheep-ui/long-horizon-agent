@@ -96,6 +96,12 @@ python3 -m evaluation.product_eval --profile api_only --split test
 python3 -m evaluation.product_eval --profile local_first --split test --judge-model deepseek-v4-flash
 ```
 
+多轮修改另有 10 条固定用例在 `evaluation/product_revision_cases.json`：先规划一次，再提“第二天换成更安静的景点”这类修改，检查“只改该改的那天、其余保持稳定”。
+
+```bash
+python3 -m evaluation.revision_eval --profile api_only
+```
+
 结果写入 `results/product_eval/<时间戳>-<profile>/`（`report.md` 与 `records.json`），该目录不入库。
 
 ## 验证
