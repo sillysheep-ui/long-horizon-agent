@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from product.orchestrator import AgentWorkflow
+from product.orchestrator import _finalize_days
 from product.planner import queries_for_day
 from product.revision import (
     compact_days,
@@ -14,6 +15,7 @@ from product.revision import (
     days_to_revision_plan,
     describe_targets,
     merge_days,
+    out_of_range_days,
     parse_target_days,
     split_by_targets,
 )
@@ -244,3 +246,45 @@ def test_workflow_falls_back_when_no_day_named(tmp_path):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExplodingModel:
+    """如果走到模型调用就立刻失败，用来证明越界日期被确定性拦下。"""
+
+    async def complete(self, role, system, user, max_tokens=1200):
+        raise AssertionError("不应调用模型：%s" % role)
+
+
+def test_out_of_range_day_is_clarified_without_model_call(tmp_path):
+    store = Store(str(tmp_path / "range.db"))
+    tools = FakeTools()
+    workflow = AgentWorkflow(store, FakeModel(), tools)
+    trip = store.create_trip("杭州两天，轻松一点，预算1000元")
+    job = store.claim()
+    store.finish(job, asyncio.run(workflow.run(job)))
+
+    store.revise(trip["trip_id"], "第五天去乌镇")
+    job = store.claim()
+    result = asyncio.run(AgentWorkflow(store, ExplodingModel(), tools).run(job))
+    assert result["status"] == "needs_clarification"
+    assert "2 天" in result["question"] and "5" in result["question"]
+    assert result["days"] == []
+
+
+def test_out_of_range_days_only_reports_beyond_total():
+    assert out_of_range_days("第五天去乌镇", 2) == [5]
+    assert out_of_range_days("第二天换成博物馆", 2) == []
+    assert out_of_range_days("day 4 加一天", 3) == [4]
+
+
+def test_finalize_keeps_untouched_days_verbatim():
+    kept_day = {"day": 1, "city": "杭州", "activities": [
+        {"title": "西湖", "start": "09:30"}, {"title": "灵隐寺", "start": "13:30"}]}
+    cleaned = [{"day": 2, "city": "杭州", "activities": [{"title": "龙井村", "start": "20:00", "evidence_id": "d2-p1"}]}]
+    days = _finalize_days(cleaned, [_evidence("d2-p1", "九溪", "杭州")], [{"day": 2, "city": "杭州"}],
+                          keep_days=[kept_day])
+    assert [day["day"] for day in days] == [1, 2]
+    assert [activity["title"] for activity in days[0]["activities"]] == ["西湖", "灵隐寺"]
+    assert any(activity["title"] == "龙井村" and activity["start"] == "20:00"
+               for activity in days[1]["activities"])
+    assert len(days[1]["activities"]) == 2  # 目标日仍会补足到 2 个

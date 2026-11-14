@@ -19,7 +19,7 @@ from product.planner import (
 from product.provenance import build_evidence, normalize_all
 from product.revision import (
     compact_days, day_of_evidence, days_to_revision_plan, describe_targets,
-    merge_days, parse_target_days, split_by_targets,
+    merge_days, out_of_range_days, parse_target_days, split_by_targets,
 )
 from product.store import Store
 from product.tool_runtime import ResearchExecutor
@@ -177,10 +177,16 @@ def cities_fit_days(destinations: List[str], days: int) -> bool:
 
 
 def _finalize_days(cleaned_days: List[Dict[str, Any]], good: List[Dict[str, Any]],
-                   plan_days: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。"""
+                   plan_days: List[Dict[str, Any]],
+                   keep_days: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。
+
+    keep_days 是本次不动、原样保留的日期；只对 plan_days 里的日期做整理。
+    """
+    kept = [dict(day) for day in (keep_days or [])]
     by_day = {day.get("day"): day for day in cleaned_days if day.get("day")}
-    used = set()
+    used = {str(activity.get("title") or "").strip()
+            for day in kept for activity in day.get("activities", [])}
     result = []
     for planned in plan_days:
         day = by_day.get(planned.get("day")) or {"day": planned.get("day"), "city": planned.get("city")}
@@ -214,6 +220,8 @@ def _finalize_days(cleaned_days: List[Dict[str, Any]], good: List[Dict[str, Any]
                     break
         activities.sort(key=lambda item: str(item.get("start") or "99:99"))
         result.append({"day": planned["day"], "city": day.get("city") or planned.get("city"), "activities": activities[:3]})
+    result.extend(kept)
+    result.sort(key=lambda item: int(item.get("day") or 0))
     return result
 
 
@@ -404,6 +412,18 @@ class AgentWorkflow:
             return {**result, "trace": trace,
                     "elapsed_seconds": round(time.monotonic() - started, 2)}
 
+        if revision_text and prior_days and prior.get("constraints") and not targets:
+            too_far = out_of_range_days(revision_text, len(prior_days))
+            if too_far:
+                self._event(job, "intake", "修改点名的日期超出当前行程天数", {"days": too_far})
+                stages.append(_span("intake", "stage", "failed", 0.0,
+                                    {"revision": True, "out_of_range": too_far,
+                                     "days": len(prior_days), "decision": "clarify"},
+                                    error_type="out_of_range_day"))
+                return finish("ok", status="needs_clarification",
+                              question="现在的行程是 %d 天，%s 超出了范围。想加一天，还是把这天安排到现有行程里？"
+                                       % (len(prior_days), describe_targets(too_far)),
+                              constraints=prior.get("constraints"), model_calls=calls, days=[], evidence=[])
         if targets:
             constraints = dict(prior["constraints"])
             days_count = len(prior_days)
@@ -637,7 +657,16 @@ class AgentWorkflow:
         if targets:
             cleaned_days = merge_days(prior_days, cleaned_days, targets)
             order_ok = _time_order_ok(cleaned_days)
-        cleaned_days = _finalize_days(cleaned_days, good, days)
+        if targets:
+            target_set = set(targets)
+            kept_days = [day for day in prior_days if int(day.get("day") or 0) not in target_set]
+            cleaned_days = _finalize_days(
+                [day for day in cleaned_days if int(day.get("day") or 0) in target_set],
+                good,
+                [day for day in days if int(day.get("day") or 0) in target_set],
+                keep_days=kept_days)
+        else:
+            cleaned_days = _finalize_days(cleaned_days, good, days)
         final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
         fabricated = _fabricated_costs(cleaned_days, evidence)
         dropped = max(0, raw_count - grounded_count)

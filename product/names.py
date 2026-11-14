@@ -16,6 +16,7 @@ TRAILING_WORDS = (
     "探店指南", "探店", "指南", "推荐", "合集", "必去", "打卡",
 )
 TRAILING_PUNCT = " ·-—~～、。!！?？:："
+GENERIC_LABELS = {"定位", "地址", "位置", "电话", "营业时间", "详情", "导航"}
 
 
 def clean_place_name(title: str) -> str:
@@ -23,6 +24,7 @@ def clean_place_name(title: str) -> str:
     text = str(title or "").strip()
     if not text:
         return ""
+    text = re.sub(r"^[^\w\u4e00-\u9fff]+", "", text)
     for separator in SEPARATORS:
         if separator in text:
             text = text.split(separator, 1)[0]
@@ -36,6 +38,8 @@ def clean_place_name(title: str) -> str:
                 changed = True
                 break
     text = re.sub(r"\s+", " ", text).strip()
+    if text in GENERIC_LABELS:
+        return ""
     return text or str(title).strip()[:40]
 
 

@@ -119,3 +119,8 @@ class FinalizeDaysTests(unittest.TestCase):
         good = [{"id": "d1-p1", "status": "ok", "items": [{"name": "九溪烟树"}]}]
         out = _finalize_days([{"day": 1, "city": "杭州", "activities": []}], good, [{"day": 1, "city": "杭州"}])
         self.assertEqual(out[0]["activities"][0]["title"], "九溪烟树")
+
+
+def test_emoji_label_is_not_a_place_name():
+    from product.names import clean_place_name
+    assert clean_place_name("📍定位") == ""

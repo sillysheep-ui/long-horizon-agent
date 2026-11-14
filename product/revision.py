@@ -37,19 +37,30 @@ def _day_number(token: str) -> int:
     return _CHINESE_DIGITS.get(token, 0)
 
 
-def parse_target_days(text: str, total_days: int) -> List[int]:
-    """返回文本里点名且落在 1..total_days 内的日期，去重升序。"""
-    if not text or total_days < 1:
+def mentioned_days(text: str) -> List[int]:
+    """返回文本里点名的所有日期（不做范围过滤），去重升序。"""
+    if not text:
         return []
     found = set()
     for match in _DAY_PATTERN.finditer(text):
         day = _day_number(match.group(1))
-        if 1 <= day <= total_days:
+        if day >= 1:
             found.add(day)
     for match in _DAY_EN_PATTERN.finditer(text):
-        day = int(match.group(1))
-        if 1 <= day <= total_days:
-            found.add(day)
+        found.add(int(match.group(1)))
+    return sorted(found)
+
+
+def out_of_range_days(text: str, total_days: int) -> List[int]:
+    """返回超出 1..total_days 的日期，例如两天行程里提到的“第五天”。"""
+    return [day for day in mentioned_days(text) if day > total_days]
+
+
+def parse_target_days(text: str, total_days: int) -> List[int]:
+    """返回文本里点名且落在 1..total_days 内的日期，去重升序。"""
+    if not text or total_days < 1:
+        return []
+    found = {day for day in mentioned_days(text) if day <= total_days}
     if any(word in text for word in _LAST_DAY_WORDS):
         found.add(total_days)
     return sorted(found)
