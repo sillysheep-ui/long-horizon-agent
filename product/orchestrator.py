@@ -211,6 +211,105 @@ def _finalize_days(cleaned_days: List[Dict[str, Any]], good: List[Dict[str, Any]
     return result
 
 
+def _span(name: str, kind: str, status: str, latency_ms: float = 0.0,
+          attributes: Optional[Dict[str, Any]] = None,
+          events: Optional[List[Dict[str, Any]]] = None,
+          children: Optional[List[Dict[str, Any]]] = None,
+          error_type: Optional[str] = None) -> Dict[str, Any]:
+    """构造一个执行轨迹节点（trace span），只记录事实，不做判定。"""
+    span: Dict[str, Any] = {"name": name, "kind": kind, "status": status,
+                            "latency_ms": int(latency_ms), "attributes": attributes or {}}
+    if events:
+        span["events"] = events
+    if children:
+        span["children"] = children
+    if error_type:
+        span["error_type"] = error_type
+    return span
+
+
+def _tool_spans(dag_result: Dict[str, Any], plan: Any) -> List[Dict[str, Any]]:
+    """把调度器的节点结果转成工具子 span。"""
+    nodes = {node.id: node for node in plan.nodes}
+    spans: List[Dict[str, Any]] = []
+    for item in dag_result.get("results", []):
+        node = nodes.get(str(item.get("node_id")))
+        day = None
+        if node is not None:
+            matched = re.match(r"^d(\d+)-", node.id)
+            day = int(matched.group(1)) if matched else None
+        parsed: Any = None
+        try:
+            parsed = json.loads(item.get("output") or "")
+        except (TypeError, ValueError):
+            parsed = None
+        evidence_status = parsed.get("status") if isinstance(parsed, dict) else None
+        status, error_type = "ok", None
+        if item.get("status") == "skipped":
+            status, error_type = "blocked", "tool_error"
+        elif item.get("status") != "success":
+            status, error_type = "failed", "tool_error"
+        elif evidence_status == "unavailable":
+            status, error_type = "failed", "auth_missing"
+        elif evidence_status == "failed":
+            status, error_type = "failed", "tool_error"
+        elif evidence_status == "empty":
+            status, error_type = "warn", "empty_result"
+        if isinstance(parsed, dict) and parsed.get("reused"):
+            status = "degraded"
+        attributes = {"day": day, "cache_hit": bool(item.get("cache_hit")),
+                      "attempts": int(item.get("attempts") or 0),
+                      "reused": bool(parsed.get("reused")) if isinstance(parsed, dict) else False}
+        events = [{"name": error_type, "reason": str(item.get("error") or "")[:120]}] if error_type else None
+        spans.append(_span(node.tool if node is not None else "tool", "tool", status,
+                           float(item.get("latency_ms") or 0.0), attributes,
+                           events=events, error_type=error_type))
+    return spans
+
+
+def _critical_path_ms(plan: Any, dag_result: Dict[str, Any]) -> float:
+    """按依赖关系计算最长路径耗时。"""
+    latency = {str(item.get("node_id")): float(item.get("latency_ms") or 0.0)
+               for item in dag_result.get("results", [])}
+    nodes = {node.id: node for node in plan.nodes}
+    memo: Dict[str, float] = {}
+
+    def longest(node_id: str) -> float:
+        if node_id in memo:
+            return memo[node_id]
+        node = nodes.get(node_id)
+        upstream = max((longest(dep) for dep in node.depends_on if dep in nodes), default=0.0) if node else 0.0
+        memo[node_id] = latency.get(node_id, 0.0) + upstream
+        return memo[node_id]
+
+    return max((longest(node_id) for node_id in nodes), default=0.0)
+
+
+def _fabricated_costs(days: List[Dict[str, Any]], evidence: List[Dict[str, Any]]) -> int:
+    """活动费用里出现、但证据文本中没有的数字，算编造。"""
+    corpus = " ".join(
+        " ".join(str(entry.get(part) or "") for part in ("name", "snippet", "address"))
+        for evidence_item in evidence for entry in evidence_item.get("items", [])
+    )
+    count = 0
+    for day in days:
+        for activity in day.get("activities", []):
+            cost = str(activity.get("cost") or "")
+            for number in re.findall(r"\d+(?:\.\d+)?", cost):
+                if number not in corpus:
+                    count += 1
+                    break
+    return count
+
+
+def _time_order_ok(days: List[Dict[str, Any]]) -> bool:
+    for day in days:
+        starts = [str(activity.get("start") or "") for activity in day.get("activities", [])]
+        if starts != sorted(starts):
+            return False
+    return True
+
+
 class ResearchTools:
     def __init__(self) -> None:
         self.amap_key = os.getenv("AMAP_MAPS_API_KEY", "")
@@ -284,35 +383,67 @@ class AgentWorkflow:
         started = time.monotonic()
         query = job["query"]
         calls: List[Dict[str, str]] = []
+        stages: List[Dict[str, Any]] = []
+
+        def finish(trace_status: str, **result: Any) -> Dict[str, Any]:
+            trace = _span("run", "run", trace_status, (time.monotonic() - started) * 1000,
+                          {"status": result.get("status"), "stages": len(stages)}, children=stages)
+            return {**result, "trace": trace,
+                    "elapsed_seconds": round(time.monotonic() - started, 2)}
+
         self._event(job, "intake", "正在理解日期、目的地和预算")
+        intake_started = time.monotonic()
         intake = await self.model.complete("需求 Agent",
             "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组、conflicts 字符串数组。未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；只有完全看不出目的地时才留空。conflicts 用一句话列出需求中的硬冲突（例如“五天带老人孩子预算 1000 元”“人均五百还想住五星酒店”“没说明玩几天”），没有冲突就给空数组。",
             query, max_tokens=500)
         calls.append({k: intake[k] for k in ("role", "provider", "model")})
         constraints = parse_json(intake["content"])
         destinations = _as_list(constraints.get("destinations"), 4)
+        declared = _declares_duration(query)
+        intake_attributes = {"days": constraints.get("days"), "cities": destinations,
+                             "days_declared": declared}
         if not destinations:
-            return {"status": "needs_clarification", "question": "你想去哪个城市或地区？",
-                    "constraints": constraints, "model_calls": calls, "days": [], "evidence": []}
+            stages.append(_span("intake", "stage", "failed",
+                                (time.monotonic() - intake_started) * 1000,
+                                {**intake_attributes, "decision": "clarify"}, error_type="wrong_city"))
+            return finish("ok", status="needs_clarification", question="你想去哪个城市或地区？",
+                          constraints=constraints, model_calls=calls, days=[], evidence=[])
         try:
             days_count = min(7, max(1, int(constraints.get("days") or 1)))
         except (TypeError, ValueError):
             days_count = 1
         constraints["days"] = days_count
         conflicts = _as_list(constraints.get("conflicts"), 3)
-        if not _declares_duration(query):
-            return {"status": "needs_clarification", "question": "打算玩几天？",
-                    "constraints": constraints, "model_calls": calls, "days": [], "evidence": []}
-        if conflicts or budget_conflict(query, days_count):
+        if not declared:
+            stages.append(_span("intake", "stage", "failed",
+                                (time.monotonic() - intake_started) * 1000,
+                                {**intake_attributes, "days": days_count, "decision": "clarify"},
+                                error_type="missing_days"))
+            return finish("ok", status="needs_clarification", question="打算玩几天？",
+                          constraints=constraints, model_calls=calls, days=[], evidence=[])
+        budget_clash = budget_conflict(query, days_count)
+        if conflicts or budget_clash:
             reason = "；".join(conflicts[:2]) or "预算和住宿标准对不上"
-            return {"status": "needs_clarification", "question": "需求里有冲突：%s。想先调整哪一项？" % reason,
-                    "constraints": constraints, "model_calls": calls, "days": [], "evidence": []}
+            stages.append(_span("intake", "stage", "failed",
+                                (time.monotonic() - intake_started) * 1000,
+                                {**intake_attributes, "days": days_count, "decision": "clarify",
+                                 "conflicts": conflicts},
+                                error_type="missed_budget" if budget_clash else "should_clarify"))
+            return finish("ok", status="needs_clarification", question="需求里有冲突：%s。想先调整哪一项？" % reason,
+                          constraints=constraints, model_calls=calls, days=[], evidence=[])
         if not cities_fit_days(destinations, days_count):
-            return {"status": "needs_clarification",
-                    "question": "%d 天安排 %d 个城市太紧，想保留哪几个？" % (days_count, len(destinations)),
-                    "constraints": constraints, "model_calls": calls, "days": [], "evidence": []}
+            stages.append(_span("intake", "stage", "failed",
+                                (time.monotonic() - intake_started) * 1000,
+                                {**intake_attributes, "days": days_count, "decision": "clarify"},
+                                error_type="should_clarify"))
+            return finish("ok", status="needs_clarification",
+                          question="%d 天安排 %d 个城市太紧，想保留哪几个？" % (days_count, len(destinations)),
+                          constraints=constraints, model_calls=calls, days=[], evidence=[])
+        stages.append(_span("intake", "stage", "ok", (time.monotonic() - intake_started) * 1000,
+                            {**intake_attributes, "days": days_count, "decision": "proceed"}))
 
         self._event(job, "planning", "正在拆解每日行程和查询任务")
+        planning_started = time.monotonic()
         prior = job.get("previous") or {}
         plan_response = await self.model.complete("规划 Agent", PLANNER_SYSTEM_PROMPT,
             build_planner_prompt(query, constraints, prior.get("plan")), max_tokens=1000)
@@ -320,12 +451,21 @@ class AgentWorkflow:
         plan = parse_json(plan_response["content"])
         days = plan.get("days")
         tool_plan = days_to_tool_plan(days, days_count, destinations)
+        per_day_queries = [len(day.get("poi_queries") or []) for day in days if isinstance(day, dict)]
+        stages.append(_span("planning", "stage", "ok", (time.monotonic() - planning_started) * 1000,
+                            {"days_planned": len(per_day_queries), "per_day_queries": per_day_queries,
+                             "nodes": len(tool_plan.nodes)}))
 
         self._event(job, "research", "正在并行查询地点来源", {"tool_count": len(tool_plan.nodes)})
         executor = ResearchExecutor(self.tools, normalize_all(prior.get("evidence", [])))
         scheduler = ToolDAGScheduler(executor=executor, max_concurrency=4, fail_fast=False)
+        retrieval_started = time.monotonic()
         dag_result = await scheduler.run(tool_plan)
         evidence = normalize_all(executor.collect(dag_result, tool_plan))
+        tool_spans = _tool_spans(dag_result, tool_plan)
+        critical_ms = _critical_path_ms(tool_plan, dag_result)
+        node_ms = sum(float(item.get("latency_ms") or 0.0) for item in dag_result.get("results", []))
+        cache_hits = sum(1 for item in dag_result.get("results", []) if item.get("cache_hit"))
         verification = assess_days(days, evidence)
         repair_plan = build_repair_plan(days, evidence)
         if repair_plan is not None:
@@ -333,19 +473,45 @@ class AgentWorkflow:
                         {"uncovered_days": verification["uncovered_days"]})
             repair_result = await scheduler.run(repair_plan)
             evidence = normalize_all(evidence + executor.collect(repair_result, repair_plan))
+            tool_spans += _tool_spans(repair_result, repair_plan)
+            critical_ms = max(critical_ms, _critical_path_ms(repair_plan, repair_result))
+            node_ms += sum(float(item.get("latency_ms") or 0.0) for item in repair_result.get("results", []))
+            cache_hits += sum(1 for item in repair_result.get("results", []) if item.get("cache_hit"))
             verification = assess_days(days, evidence)
+        retrieval_ms = (time.monotonic() - retrieval_started) * 1000
+        counts = {"ok": 0, "empty": 0, "failed": 0, "unavailable": 0}
+        for item in evidence:
+            status = str(item.get("status"))
+            if status in counts:
+                counts[status] += 1
+        retrieval_status = "degraded" if (counts["failed"] or counts["unavailable"]) else (
+            "warn" if (counts["empty"] or verification["uncovered_days"]) else "ok")
+        stages.append(_span("retrieval", "stage", retrieval_status, retrieval_ms,
+                            {"calls": len(evidence), **counts, "cache_hits": cache_hits,
+                             "critical_path_ms": int(critical_ms),
+                             "parallel_efficiency": round(min(1.0, node_ms / (retrieval_ms * 4)), 3)
+                             if retrieval_ms else 0.0},
+                            children=tool_spans,
+                            error_type="tool_error" if counts["failed"] else (
+                                "auth_missing" if counts["unavailable"] else None)))
+        stages.append(_span("coverage", "stage", "warn" if verification["uncovered_days"] else "ok", 0.0,
+                            {"per_day_ok": [item["covered"] for item in verification["days"]],
+                             "uncovered_days": verification["uncovered_days"], "risk": verification["risk"]}))
 
         good = [e for e in evidence if e.get("status") == "ok"]
         self._event(job, "verification", "正在检查计划是否有可追溯的地点来源",
                     {"supported_queries": len(good), "total_queries": len(evidence),
                      "risk": verification["risk"], "uncovered_days": verification["uncovered_days"]})
         if not good:
-            return {"status": "partial", "question": "地点查询暂不可用，无法给出可信的具体行程。",
-                    "constraints": constraints, "plan": plan, "days": [],
-                    "evidence": evidence, "model_calls": calls, "verification": verification,
-                    "elapsed_seconds": round(time.monotonic() - started, 2)}
+            stages.append(_span("answer", "stage", "skipped", 0.0,
+                                {"reason": "no_usable_evidence"}, error_type="tool_error"))
+            return finish("failed", status="partial",
+                          question="地点查询暂不可用，无法给出可信的具体行程。",
+                          constraints=constraints, plan=plan, days=[],
+                          evidence=evidence, model_calls=calls, verification=verification)
 
         self._event(job, "answer", "正在根据已核实地点组织行程")
+        answer_started = time.monotonic()
         answer = {}
         answer_failed = False
         try:
@@ -361,8 +527,11 @@ class AgentWorkflow:
         valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
         cleaned_days = []
         seen_titles = set()
+        raw_count = 0
+        grounded_count = 0
         for day in answer.get("days", []) if isinstance(answer.get("days"), list) else []:
             raw_activities = day.get("activities", []) if isinstance(day, dict) else []
+            raw_count += sum(1 for activity in raw_activities if isinstance(activity, dict))
             matched_activities = []
             for activity in raw_activities:
                 if not isinstance(activity, dict):
@@ -371,6 +540,7 @@ class AgentWorkflow:
                 if not matched or matched[1] in seen_titles:
                     continue
                 seen_titles.add(matched[1])
+                grounded_count += 1
                 matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1]})
             cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
                                  "activities": _clean_activities(matched_activities, evidence={e["id"]: e for e in evidence})})
@@ -384,7 +554,18 @@ class AgentWorkflow:
                     "description": "可作为当天的候选地点；请通过来源页面核对地址、开放时间和交通。",
                     "transport": "交通未核实", "cost": "未核实"} for e in day_evidence])
                 cleaned_days.append({"day": day["day"], "city": day["city"], "activities": activities})
+        order_ok = _time_order_ok(cleaned_days)
         cleaned_days = _finalize_days(cleaned_days, good, days)
+        final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
+        fabricated = _fabricated_costs(cleaned_days, evidence)
+        dropped = max(0, raw_count - grounded_count)
+        filled = max(0, final_count - grounded_count)
+        stages.append(_span("answer", "stage", "degraded" if (answer_failed or dropped or filled) else "ok",
+                            (time.monotonic() - answer_started) * 1000,
+                            {"raw": raw_count, "grounded": grounded_count, "dropped": dropped,
+                             "filled": filled, "final": final_count,
+                             "fabricated_cost": fabricated, "time_order_ok": order_ok},
+                            error_type="density_miss" if dropped else None))
         notes = _as_list(answer.get("notes"), 8)
         if answer_failed:
             notes.insert(0, "回答阶段使用保守方案，安排基于可追溯来源，具体细节需出行前核对。")
@@ -392,9 +573,9 @@ class AgentWorkflow:
             if item["uncovered"]:
                 notes.append("第%d天没有获取到可追溯来源，当天安排仅作参考。" % item["day"])
         notes = notes[:8]
-        return {"status": "complete" if any(d["activities"] for d in cleaned_days) else "partial",
-                "summary": str(answer.get("summary") or "已根据可追溯地点来源整理行程。"), "days": cleaned_days,
-                "notes": notes, "constraints": constraints,
-                "plan": plan, "evidence": evidence, "model_calls": calls,
-                "verification": verification,
-                "elapsed_seconds": round(time.monotonic() - started, 2)}
+        root_status = "degraded" if any(span["status"] in ("degraded", "warn", "failed") for span in stages) else "ok"
+        return finish(root_status,
+                      status="complete" if any(d["activities"] for d in cleaned_days) else "partial",
+                      summary=str(answer.get("summary") or "已根据可追溯地点来源整理行程。"),
+                      days=cleaned_days, notes=notes, constraints=constraints,
+                      plan=plan, evidence=evidence, model_calls=calls, verification=verification)

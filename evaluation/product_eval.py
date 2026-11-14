@@ -18,6 +18,7 @@ from typing import Any, Dict, List
 from openai import AsyncOpenAI
 
 from evaluation.product_checks import check_result, combined_score, summarize
+from evaluation.stage_checks import evaluator_health, summarize_trajectory
 from evaluation.product_judge import judge as judge_itinerary
 from product.orchestrator import AgentWorkflow
 from product.store import Store
@@ -63,14 +64,15 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) 
         elapsed = round(time.monotonic() - started, 2)
         store.finish(job, result)
         return {"id": case["id"], "query": case["query"], "status": result.get("status"),
-                "result": _compact(result), "checks": check_result(case, result), "elapsed": elapsed}
+                "result": _compact(result), "checks": check_result(case, result),
+                "trajectory": summarize_trajectory(case, result), "elapsed": elapsed}
     except Exception as error:
         return {"id": case["id"], "query": case["query"], "error": str(error)[:300],
                 "checks": {}, "elapsed": 0.0}
 
 
 def write_report(target: Path, profile: str, summary: Dict[str, Any], records: List[Dict[str, Any]],
-                 split: str = "all") -> None:
+                 split: str = "all", health: Dict[str, Any] | None = None) -> None:
     lines = [f"# 产品行程评测 · {profile} · {split}", "", f"- 用例：{summary['cases']}",
              f"- 确定性检查全过：{summary['all_checks_passed']}/{summary['cases']}（平均通过率 {summary['hard_mean']}）",
              f"- rubric 均分：{summary['rubric_mean']}（0–1，10 条清单）",
@@ -91,6 +93,59 @@ def write_report(target: Path, profile: str, summary: Dict[str, Any], records: L
             else ("待改进" if rubric is not None else "待人工")
         lines.append(f"| {record['id']} | {record.get('status') or record.get('error', '错误')[:20]} | "
                      f"{record['elapsed']}s | {failed} | {rubric} | {score} | {verdict} |")
+    stage_failed: Dict[str, List[str]] = {}
+    stage_totals: Dict[str, List[bool]] = {}
+    error_counts: Dict[tuple, int] = {}
+    attributions: Dict[str, int] = {}
+    branch_rates: Dict[str, List[float]] = {}
+    for record in records:
+        trajectory = record.get("trajectory") or {}
+        for stage, info in (trajectory.get("stages") or {}).items():
+            for check in info.get("checks") or []:
+                if check["passed"] is None:
+                    continue
+                stage_totals.setdefault(stage, []).append(bool(check["passed"]))
+                if not check["passed"]:
+                    stage_failed.setdefault(stage, []).append(check["name"])
+        for error in trajectory.get("errors") or []:
+            key = (error["stage"], error["type"])
+            error_counts[key] = error_counts.get(key, 0) + 1
+        primary = (trajectory.get("attribution") or {}).get("primary")
+        if primary and primary != "none":
+            attributions[primary] = attributions.get(primary, 0) + 1
+        for branch, info in (trajectory.get("branches") or {}).items():
+            if info.get("rate") is not None:
+                branch_rates.setdefault(branch, []).append(info["rate"])
+
+    lines += ["", "## 分阶段", "", "| 阶段 | 分数 | 主要未通过项 |", "|---|---|---|"]
+    for stage in ("intake", "planning", "retrieval", "coverage", "answer"):
+        values = stage_totals.get(stage) or []
+        score = round(sum(1 for value in values if value) / len(values), 3) if values else "unknown"
+        failed = sorted(set(stage_failed.get(stage) or []))[:4]
+        lines.append(f"| {stage} | {score} | {', '.join(failed) or '-'} |")
+
+    lines += ["", "## 分支覆盖", "", "| 分支 | 平均覆盖率 |", "|---|---|"]
+    for branch in ("poi", "weather", "hotel", "transport"):
+        values = branch_rates.get(branch)
+        lines.append(f"| {branch} | {round(sum(values) / len(values), 3) if values else 'skipped'} |")
+
+    lines += ["", "## 归因", ""]
+    if attributions:
+        for source, count in sorted(attributions.items(), key=lambda item: -item[1]):
+            lines.append(f"- {source}: {count}")
+    else:
+        lines.append("- 无失败样本")
+
+    lines += ["", "## 错误分布", "", "| 阶段 | 类型 | 次数 |", "|---|---|---|"]
+    for (stage, error_type), count in sorted(error_counts.items(), key=lambda item: -item[1])[:10]:
+        lines.append(f"| {stage} | {error_type} | {count} |")
+
+    health = health or evaluator_health(records)
+    lines += ["", "## 裁判健康度", "",
+              f"- 判定样本：{health['judged']}",
+              f"- 截断：{health['truncated']}，解析失败：{health['parse_failed']}",
+              f"- 双裁判平均分差：{health['mean_agreement']}",
+              f"- 结论：{'可信' if health['reliable'] else '不可用（裁判问题，先修裁判）'}"]
     lines += ["", "## 裁判未通过的条目", ""]
     for record in records:
         judge_info = record.get("judge") or {}
@@ -151,7 +206,9 @@ async def main() -> None:
     summary = summarize(records)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = Path(args.out or f"results/product_eval/{stamp}-{args.profile}")
-    write_report(target, args.profile, summary, records, args.split)
+    health = evaluator_health(records)
+    summary["evaluator"] = health
+    write_report(target, args.profile, summary, records, args.split, health)
     print(json.dumps(summary, ensure_ascii=False))
     print(f"报告：{target/'report.md'}")
 
