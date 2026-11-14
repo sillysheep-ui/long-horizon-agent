@@ -13,11 +13,13 @@ from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
 from product.names import clean_place_name, dedupe_names, looks_like_place, title_matches
-from product.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan
+from product.planner import (
+    PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan, queries_for_day,
+)
 from product.provenance import build_evidence, normalize_all
 from product.revision import (
-    day_of_evidence, days_to_revision_plan, describe_targets, merge_days,
-    parse_target_days, split_by_targets,
+    compact_days, day_of_evidence, days_to_revision_plan, describe_targets,
+    merge_days, parse_target_days, split_by_targets,
 )
 from product.store import Store
 from product.tool_runtime import ResearchExecutor
@@ -471,6 +473,20 @@ class AgentWorkflow:
             max_tokens=1000)
         calls.append({k: plan_response[k] for k in ("role", "provider", "model")})
         plan = parse_json(plan_response["content"])
+        if targets and prior.get("plan"):
+            previous_plan = prior["plan"]
+            if all(queries_for_day(plan, day) == queries_for_day(previous_plan, day) for day in targets):
+                self._event(job, "planning", "修改意见没有被规划体现，正在重试")
+                retry_response = await self.model.complete("规划 Agent", PLANNER_SYSTEM_PROMPT,
+                    build_planner_prompt(query, constraints, previous_plan,
+                                         {"days": targets, "instruction": revision_text,
+                                          "note": "上一次的查询词与原方案相同，请换用不同的地点关键词以体现修改意见"}),
+                    max_tokens=1000)
+                calls.append({k: retry_response[k] for k in ("role", "provider", "model")})
+                retry_plan = parse_json(retry_response["content"])
+                if not all(queries_for_day(retry_plan, day) == queries_for_day(previous_plan, day)
+                           for day in targets):
+                    plan = retry_plan
         days = plan.get("days")
         if targets:
             tool_plan = days_to_revision_plan(days, targets, days_count, destinations)
@@ -577,9 +593,9 @@ class AgentWorkflow:
             if targets:
                 answer_payload["revision"] = revision_text
                 answer_payload["target_days"] = targets
-                answer_payload["keep_days"] = [
-                    day for day in prior_days if int(day.get("day") or 0) not in targets
-                ]
+                answer_payload["keep_days"] = compact_days(
+                    [day for day in prior_days if int(day.get("day") or 0) not in targets]
+                )
             answer_response = await self.model.complete("回答 Agent", answer_system,
                 json.dumps(answer_payload, ensure_ascii=False), max_tokens=3000)
             calls.append({k: answer_response[k] for k in ("role", "provider", "model")})

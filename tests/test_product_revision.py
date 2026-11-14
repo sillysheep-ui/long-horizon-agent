@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from product.orchestrator import AgentWorkflow
+from product.planner import queries_for_day
 from product.revision import (
+    compact_days,
     day_of_evidence,
     days_to_revision_plan,
     describe_targets,
@@ -51,6 +53,9 @@ class FakeModel:
         self.roles = []
         self.answer_payloads = []
 
+    def _second_query(self, index):
+        return "九溪烟树" if index > 1 else "灵隐寺"
+
     async def complete(self, role, system, user, max_tokens=1200):
         self.roles.append(role)
         if role == "需求 Agent":
@@ -58,7 +63,7 @@ class FakeModel:
                                   "budget": "1500", "preferences": [], "missing_required": [],
                                   "conflicts": []}, ensure_ascii=False)
         elif role == "规划 Agent":
-            second = "九溪烟树" if self.roles.count("规划 Agent") > 1 else "灵隐寺"
+            second = self._second_query(self.roles.count("规划 Agent"))
             content = json.dumps({"days": [
                 {"day": 1, "city": "杭州", "poi_queries": ["西湖"]},
                 {"day": 2, "city": "杭州", "poi_queries": [second]},
@@ -109,6 +114,44 @@ def test_revision_plan_only_targets_named_day():
     assert describe_targets([2]) == "第2天"
 
 
+class StubbornModel(FakeModel):
+    """第一次修改照抄旧计划，被重试后才真正改。"""
+
+    def _second_query(self, index):
+        return "灵隐寺" if index <= 2 else "九溪烟树"
+
+
+def test_planner_retries_when_revision_changes_nothing(tmp_path):
+    store = Store(str(tmp_path / "retry.db"))
+    tools = FakeTools()
+    model = StubbornModel()
+    workflow = AgentWorkflow(store, model, tools)
+    trip = store.create_trip("从上海去杭州玩两天")
+    job = store.claim()
+    store.finish(job, asyncio.run(workflow.run(job)))
+
+    store.revise(trip["trip_id"], "第二天换成安静的地方")
+    job = store.claim()
+    result = asyncio.run(workflow.run(job))
+    assert model.roles.count("规划 Agent") == 3
+    queries = {item["id"]: item["query"] for item in result["evidence"]}
+    assert queries["d2-p1"] == "九溪烟树"
+
+
+def test_queries_for_day():
+    plan = {"days": [{"day": 1, "poi_queries": ["西湖"]}, {"day": 2, "poi_queries": ["灵隐寺"]}]}
+    assert queries_for_day(plan, 2) == ["灵隐寺"]
+    assert queries_for_day(plan, 3) == []
+
+
+def test_compact_days_drops_long_fields():
+    days = [{"day": 1, "city": "杭州", "activities": [
+        {"title": "西湖", "start": "09:30", "duration": "2 小时",
+         "description": "很长的描述", "transport": "地铁", "cost": "免费"}]}]
+    compacted = compact_days(days)
+    assert compacted[0]["activities"] == [{"title": "西湖", "start": "09:30", "duration": "2 小时"}]
+
+
 def test_split_by_targets_and_day_of_evidence():
     evidence = [_evidence("d1-p1", "西湖", "杭州"), _evidence("d2-p1", "灵隐寺", "杭州")]
     keep, replace = split_by_targets(evidence, [2])
@@ -150,7 +193,10 @@ def test_workflow_only_replans_named_day(tmp_path):
     # 回答阶段能看到未修改日期的成品，避免重复和节奏冲突。
     kept = model.answer_payloads[-1]["keep_days"]
     assert [day["day"] for day in kept] == [1]
-    assert kept[0]["activities"] == first["days"][0]["activities"]
+    assert [item["title"] for item in kept[0]["activities"]] == [
+        item["title"] for item in first["days"][0]["activities"]
+    ]
+    assert set(kept[0]["activities"][0]) == {"title", "start", "duration"}
 
 
 def test_workflow_falls_back_when_no_day_named(tmp_path):

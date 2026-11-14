@@ -142,5 +142,22 @@ def days_to_revision_plan(
         raise ValueError("计划未通过校验: %s" % exc)
 
 
+def compact_days(days: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """把已成稿的日期压缩成“日期 + 标题/时间”，用于给模型提供上下文。"""
+    compacted = []
+    for day in days:
+        activities = []
+        for activity in day.get("activities") or []:
+            if not isinstance(activity, dict):
+                continue
+            activities.append({
+                "title": activity.get("title"),
+                "start": activity.get("start"),
+                "duration": activity.get("duration"),
+            })
+        compacted.append({"day": day.get("day"), "city": day.get("city"), "activities": activities})
+    return compacted
+
+
 def describe_targets(targets: List[int]) -> str:
     return "、".join("第%d天" % day for day in targets)

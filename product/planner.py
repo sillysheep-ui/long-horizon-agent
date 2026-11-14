@@ -41,6 +41,19 @@ def build_planner_prompt(
     return json.dumps(payload, ensure_ascii=False)
 
 
+def queries_for_day(plan: Any, day: int) -> List[str]:
+    """取出某一天的 poi_queries；没有该天时返回空列表。"""
+    items = plan.get("days") if isinstance(plan, dict) else None
+    for item in items or []:
+        try:
+            number = int(item.get("day"))
+        except (TypeError, ValueError):
+            continue
+        if number == day:
+            return [str(query) for query in (item.get("poi_queries") or [])]
+    return []
+
+
 def days_to_tool_plan(
     days: List[Dict[str, Any]],
     days_count: int,
