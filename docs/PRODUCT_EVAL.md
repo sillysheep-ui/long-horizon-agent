@@ -10,7 +10,7 @@
 
 ## 第一层：确定性检查（不花模型调用）
 
-`evaluation/product_checks.py` 对每条行程做 11 项检查，全部来自结构化字段：
+`evaluation/product_checks.py` 对每条行程做 12 项检查，全部来自结构化字段：
 
 | 检查 | 含义 |
 |---|---|
@@ -20,6 +20,7 @@
 | `unique_titles` | 跨天不重复同一地点 |
 | `title_clean` | 标题短且不含“攻略/门票/图片”等网页噪声 |
 | `time_order` | 同一天时间升序 |
+| `no_overlap` | 前一项 start + duration 不晚于后一项 start |
 | `fields_filled` | start/duration/transport/cost 都有值 |
 | `evidence_ok` | 每个活动都能指回一条 ok 证据 |
 | `city_coverage` | 每天的城市都在用户要求的城市里（`杭州` 与 `杭州市` 等价） |
@@ -51,7 +52,7 @@ score = 0.6 × 硬检查通过率 + 0.4 × rubric − 0.2 × 是否编造   （�
 
 一条结果同时满足以下三条才算**可交付**：
 
-1. 11 项确定性检查全部通过；
+1. 12 项确定性检查全部通过；
 2. rubric ≥ 0.7（10 条里至少对 7 条）；
 3. 没有编造数字。
 

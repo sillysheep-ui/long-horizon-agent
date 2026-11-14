@@ -76,6 +76,41 @@ def hard_pass_rate(checks: Dict[str, bool]) -> float:
     return sum(1 for value in checks.values() if value) / len(checks)
 
 
+_HOURS = re.compile(r"([0-9]+(?:\.[0-9]+)?)\s*小时")
+_MINS = re.compile(r"([0-9]+)\s*分钟")
+
+
+def _start_minutes(value: Any) -> int:
+    hour, _, minute = str(value or "").partition(":")
+    try:
+        return int(hour) * 60 + int(minute)
+    except ValueError:
+        return -1
+
+
+def _duration_minutes(value: Any) -> int:
+    text = str(value or "")
+    match = _HOURS.search(text)
+    if match:
+        return int(float(match.group(1)) * 60)
+    match = _MINS.search(text)
+    return int(match.group(1)) if match else 0
+
+
+def _schedule_ok(days: List[Dict[str, Any]]) -> bool:
+    """每天的开始时间递增，且前一项结束不晚于后一项开始。"""
+    for day in days:
+        activities = _activities(day)
+        starts = [_start_minutes(a.get("start")) for a in activities]
+        if any(start < 0 for start in starts) or starts != sorted(starts) or len(starts) != len(set(starts)):
+            return False
+        for current, following in zip(activities, activities[1:]):
+            finish = _start_minutes(current.get("start")) + _duration_minutes(current.get("duration"))
+            if finish > _start_minutes(following.get("start")):
+                return False
+    return True
+
+
 def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool]:
     """返回逐项检查结果；键名会直接进报告。"""
     if case.get("expect") == "needs_clarification":
@@ -117,6 +152,7 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
         "day_count": bool(days) and (expected_days is None or len(days) == expected_days),
         "density": bool(days) and all(2 <= len(_activities(d)) <= 3 for d in days),
         "unique_titles": len(titles) == len(set(titles)),
+        "no_overlap": _schedule_ok(days),
         "title_clean": bool(titles) and all(
             len(title) <= 24 and not any(token in title for token in NOISE_TOKENS) for title in titles),
         "time_order": bool(days) and all(
