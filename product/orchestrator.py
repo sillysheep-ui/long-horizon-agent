@@ -567,12 +567,19 @@ class AgentWorkflow:
             "7) notes 最多 6 条，写出行前必须核对的事项。"
         )
         if targets:
-            answer_system += " 本次只修改%s：只输出这些天的 days 条目，其他天不要输出。" % describe_targets(targets)
+            answer_system += (
+                " 本次只修改%s：只输出这些天的 days 条目，其他天不要输出。"
+                " keep_days 是已经定稿、本次不动的日期：不要重复其中的地点，新安排要与它们的节奏和交通衔接。"
+                % describe_targets(targets)
+            )
         try:
             answer_payload = {"query": query, "constraints": constraints, "plan": plan, "evidence": good}
             if targets:
                 answer_payload["revision"] = revision_text
                 answer_payload["target_days"] = targets
+                answer_payload["keep_days"] = [
+                    day for day in prior_days if int(day.get("day") or 0) not in targets
+                ]
             answer_response = await self.model.complete("回答 Agent", answer_system,
                 json.dumps(answer_payload, ensure_ascii=False), max_tokens=3000)
             calls.append({k: answer_response[k] for k in ("role", "provider", "model")})

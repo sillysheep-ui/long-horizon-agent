@@ -49,6 +49,7 @@ class FakeModel:
 
     def __init__(self):
         self.roles = []
+        self.answer_payloads = []
 
     async def complete(self, role, system, user, max_tokens=1200):
         self.roles.append(role)
@@ -64,6 +65,7 @@ class FakeModel:
             ]}, ensure_ascii=False)
         else:
             payload = json.loads(user)
+            self.answer_payloads.append(payload)
             days = []
             for item in payload["evidence"]:
                 number = int(item["id"].split("-")[0][1:])
@@ -145,6 +147,10 @@ def test_workflow_only_replans_named_day(tmp_path):
     assert second["days"][0]["activities"] == first["days"][0]["activities"]
     titles = [activity["title"] for activity in second["days"][1]["activities"]]
     assert any("九溪" in title for title in titles)
+    # 回答阶段能看到未修改日期的成品，避免重复和节奏冲突。
+    kept = model.answer_payloads[-1]["keep_days"]
+    assert [day["day"] for day in kept] == [1]
+    assert kept[0]["activities"] == first["days"][0]["activities"]
 
 
 def test_workflow_falls_back_when_no_day_named(tmp_path):
