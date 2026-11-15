@@ -57,6 +57,10 @@ class CleanActivitiesTests(unittest.TestCase):
         self.assertEqual(activities[1]["cost"], "45 元")
         self.assertEqual(activities[0]["transport"], "交通未核实")
 
+    def test_strips_trailing_phone_label(self):
+        self.assertEqual(clean_place_name("飞鸟集】电话"), "飞鸟集")
+        self.assertEqual(clean_place_name("某某茶室 联系电话"), "某某茶室")
+
     def test_prefers_display_title(self):
         activities = _clean_activities([{"title": "很长的证据标题", "display_title": "湖滨咖啡馆"}])
         self.assertEqual(activities[0]["title"], "湖滨咖啡馆")

@@ -12,8 +12,11 @@ from inference.tool_dag import ToolDAGError, ToolPlan
 PLANNER_SYSTEM_PROMPT = (
     "你负责国内多日旅行的计划草案。只输出 JSON："
     '{"days":[{"day":1,"city":"城市","poi_queries":["准确地点或类型关键词"]}]}。'
-    "days 数量严格等于用户天数；每日至多 3 个 poi_queries，地点必须位于对应城市；"
-    "不要编造价格、班次或经纬度。若出现 revision 字段，只重写 revision.days 这些天的 poi_queries 以体现修改意见；其他天原样照抄 previous_plan。"
+    "规则：1) days 数量严格等于用户天数；2) 每天 2-3 个 poi_queries，"
+    "写成具体地点名或明确类别（如“西湖”“龙井村”“博物馆”），不要写“景点”“好玩的地方”；"
+    "3) 同一天尽量覆盖不同类型，同一地点只查一次；4) 地点必须位于对应城市；"
+    "5) 不要编造价格、班次或经纬度。"
+    "若出现 revision 字段，只重写 revision.days 这些天的 poi_queries 以体现修改意见；其他天原样照抄 previous_plan。"
 )
 
 MAX_QUERIES_PER_DAY = 3
