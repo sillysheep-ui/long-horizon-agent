@@ -7,7 +7,7 @@ from typing import Any
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
-from product.pace import detect_pace
+from product.pace import count_bounds, detect_pace
 from product.planner import (
     PLANNER_SYSTEM_PROMPT,
     build_planner_prompt,
@@ -23,7 +23,8 @@ from product.postprocess import (
     budget_conflict,
     cities_fit_days,
     clean_named_places,
-    detect_day_span,
+    day_hours,
+    detect_day_windows,
     match_activity,
 )
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
@@ -91,11 +92,11 @@ class AgentWorkflow:
                               question="现在的行程是 %d 天，%s 超出了范围。想加一天，还是把这天安排到现有行程里？"
                                        % (len(prior_days), describe_targets(too_far)),
                               constraints=prior.get("constraints"), model_calls=calls, days=[], evidence=[])
-        day_span = (prior.get("constraints") or {}).get("day_span") or detect_day_span(
-            query, revision_text)
-        activity_limit = 2 if day_span == "half" else 4
+        prior_windows = (prior.get("constraints") or {}).get("day_windows")
+        windows = prior_windows or detect_day_windows(query, revision_text, days=max(1, len(prior_days)))
         if targets:
             constraints = dict(prior["constraints"])
+            constraints["day_windows"] = windows
             days_count = len(prior_days)
             destinations = _as_list(constraints.get("destinations"), 4)
             self._event(job, "intake", "沿用原需求，只重排%s" % describe_targets(targets))
@@ -115,9 +116,6 @@ class AgentWorkflow:
             constraints = parse_json(intake["content"])
             constraints["named_places"] = clean_named_places(
                 constraints.get("named_places"), intake_query)
-            day_span = detect_day_span(intake_query, revision_text)
-            constraints["day_span"] = day_span
-            activity_limit = 2 if day_span == "half" else 4
             destinations = _as_list(constraints.get("destinations"), 4)
             declared = _declares_duration(intake_query)
             intake_attributes = {"days": constraints.get("days"), "cities": destinations,
@@ -133,6 +131,8 @@ class AgentWorkflow:
             except (TypeError, ValueError):
                 days_count = 1
             constraints["days"] = days_count
+            windows = detect_day_windows(intake_query, revision_text, days=days_count)
+            constraints["day_windows"] = windows
             constraints["pace"] = detect_pace(intake_query, revision_text)
             conflicts = _as_list(constraints.get("conflicts"), 3)
             if not declared:
@@ -312,9 +312,10 @@ class AgentWorkflow:
                 seen_titles.add(matched[1])
                 grounded_count += 1
                 matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1]})
+            hours_for_day = day_hours(windows, day.get("day"))
             cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
                                  "activities": _clean_activities(
-                                     matched_activities, limit=activity_limit,
+                                     matched_activities, limit=count_bounds(hours_for_day, pace)[1],
                                      evidence={e["id"]: e for e in evidence})})
         if not any(d["activities"] for d in cleaned_days):
             answer_failed = True
@@ -337,9 +338,9 @@ class AgentWorkflow:
                 [day for day in cleaned_days if int(day.get("day") or 0) in target_set],
                 good,
                 [day for day in days if int(day.get("day") or 0) in target_set],
-                keep_days=kept_days, max_activities=activity_limit)
+                keep_days=kept_days, windows=windows, pace=pace)
         else:
-            cleaned_days = _finalize_days(cleaned_days, good, days, max_activities=activity_limit)
+            cleaned_days = _finalize_days(cleaned_days, good, days, windows=windows, pace=pace)
         final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
         fabricated = _fabricated_costs(cleaned_days, evidence)
         dropped = max(0, raw_count - grounded_count)

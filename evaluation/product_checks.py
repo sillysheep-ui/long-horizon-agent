@@ -7,7 +7,7 @@
 import re
 from typing import Any
 
-from product.pace import PACE_LIMITS, PACE_PLAN, detect_pace
+from product.pace import DEFAULT_DAY_HOURS, PACE_LIMITS, PACE_PLAN, count_bounds, detect_pace
 
 NOISE_TOKENS = ("攻略", "门票", "地址", "图片", "开放时间", "营业时间", "【", "】", "｜", "点评", "简介")
 TIME_ORDER_TOLERANCE = 0  # 只比较字符串顺序，HH:MM 定长可直接比
@@ -147,14 +147,29 @@ def _total_hours(activities: list[dict[str, Any]]) -> float:
     return round(sum(_duration_minutes(activity.get("duration")) for activity in activities) / 60, 2)
 
 
+def _windows(result: dict[str, Any]) -> dict[int, float]:
+    raw = (result.get("constraints") or {}).get("day_windows") or []
+    return {int(item.get("day") or 0): float(item.get("hours") or DEFAULT_DAY_HOURS)
+            for item in raw if item.get("day") and item.get("hours")}
+
+
 def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
     """返回逐项检查结果；键名会直接进报告。"""
     if case.get("expect") == "needs_clarification":
         return {"clarification": result.get("status") == "needs_clarification"}
     days = _days(result)
     pace = detect_pace(case.get("query"))
-    min_count, max_count, min_hours, max_hours = PACE_LIMITS[pace]
     plan = PACE_PLAN[pace]
+    windows = _windows(result)
+
+    def _hours(day: dict[str, Any]) -> float:
+        return windows.get(int(day.get("day") or 0), DEFAULT_DAY_HOURS)
+
+    def _bounds(day: dict[str, Any]) -> tuple[int, int]:
+        hours = windows.get(int(day.get("day") or 0))
+        if hours:
+            return count_bounds(hours, pace)
+        return PACE_LIMITS[pace][0], PACE_LIMITS[pace][1]
     activities = [a for d in days for a in _activities(d)]
     titles = [str(a.get("title") or "") for a in activities]
     evidence = _evidence_map(result)
@@ -189,9 +204,11 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
     checks = {
         "complete": result.get("status") == "complete",
         "day_count": bool(days) and (expected_days is None or len(days) == expected_days),
-        "density": bool(days) and all(min_count <= len(_activities(d)) <= max_count for d in days),
+        "density": bool(days) and all(
+            _bounds(d)[0] <= len(_activities(d)) <= _bounds(d)[1] for d in days),
         "periods": bool(days) and all(len(_periods(_activities(d))) >= 2 for d in days),
-        "day_load": bool(days) and all(min_hours <= _total_hours(_activities(d)) <= max_hours for d in days),
+        "day_load": bool(days) and all(
+            min(3.0, _hours(d)) <= _total_hours(_activities(d)) <= _hours(d) + 0.5 for d in days),
         "activity_length": bool(days) and all(
             plan["activity"][0] - 1.0 <= _duration_minutes(a.get("duration")) / 60 <= plan["activity"][1] + 1.0
             for a in activities),
@@ -205,7 +222,6 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         "time_order": bool(days) and all(
             [str(a.get("start")) for a in _activities(d)] == sorted(str(a.get("start")) for a in _activities(d))
             for d in days),
-        "half_day": True,
         "fields_filled": bool(activities) and all(
             a.get("start") and a.get("duration") and a.get("transport") and a.get("cost") for a in activities),
         "evidence_ok": bool(activities) and all(
@@ -214,9 +230,6 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         "title_matches_evidence": title_matches_evidence,
         "no_fabricated_cost": no_fabricated_cost,
     }
-    if any(token in str(case.get("query") or "") for token in ("半天", "大半天")):
-        checks["half_day"] = bool(days) and all(
-            1 <= len(_activities(d)) <= 2 and 4.5 <= _total_hours(_activities(d)) <= 7.5 for d in days)
     wanted = [str(place).strip() for place in case.get("named_places") or [] if str(place).strip()]
     if wanted:
         checks["named_places_covered"] = _named_places_covered(wanted, titles)

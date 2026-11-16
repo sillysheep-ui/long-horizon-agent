@@ -4,6 +4,7 @@
 每天的活动数量由可用时间和这两者自然决定，而不是先定个数。
 """
 
+import re
 from typing import Any
 
 PACE_WORDS = {
@@ -33,6 +34,43 @@ PACE_RULES = {
     "packed": ("用户偏好紧凑：每个活动 1-1.5 小时，间隔 15-45 分钟，全天总时长 5-10 小时；"
                "全天总时长 4-10 小时；确实顺路再多安排，但不要挤掉吃饭和交通时间。"),
 }
+
+DEFAULT_DAY_HOURS = 10.0
+HALF_DAY_HOURS = 6.0
+BIG_HALF_DAY_HOURS = 8.0
+HOUR_WORDS = ("小时", "个小时", "h", "H")
+CN_DIGITS = {"一": 1, "两": 2, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+
+
+def hours_from_text(text: Any) -> float | None:
+    """从一句话里读"半天 / 大半天 / N 个小时"；读不到返回 None。"""
+    joined = str(text or "")
+    if "大半天" in joined:
+        return BIG_HALF_DAY_HOURS
+    if "半天" in joined:
+        return HALF_DAY_HOURS
+    match = re.search(r"([0-9]+|[一两二三四五六七八九十])\s*(?:个)?\s*(?:小时|h|H)", joined)
+    if not match:
+        return None
+    raw = match.group(1)
+    if raw.isdigit():
+        return float(raw)
+    if raw == "十":
+        return 10.0
+    return float(CN_DIGITS.get(raw, 0)) or None
+
+
+def count_bounds(hours: float, pace: str) -> tuple[int, int]:
+    """按可用时长与单个活动的时长/间隔，算出当天合理的活动数区间。"""
+    plan = PACE_PLAN[pace]
+    low_unit = plan["activity"][0] + plan["gap"][0] / 60
+    high_unit = plan["activity"][1] + plan["gap"][1] / 60
+    upper = min(4, max(1, int(hours / low_unit)))
+    if hours <= 7.0:  # 半天窗口（5–7 小时）最多两个活动
+        upper = min(upper, 2)
+    lower = max(1, int(hours / high_unit))
+    return min(lower, upper), max(1, upper)
+
 
 NEGATIONS = ("不要", "别", "不想", "不必", "不用")
 

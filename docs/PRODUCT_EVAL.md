@@ -10,19 +10,19 @@
 
 ## 第一层：确定性检查（不花模型调用）
 
-`evaluation/product_checks.py` 对每条行程做 16 项检查，全部来自结构化字段。其中 `density`、`day_load`、`activity_length`、`free_time` 按用户节奏（`product/pace.py` 的 relaxed/normal/packed，从 query 关键词识别）分档。节奏的主口径是“每件事干多久”：relaxed 每个活动 2–3.5 小时、packed 1–1.5 小时，活动数量由可用时间自然决定：
+`evaluation/product_checks.py` 对每条行程做 16 项检查，全部来自结构化字段。其中 `density`、`day_load`、`activity_length`、`free_time` 按两层信息判断：① 每天可用时长 `constraints.day_windows`（半天约 6 小时、大半天约 8 小时、全天约 10 小时；用户点名某天则覆盖那天）；② 用户节奏（`product/pace.py` 的 relaxed/normal/packed，从 query 关键词识别）。节奏只管“每件事干多久”：relaxed 每个活动 2–3.5 小时、packed 1–1.5 小时，活动数量由可用时长与活动时长共同决定（半天窗口最多 2 个）：
 
 | 检查 | 含义 |
 |---|---|
 | `complete` | 状态是 complete，而不是 partial |
 | `day_count` | 天数与需求一致 |
-| `density` | 每天 2–3 个活动，不空也不塞 |
+| `density` | 活动数落在当天的时长区间（半天 ≤2；全天见 pace 档位） |
 | `unique_titles` | 跨天不重复同一地点 |
 | `title_clean` | 标题短且不含“攻略/门票/图片”等网页噪声 |
 | `time_order` | 同一天时间升序 |
 | `no_overlap` | 前一项 start + duration 不晚于后一项 start |
 | `periods` | 按活动占用区间，每天覆盖上午/下午/晚上中的至少两个时段 |
-| `day_load` | 全天活动总时长符合 pace 档位（relaxed 3–8 / normal 3–8.5 / packed 3.5–10 小时） |
+| `day_load` | 活动总时长不超过当天可用时长、且不少于 3 小时（可用时长不足 3 小时时按可用时长） |
 | `activity_length` | 每个活动的停留时长落在 pace 档位内（relaxed 2–3.5 / normal 1.5–2.5 / packed 1–1.5 小时，±1 小时容差） |
 | `free_time` | 一天里未被活动占用的时间占比符合 pace（relaxed ≥0.18 / normal 0.10–0.65 / packed ≤0.55） |
 | `fields_filled` | start/duration/transport/cost 都有值 |

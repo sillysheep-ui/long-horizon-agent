@@ -56,16 +56,21 @@ class CheckResultTests(unittest.TestCase):
         self.assertTrue(checks["city_coverage"])
 
 
-    def test_half_day_needs_two_activities(self):
+    def test_day_window_caps_activity_count(self):
         three = [make_activity("西湖", "09:30"), make_activity("苏博", "12:00"), make_activity("平江路", "15:00")]
-        checks = check_result({"days": 1, "query": "苏州只有半天"}, make_result([make_day(1, three)]))
-        self.assertFalse(checks["half_day"])
+        result = make_result([make_day(1, three)])
+        result["constraints"] = {"day_windows": [{"day": 1, "hours": 6.0}]}
+        checks = check_result({"days": 1, "query": "苏州只有半天"}, result)
+        self.assertFalse(checks["density"])
 
-    def test_half_day_two_activities_pass(self):
+    def test_day_window_allows_two_activities(self):
         two = [{**make_activity("拙政园", "09:30"), "duration": "3 小时"},
                {**make_activity("苏博", "13:00"), "duration": "2.5 小时"}]
-        checks = check_result({"days": 1, "query": "苏州只有半天"}, make_result([make_day(1, two)]))
-        self.assertTrue(checks["half_day"])
+        result = make_result([make_day(1, two)])
+        result["constraints"] = {"day_windows": [{"day": 1, "hours": 6.0}]}
+        checks = check_result({"days": 1, "query": "苏州只有半天"}, result)
+        self.assertTrue(checks["density"], checks)
+        self.assertTrue(checks["day_load"], checks)
 
     def test_flags_fabricated_cost(self):
         result = make_result([make_day(1, [make_activity(cost="门票 60 元"), make_activity("灵隐寺", "14:00")])],

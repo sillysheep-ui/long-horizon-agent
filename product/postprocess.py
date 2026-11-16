@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from product.names import clean_place_name, title_matches
+from product.pace import DEFAULT_DAY_HOURS, count_bounds, hours_from_text
 
 
 def _as_list(value: Any, limit: int) -> list[str]:
@@ -148,13 +149,37 @@ def chinese_number(text: str) -> int:
     return total + section + number
 
 
-HALF_DAY_WORDS = ("半天", "大半天", "half day", "half-day")
+DAY_MARKER = re.compile(r"第([一二三四五六七八九十\d]+)天[^。；\n]{0,8}?(半天|大半天|([0-9一二三四五六七八九十]+)\s*(?:个)?\s*小时)")
+CN_DAY = {"一": 1, "两": 2, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
 
 
-def detect_day_span(*texts: Any) -> str:
-    """半天/大半天 → half；其余按整天。"""
+def day_hours(windows: list[dict[str, Any]] | None, day: Any) -> float:
+    """取某天的可用时长；缺省按整天。"""
+    for window in windows or []:
+        if int(window.get("day") or 0) == int(day or 0):
+            return float(window.get("hours") or DEFAULT_DAY_HOURS)
+    return DEFAULT_DAY_HOURS
+
+
+def _cn_number(raw: str) -> int | None:
+    raw = raw.strip()
+    if raw.isdigit():
+        return int(raw)
+    return CN_DAY.get(raw)
+
+
+def detect_day_windows(*texts: Any, days: int = 1) -> list[dict[str, Any]]:
+    """每天可用时长：用户点名某天半天/N 小时就覆盖那天，否则用全局值。"""
     joined = " ".join(str(text) for text in texts if text)
-    return "half" if any(word in joined for word in HALF_DAY_WORDS) else "full"
+    default = hours_from_text(joined) or DEFAULT_DAY_HOURS
+    windows = [{"day": day, "hours": default} for day in range(1, max(1, days) + 1)]
+    for match in DAY_MARKER.finditer(joined):
+        day = _cn_number(match.group(1))
+        if not day or day > len(windows):
+            continue
+        hours = hours_from_text(match.group(2)) or DEFAULT_DAY_HOURS
+        windows[day - 1]["hours"] = hours
+    return windows
 
 
 def clean_named_places(values: Any, text: str, limit: int = 6) -> list[str]:
@@ -203,7 +228,8 @@ def cities_fit_days(destinations: list[str], days: int) -> bool:
 def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]],
                    plan_days: list[dict[str, Any]],
                    keep_days: list[dict[str, Any]] | None = None,
-                   max_activities: int = 4) -> list[dict[str, Any]]:
+                   windows: list[dict[str, Any]] | None = None,
+                   pace: str = "normal") -> list[dict[str, Any]]:
     """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。
 
     keep_days 是本次不动、原样保留的日期；只对 plan_days 里的日期做整理。
@@ -222,7 +248,9 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                 continue
             used.add(title)
             activities.append({**activity, "title": title})
-        floor = min(2, max_activities)
+        hours = day_hours(windows, planned.get("day"))
+        low, high = count_bounds(hours, pace)
+        floor = max(1, min(2, low, high))
         if len(activities) < floor:
             for evidence in good:
                 if not evidence["id"].startswith("d%d-" % planned["day"]):
@@ -246,7 +274,7 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                 if len(activities) >= floor:
                     break
         result.append({"day": planned["day"], "city": day.get("city") or planned.get("city"),
-                       "activities": _fit_schedule(activities)[:max_activities]})
+                       "activities": _fit_schedule(activities)[:high]})
     result.extend(kept)
     result.sort(key=lambda item: int(item.get("day") or 0))
     return result
