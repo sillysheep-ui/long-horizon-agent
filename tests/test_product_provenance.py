@@ -9,7 +9,6 @@ from product.orchestrator import AgentWorkflow, ResearchTools
 from product.provenance import build_evidence, normalize_all, normalize_evidence
 from product.store import Store
 
-
 REQUIRED_FIELDS = ("id", "kind", "query", "city", "status", "source", "source_kind",
                    "verification_level", "simulated", "fetched_at", "reason", "items", "reused")
 

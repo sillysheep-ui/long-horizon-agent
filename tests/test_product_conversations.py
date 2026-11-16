@@ -7,9 +7,9 @@ import unittest
 
 os.environ.setdefault("TRAVEL_DB_PATH", os.path.join(tempfile.gettempdir(), "travel-test-default.db"))
 
-import product.api as api_module  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
+import product.api as api_module  # noqa: E402
 from product.store import Store  # noqa: E402
 
 

@@ -6,7 +6,7 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from inference.tool_dag import ToolDAGError, ToolPlan
 from product.planner import MAX_NODES, MAX_QUERIES_PER_DAY, NODE_TIMEOUT_SECONDS
@@ -37,7 +37,7 @@ def _day_number(token: str) -> int:
     return _CHINESE_DIGITS.get(token, 0)
 
 
-def mentioned_days(text: str) -> List[int]:
+def mentioned_days(text: str) -> list[int]:
     """返回文本里点名的所有日期（不做范围过滤），去重升序。"""
     if not text:
         return []
@@ -51,12 +51,12 @@ def mentioned_days(text: str) -> List[int]:
     return sorted(found)
 
 
-def out_of_range_days(text: str, total_days: int) -> List[int]:
+def out_of_range_days(text: str, total_days: int) -> list[int]:
     """返回超出 1..total_days 的日期，例如两天行程里提到的“第五天”。"""
     return [day for day in mentioned_days(text) if day > total_days]
 
 
-def parse_target_days(text: str, total_days: int) -> List[int]:
+def parse_target_days(text: str, total_days: int) -> list[int]:
     """返回文本里点名且落在 1..total_days 内的日期，去重升序。"""
     if not text or total_days < 1:
         return []
@@ -72,7 +72,7 @@ def day_of_evidence(evidence_id: Any) -> int:
     return int(match.group(1)) if match else 0
 
 
-def split_by_targets(evidence: List[Dict[str, Any]], targets: List[int]) -> "tuple[List[Dict[str, Any]], List[Dict[str, Any]]]":
+def split_by_targets(evidence: list[dict[str, Any]], targets: list[int]) -> "tuple[list[dict[str, Any]], list[dict[str, Any]]]":
     """把证据分成“保留的”和“本次要替换的”两组。"""
     target_set = set(targets)
     keep, replace = [], []
@@ -81,11 +81,11 @@ def split_by_targets(evidence: List[Dict[str, Any]], targets: List[int]) -> "tup
     return keep, replace
 
 
-def merge_days(previous_days: List[Dict[str, Any]], new_days: List[Dict[str, Any]],
-               targets: List[int]) -> List[Dict[str, Any]]:
+def merge_days(previous_days: list[dict[str, Any]], new_days: list[dict[str, Any]],
+               targets: list[int]) -> list[dict[str, Any]]:
     """用新结果替换目标日期，其余日期沿用旧结果，最后按天排序。"""
     target_set = set(targets)
-    merged: Dict[int, Dict[str, Any]] = {}
+    merged: dict[int, dict[str, Any]] = {}
     for day in previous_days:
         try:
             number = int(day.get("day"))
@@ -104,10 +104,10 @@ def merge_days(previous_days: List[Dict[str, Any]], new_days: List[Dict[str, Any
 
 
 def days_to_revision_plan(
-    days: List[Dict[str, Any]],
-    targets: List[int],
+    days: list[dict[str, Any]],
+    targets: list[int],
     days_count: int,
-    destinations: List[str],
+    destinations: list[str],
     *,
     max_nodes: int = MAX_NODES,
     node_timeout_seconds: float = NODE_TIMEOUT_SECONDS,
@@ -121,7 +121,7 @@ def days_to_revision_plan(
         raise ValueError("规划 Agent 返回的天数与需求不一致")
 
     target_set = set(targets)
-    nodes: List[Dict[str, Any]] = []
+    nodes: list[dict[str, Any]] = []
     for day_index, day in enumerate(days, 1):
         if day_index not in target_set or not isinstance(day, dict):
             continue
@@ -150,10 +150,10 @@ def days_to_revision_plan(
             allowed_tools={"poi"}, max_nodes=max_nodes,
         )
     except ToolDAGError as exc:
-        raise ValueError("计划未通过校验: %s" % exc)
+        raise ValueError("计划未通过校验: %s" % exc) from exc
 
 
-def compact_days(days: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def compact_days(days: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """把已成稿的日期压缩成“日期 + 标题/时间”，用于给模型提供上下文。"""
     compacted = []
     for day in days:
@@ -170,5 +170,5 @@ def compact_days(days: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return compacted
 
 
-def describe_targets(targets: List[int]) -> str:
+def describe_targets(targets: list[int]) -> str:
     return "、".join("第%d天" % day for day in targets)

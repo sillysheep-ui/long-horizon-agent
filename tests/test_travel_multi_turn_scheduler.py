@@ -5,14 +5,13 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import os
 import sys
 import types
-import os
-
-import pytest
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault('TRAVEL_AGENTIC_RL_ROOT', str(ROOT))

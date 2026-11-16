@@ -6,7 +6,6 @@
 """
 
 import re
-from typing import List
 
 SEPARATORS = ("｜", "|", "【", "】", "[", "]", "（", "(", " - ", "—", "_", "，", ",", "：")
 TRAILING_WORDS = (
@@ -58,7 +57,7 @@ def looks_like_place(name: str, keyword: str, city: str) -> bool:
     return False
 
 
-def dedupe_names(items: List[dict]) -> List[dict]:
+def dedupe_names(items: list[dict]) -> list[dict]:
     seen = set()
     result = []
     for item in items:
@@ -75,7 +74,7 @@ def _bigrams(text: str) -> set:
     return {cleaned[i:i + 2] for i in range(len(cleaned) - 1)}
 
 
-def title_matches(title: str, names: List[str], threshold: float = 0.6) -> bool:
+def title_matches(title: str, names: list[str], threshold: float = 0.6) -> bool:
     """标题是否落在证据地点名上：包含关系，或 2-gram 重合度达到阈值。"""
     normalized = "".join(ch for ch in str(title or "") if ch.isalnum())
     if not normalized:

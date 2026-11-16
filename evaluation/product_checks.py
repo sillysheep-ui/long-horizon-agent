@@ -5,7 +5,7 @@
 """
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from product.pace import PACE_LIMITS, PACE_PLAN, detect_pace
 
@@ -14,17 +14,17 @@ TIME_ORDER_TOLERANCE = 0  # 只比较字符串顺序，HH:MM 定长可直接比
 DIGITS = re.compile(r"\d+")
 
 
-def _days(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _days(result: dict[str, Any]) -> list[dict[str, Any]]:
     days = result.get("days")
     return [d for d in days if isinstance(d, dict)] if isinstance(days, list) else []
 
 
-def _activities(day: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _activities(day: dict[str, Any]) -> list[dict[str, Any]]:
     items = day.get("activities")
     return [a for a in items if isinstance(a, dict)] if isinstance(items, list) else []
 
 
-def _evidence_map(result: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+def _evidence_map(result: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {e.get("id"): e for e in result.get("evidence") or [] if isinstance(e, dict)}
 
 
@@ -32,7 +32,7 @@ def _norm(text: Any) -> str:
     return re.sub(r"[\s\W_]+", "", str(text or ""))
 
 
-def _item_names(evidence: Dict[str, Any]) -> List[str]:
+def _item_names(evidence: dict[str, Any]) -> list[str]:
     items = evidence.get("items")
     if not isinstance(items, list):
         return []
@@ -43,7 +43,7 @@ def _bigrams(text: str) -> set:
     return {text[index:index + 2] for index in range(len(text) - 1)}
 
 
-def _title_matches(title: str, names: List[str]) -> bool:
+def _title_matches(title: str, names: list[str]) -> bool:
     """标题与证据地点名：包含关系，或 2-gram 重合度 ≥60%（容忍“熊猫基地”这类简称）。"""
     normalized = _norm(title)
     if not normalized:
@@ -60,8 +60,8 @@ def _title_matches(title: str, names: List[str]) -> bool:
     return False
 
 
-def _evidence_text(evidence: Dict[str, Any]) -> str:
-    parts: List[str] = []
+def _evidence_text(evidence: dict[str, Any]) -> str:
+    parts: list[str] = []
     items = evidence.get("items")
     if isinstance(items, list):
         for item in items:
@@ -71,7 +71,7 @@ def _evidence_text(evidence: Dict[str, Any]) -> str:
     return "".join(parts)
 
 
-def hard_pass_rate(checks: Dict[str, bool]) -> float:
+def hard_pass_rate(checks: dict[str, bool]) -> float:
     """确定性检查的通过比例，供打分与 RL 奖励使用。"""
     if not checks:
         return 0.0
@@ -99,14 +99,14 @@ def _duration_minutes(value: Any) -> int:
     return int(match.group(1)) if match else 0
 
 
-def _schedule_ok(days: List[Dict[str, Any]]) -> bool:
+def _schedule_ok(days: list[dict[str, Any]]) -> bool:
     """每天的开始时间递增，且前一项结束不晚于后一项开始。"""
     for day in days:
         activities = _activities(day)
         starts = [_start_minutes(a.get("start")) for a in activities]
         if any(start < 0 for start in starts) or starts != sorted(starts) or len(starts) != len(set(starts)):
             return False
-        for current, following in zip(activities, activities[1:]):
+        for current, following in zip(activities, activities[1:], strict=False):
             finish = _start_minutes(current.get("start")) + _duration_minutes(current.get("duration"))
             if finish > _start_minutes(following.get("start")):
                 return False
@@ -117,7 +117,7 @@ PERIODS = (("morning", 6 * 60, 12 * 60), ("afternoon", 12 * 60, 17 * 60 + 30),
            ("evening", 17 * 60 + 30, 24 * 60))
 
 
-def _free_ratio(activities: List[Dict[str, Any]]) -> float:
+def _free_ratio(activities: list[dict[str, Any]]) -> float:
     """一天里“没被活动占用的时间”占比；活动越少、停留越短，留白越大。"""
     if len(activities) < 2:
         return 1.0
@@ -130,7 +130,7 @@ def _free_ratio(activities: List[Dict[str, Any]]) -> float:
     return round(max(0.0, 1 - busy / span), 2)
 
 
-def _periods(activities: List[Dict[str, Any]]) -> set:
+def _periods(activities: list[dict[str, Any]]) -> set:
     """按活动占用区间判断覆盖时段：跨 17:30 的活动算下午+晚上。"""
     buckets = set()
     for activity in activities:
@@ -143,11 +143,11 @@ def _periods(activities: List[Dict[str, Any]]) -> set:
     return buckets
 
 
-def _total_hours(activities: List[Dict[str, Any]]) -> float:
+def _total_hours(activities: list[dict[str, Any]]) -> float:
     return round(sum(_duration_minutes(activity.get("duration")) for activity in activities) / 60, 2)
 
 
-def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool]:
+def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
     """返回逐项检查结果；键名会直接进报告。"""
     if case.get("expect") == "needs_clarification":
         return {"clarification": result.get("status") == "needs_clarification"}
@@ -215,7 +215,7 @@ def check_result(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, bool
     }
 
 
-def combined_score(checks: Dict[str, bool], rubric: Any, fabrication: bool = False) -> Any:
+def combined_score(checks: dict[str, bool], rubric: Any, fabrication: bool = False) -> Any:
     """0–1 综合分：硬约束 60% + rubric 40%，编造再扣 0.2。"""
     if rubric is None:
         return None
@@ -223,7 +223,7 @@ def combined_score(checks: Dict[str, bool], rubric: Any, fabrication: bool = Fal
     return round(max(0.0, min(1.0, score)), 3)
 
 
-def summarize(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
     """把逐条记录汇总成通过率、平均分与延迟。"""
     check_names = sorted({name for r in records for name in r["checks"]})
     passed = {name: sum(1 for r in records if r["checks"].get(name)) for name in check_names}

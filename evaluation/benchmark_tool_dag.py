@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """在同一批测试样本上运行 ReAct 与零样本 Tool DAG 基线。"""
 
 from __future__ import annotations
@@ -9,10 +8,9 @@ import json
 import time
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from evaluation.baseline_metrics import write_summary_files
-from prompts.prompt import COLDSTART_SYSTEM_PROMPT
 from inference.run_tool_dag_infer import execute_verified_dag, generate_answer
 from inference.run_tool_loop_infer import (
     execute_tool,
@@ -21,10 +19,10 @@ from inference.run_tool_loop_infer import (
     normalize_system_prompt_inplace,
     tool_loop,
 )
-from inference.tool_dag import ToolDAGScheduler
+from prompts.prompt import COLDSTART_SYSTEM_PROMPT
 
 
-def extract_sample(path: str, idx: int) -> Tuple[str, str]:
+def extract_sample(path: str, idx: int) -> tuple[str, str]:
     row = load_jsonl_row(path, idx)
     conversations = row.get("conversations") or row.get("messages") or row.get("answer")
     if not conversations:
@@ -38,13 +36,13 @@ def extract_sample(path: str, idx: int) -> Tuple[str, str]:
     return str(row.get("id", idx)), query
 
 
-def react_messages(query: str, max_tool_calls: int) -> List[Dict[str, Any]]:
+def react_messages(query: str, max_tool_calls: int) -> list[dict[str, Any]]:
     system_prompt = (
         COLDSTART_SYSTEM_PROMPT
         .replace("__CURRENT_DATE__", date.today().strftime("%Y-%m-%d"))
         .replace("__MAX_TOOL_CALL__", str(max_tool_calls))
     )
-    messages: List[Dict[str, Any]] = [
+    messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": query},
     ]
@@ -52,7 +50,7 @@ def react_messages(query: str, max_tool_calls: int) -> List[Dict[str, Any]]:
     return messages
 
 
-async def run_react_sample(args, tokenizer, model_or_llm, sample_idx: int) -> Dict[str, Any]:
+async def run_react_sample(args, tokenizer, model_or_llm, sample_idx: int) -> dict[str, Any]:
     sample_id, query = extract_sample(args.dataset_path, sample_idx)
     messages = react_messages(query, args.system_max_tool_calls)
     started = time.perf_counter()
@@ -77,12 +75,11 @@ async def run_react_sample(args, tokenizer, model_or_llm, sample_idx: int) -> Di
         return error_record("react", sample_idx, sample_id, query, started, exc)
 
 
-async def run_dag_sample(args, tokenizer, model_or_llm, sample_idx: int) -> Dict[str, Any]:
+async def run_dag_sample(args, tokenizer, model_or_llm, sample_idx: int) -> dict[str, Any]:
     sample_id, query = extract_sample(args.dataset_path, sample_idx)
     started = time.perf_counter()
-    planner_started = time.perf_counter()
     try:
-        async def executor(tool: str, arguments: Dict[str, Any], node_id: str) -> str:
+        async def executor(tool: str, arguments: dict[str, Any], node_id: str) -> str:
             return await execute_tool(args.tools_dir, tool, arguments, node_id, args)
         plan, dag_result, verifier = await execute_verified_dag(
             model_or_llm, tokenizer, args, query, executor
@@ -145,7 +142,7 @@ async def run_dag_sample(args, tokenizer, model_or_llm, sample_idx: int) -> Dict
         return record
 
 
-def error_record(mode, sample_idx, sample_id, query, started, exc) -> Dict[str, Any]:
+def error_record(mode, sample_idx, sample_id, query, started, exc) -> dict[str, Any]:
     return {
         "mode": mode,
         "sample_idx": sample_idx,
@@ -162,7 +159,7 @@ def error_record(mode, sample_idx, sample_id, query, started, exc) -> Dict[str, 
     }
 
 
-def append_jsonl(path: Path, record: Dict[str, Any]) -> None:
+def append_jsonl(path: Path, record: dict[str, Any]) -> None:
     with path.open("a", encoding="utf-8") as file:
         file.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -182,8 +179,8 @@ async def main(args) -> None:
 
     tokenizer, model, llm = init_backend(args)
     model_or_llm = llm if args.infer_backend == "vllm" else model
-    react_records: List[Dict[str, Any]] = []
-    dag_records: List[Dict[str, Any]] = []
+    react_records: list[dict[str, Any]] = []
+    dag_records: list[dict[str, Any]] = []
 
     sample_indices = (
         args.sample_indices

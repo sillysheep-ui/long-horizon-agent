@@ -9,7 +9,7 @@
 trace 缺失时返回 `passed=None`（unknown），不计入失败，也不改变既有分数。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 STAGES = ("intake", "planning", "retrieval", "coverage", "answer")
 BRANCHES = ("poi", "weather", "hotel", "transport")
@@ -50,25 +50,25 @@ ACTIONS = {
 }
 
 
-def _check(name: str, stage: str, passed: Optional[bool],
-           error_type: Optional[str] = None, detail: str = "") -> Dict[str, Any]:
+def _check(name: str, stage: str, passed: bool | None,
+           error_type: str | None = None, detail: str = "") -> dict[str, Any]:
     return {"name": name, "stage": stage, "passed": passed,
             "error_type": error_type, "detail": detail}
 
 
-def _span_of(trace: Optional[Dict[str, Any]], name: str) -> Optional[Dict[str, Any]]:
+def _span_of(trace: dict[str, Any] | None, name: str) -> dict[str, Any] | None:
     for child in (trace or {}).get("children", []) or []:
         if child.get("name") == name:
             return child
     return None
 
 
-def _unknown(names: List[str], stage: str) -> List[Dict[str, Any]]:
+def _unknown(names: list[str], stage: str) -> list[dict[str, Any]]:
     return [_check(name, stage, None, "unknown", "缺少 trace") for name in names]
 
 
-def check_intake(case: Dict[str, Any], result: Dict[str, Any],
-                 span: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def check_intake(case: dict[str, Any], result: dict[str, Any],
+                 span: dict[str, Any] | None) -> list[dict[str, Any]]:
     if span is None:
         return _unknown(["destination", "days", "cities", "clarification"], "intake")
     attributes = span.get("attributes") or {}
@@ -94,8 +94,8 @@ def check_intake(case: Dict[str, Any], result: Dict[str, Any],
     return checks
 
 
-def check_planning(case: Dict[str, Any], result: Dict[str, Any],
-                   span: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def check_planning(case: dict[str, Any], result: dict[str, Any],
+                   span: dict[str, Any] | None) -> list[dict[str, Any]]:
     if result.get("status") == "needs_clarification" or case.get("expect") == "needs_clarification":
         return [_check(name, "planning", None, "unknown", "追问用例不进入规划")
                 for name in ("days", "per_day_queries", "city_drift", "duplicate_query")]
@@ -125,7 +125,7 @@ def check_planning(case: Dict[str, Any], result: Dict[str, Any],
     return checks
 
 
-def check_retrieval(span: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def check_retrieval(span: dict[str, Any] | None) -> list[dict[str, Any]]:
     if span is None:
         return _unknown(["success_rate", "auth_missing", "critical_path"], "retrieval")
     attributes = span.get("attributes") or {}
@@ -144,7 +144,7 @@ def check_retrieval(span: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     ]
 
 
-def check_coverage(span: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def check_coverage(span: dict[str, Any] | None) -> list[dict[str, Any]]:
     if span is None:
         return _unknown(["no_gap", "daily_evidence"], "coverage")
     attributes = span.get("attributes") or {}
@@ -157,8 +157,8 @@ def check_coverage(span: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     ]
 
 
-def check_answer(case: Dict[str, Any], result: Dict[str, Any],
-                 span: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def check_answer(case: dict[str, Any], result: dict[str, Any],
+                 span: dict[str, Any] | None) -> list[dict[str, Any]]:
     if result.get("status") == "needs_clarification" or case.get("expect") == "needs_clarification":
         return [_check(name, "answer", None, "unknown", "追问用例不进入回答")
                 for name in ("grounded", "fabricated", "density", "time_order", "drop_rate")]
@@ -188,12 +188,12 @@ def check_answer(case: Dict[str, Any], result: Dict[str, Any],
     ]
 
 
-def _branch_coverage(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+def _branch_coverage(case: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
     days = case.get("days") or len(result.get("days") or []) or 0
     evidence = result.get("evidence") or []
     ok_ids = {str(item.get("id")) for item in evidence
               if item.get("status") == "ok" and item.get("items")}
-    coverage: Dict[str, Any] = {}
+    coverage: dict[str, Any] = {}
     for branch in BRANCHES:
         covered = []
         for day in range(1, int(days) + 1):
@@ -209,7 +209,7 @@ def _branch_coverage(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, 
     return coverage
 
 
-def _collect_errors(checks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _collect_errors(checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     errors = []
     for check in checks:
         if check["passed"] is False and check.get("error_type") and check["error_type"] != "unknown":
@@ -218,10 +218,10 @@ def _collect_errors(checks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return errors
 
 
-def attribute(checks: List[Dict[str, Any]], case: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def attribute(checks: list[dict[str, Any]], case: dict[str, Any] | None = None) -> dict[str, Any]:
     """按症状加权投票，返回主因、置信度与建议动作。"""
-    votes: Dict[str, int] = {}
-    contributing: List[str] = []
+    votes: dict[str, int] = {}
+    contributing: list[str] = []
     for error in _collect_errors(checks):
         source, weight = SYMPTOM_WEIGHTS.get(error["type"], ("orchestrator", 1))
         votes[source] = votes.get(source, 0) + weight
@@ -237,17 +237,17 @@ def attribute(checks: List[Dict[str, Any]], case: Optional[Dict[str, Any]] = Non
             "action": ACTIONS.get(primary, "")}
 
 
-def summarize_trajectory(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+def summarize_trajectory(case: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
     """汇总阶段分、分支覆盖与归因；供评测记录与线上遥测共用。"""
     trace = result.get("trace") if isinstance(result, dict) else None
-    checks: List[Dict[str, Any]] = []
+    checks: list[dict[str, Any]] = []
     checks += check_intake(case, result, _span_of(trace, "intake"))
     checks += check_planning(case, result, _span_of(trace, "planning"))
     checks += check_retrieval(_span_of(trace, "retrieval"))
     checks += check_coverage(_span_of(trace, "coverage"))
     checks += check_answer(case, result, _span_of(trace, "answer"))
 
-    stages: Dict[str, Any] = {}
+    stages: dict[str, Any] = {}
     for stage in STAGES:
         items = [check for check in checks if check["stage"] == stage]
         applicable = [check for check in items if check["passed"] is not None]
@@ -266,7 +266,7 @@ def summarize_trajectory(case: Dict[str, Any], result: Dict[str, Any]) -> Dict[s
     }
 
 
-def evaluator_health(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+def evaluator_health(records: list[dict[str, Any]]) -> dict[str, Any]:
     """统计裁判自身的失败与分歧，用于判断结论是否可信。"""
     judged = [record for record in records if record.get("judge")]
     errors = [str(record["judge"].get("error") or "") for record in judged]

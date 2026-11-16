@@ -1,7 +1,16 @@
 import unittest
 
 from inference.tool_dag import ToolPlan
-from inference.tool_verifier import VerificationResult, assess_answer_consistency, assess_evidence, assess_plan, build_targeted_evidence_repair, extract_route_entities, merge_plans, should_attempt_evidence_repair
+from inference.tool_verifier import (
+    VerificationResult,
+    assess_answer_consistency,
+    assess_evidence,
+    assess_plan,
+    build_targeted_evidence_repair,
+    extract_route_entities,
+    merge_plans,
+    should_attempt_evidence_repair,
+)
 
 
 class ToolVerifierTest(unittest.TestCase):

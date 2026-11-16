@@ -2,16 +2,16 @@
 
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def _span(name: str, kind: str, status: str, latency_ms: float = 0.0,
-          attributes: Optional[Dict[str, Any]] = None,
-          events: Optional[List[Dict[str, Any]]] = None,
-          children: Optional[List[Dict[str, Any]]] = None,
-          error_type: Optional[str] = None) -> Dict[str, Any]:
+          attributes: dict[str, Any] | None = None,
+          events: list[dict[str, Any]] | None = None,
+          children: list[dict[str, Any]] | None = None,
+          error_type: str | None = None) -> dict[str, Any]:
     """构造一个执行轨迹节点（trace span），只记录事实，不做判定。"""
-    span: Dict[str, Any] = {"name": name, "kind": kind, "status": status,
+    span: dict[str, Any] = {"name": name, "kind": kind, "status": status,
                             "latency_ms": int(latency_ms), "attributes": attributes or {}}
     if events:
         span["events"] = events
@@ -22,10 +22,10 @@ def _span(name: str, kind: str, status: str, latency_ms: float = 0.0,
     return span
 
 
-def _tool_spans(dag_result: Dict[str, Any], plan: Any) -> List[Dict[str, Any]]:
+def _tool_spans(dag_result: dict[str, Any], plan: Any) -> list[dict[str, Any]]:
     """把调度器的节点结果转成工具子 span。"""
     nodes = {node.id: node for node in plan.nodes}
-    spans: List[Dict[str, Any]] = []
+    spans: list[dict[str, Any]] = []
     for item in dag_result.get("results", []):
         node = nodes.get(str(item.get("node_id")))
         day = None
@@ -61,12 +61,12 @@ def _tool_spans(dag_result: Dict[str, Any], plan: Any) -> List[Dict[str, Any]]:
     return spans
 
 
-def _critical_path_ms(plan: Any, dag_result: Dict[str, Any]) -> float:
+def _critical_path_ms(plan: Any, dag_result: dict[str, Any]) -> float:
     """按依赖关系计算最长路径耗时。"""
     latency = {str(item.get("node_id")): float(item.get("latency_ms") or 0.0)
                for item in dag_result.get("results", [])}
     nodes = {node.id: node for node in plan.nodes}
-    memo: Dict[str, float] = {}
+    memo: dict[str, float] = {}
 
     def longest(node_id: str) -> float:
         if node_id in memo:
@@ -79,7 +79,7 @@ def _critical_path_ms(plan: Any, dag_result: Dict[str, Any]) -> float:
     return max((longest(node_id) for node_id in nodes), default=0.0)
 
 
-def _fabricated_costs(days: List[Dict[str, Any]], evidence: List[Dict[str, Any]]) -> int:
+def _fabricated_costs(days: list[dict[str, Any]], evidence: list[dict[str, Any]]) -> int:
     """活动费用里出现、但证据文本中没有的数字，算编造。"""
     corpus = " ".join(
         " ".join(str(entry.get(part) or "") for part in ("name", "snippet", "address"))
@@ -96,7 +96,7 @@ def _fabricated_costs(days: List[Dict[str, Any]], evidence: List[Dict[str, Any]]
     return count
 
 
-def _time_order_ok(days: List[Dict[str, Any]]) -> bool:
+def _time_order_ok(days: list[dict[str, Any]]) -> bool:
     for day in days:
         starts = [str(activity.get("start") or "") for activity in day.get("activities", [])]
         if starts != sorted(starts):

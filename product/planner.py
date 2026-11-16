@@ -5,7 +5,7 @@
 """
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from inference.tool_dag import ToolDAGError, ToolPlan
 
@@ -24,7 +24,7 @@ MAX_NODES = 18
 NODE_TIMEOUT_SECONDS = 45.0
 
 
-def _clean_list(value: Any, limit: int) -> List[str]:
+def _clean_list(value: Any, limit: int) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip()[:80] for item in value[:limit] if str(item).strip()]
@@ -32,11 +32,11 @@ def _clean_list(value: Any, limit: int) -> List[str]:
 
 def build_planner_prompt(
     query: str,
-    constraints: Dict[str, Any],
-    previous_plan: Optional[Dict[str, Any]] = None,
-    revision: Optional[Dict[str, Any]] = None,
+    constraints: dict[str, Any],
+    previous_plan: dict[str, Any] | None = None,
+    revision: dict[str, Any] | None = None,
 ) -> str:
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "query": query, "constraints": constraints, "previous_plan": previous_plan,
     }
     if revision:
@@ -44,7 +44,7 @@ def build_planner_prompt(
     return json.dumps(payload, ensure_ascii=False)
 
 
-def queries_for_day(plan: Any, day: int) -> List[str]:
+def queries_for_day(plan: Any, day: int) -> list[str]:
     """取出某一天的 poi_queries；没有该天时返回空列表。"""
     items = plan.get("days") if isinstance(plan, dict) else None
     for item in items or []:
@@ -58,9 +58,9 @@ def queries_for_day(plan: Any, day: int) -> List[str]:
 
 
 def days_to_tool_plan(
-    days: List[Dict[str, Any]],
+    days: list[dict[str, Any]],
     days_count: int,
-    destinations: List[str],
+    destinations: list[str],
     *,
     max_nodes: int = MAX_NODES,
     node_timeout_seconds: float = NODE_TIMEOUT_SECONDS,
@@ -71,7 +71,7 @@ def days_to_tool_plan(
     if not isinstance(days, list) or len(days) != days_count:
         raise ValueError("规划 Agent 返回的天数与需求不一致")
 
-    nodes: List[Dict[str, Any]] = []
+    nodes: list[dict[str, Any]] = []
     for day_index, day in enumerate(days, 1):
         if not isinstance(day, dict):
             raise ValueError("规划 Agent 返回了非法日期节点")
@@ -101,5 +101,5 @@ def days_to_tool_plan(
             max_nodes=max_nodes,
         )
     except ToolDAGError as exc:
-        raise ValueError("计划未通过校验: %s" % exc)
+        raise ValueError("计划未通过校验: %s" % exc) from exc
 

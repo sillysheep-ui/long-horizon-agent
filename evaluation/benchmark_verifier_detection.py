@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """固定 Planner 输出，离线测量 Verifier 的检出率、误报率与计算开销。"""
 
 from __future__ import annotations

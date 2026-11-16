@@ -314,11 +314,14 @@ python3 -m evaluation.revision_eval --profile api_only                  # 多轮
 pip install -r requirements.txt
 ```
 
-运行测试：
+运行测试与静态检查：
 
 ```bash
 python3 -m pytest tests -q
+ruff check product evaluation tests scripts
 ```
+
+Python 版本见 `pyproject.toml`（3.12），lint 规则也在那里配置。
 
 推理：
 

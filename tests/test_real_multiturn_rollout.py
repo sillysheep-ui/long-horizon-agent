@@ -5,9 +5,8 @@ import json
 import os
 import uuid
 
-import requests
-
 import pytest
+import requests
 
 try:
     from prompts.prompt import COLDSTART_SYSTEM_PROMPT, STRICT_EVIDENCE_APPENDIX

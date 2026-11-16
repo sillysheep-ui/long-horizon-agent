@@ -2,7 +2,7 @@
 
 import asyncio
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
@@ -21,7 +21,7 @@ def _evidence(evidence_id, keyword, city, status="ok", items=None):
         "source_kind": "map_poi" if status == "ok" else "none",
         "verification_level": "address_verified" if status == "ok" else "none",
         "simulated": False,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "fetched_at": datetime.now(UTC).isoformat(),
         "reason": "" if status == "ok" else "查询失败",
         "items": (items if items is not None else [{"name": "西湖"}]) if status == "ok" else [],
         "reused": False,

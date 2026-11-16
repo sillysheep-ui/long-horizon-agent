@@ -3,11 +3,9 @@
 import asyncio
 import json
 import unittest
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
-from product.orchestrator import AgentWorkflow
-from product.orchestrator import _finalize_days
+from product.orchestrator import AgentWorkflow, _finalize_days
 from product.planner import queries_for_day
 from product.revision import (
     compact_days,
@@ -33,7 +31,7 @@ def _evidence(evidence_id, keyword, city):
         "source_kind": "map_poi",
         "verification_level": "address_verified",
         "simulated": False,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "fetched_at": datetime.now(UTC).isoformat(),
         "items": [{"name": city + keyword, "address": city + "某路", "city": city}],
         "reused": False,
     }

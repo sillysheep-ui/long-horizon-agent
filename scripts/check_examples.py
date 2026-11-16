@@ -10,7 +10,7 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 SECRET_PATTERNS = [
     ("api_key", re.compile(r"sk-[A-Za-z0-9_\-]{16,}")),
@@ -24,7 +24,7 @@ PLACEHOLDERS = {"13800000000", "010-00000000", "user@example.com"}
 ALLOWED_ROLES = {"system", "user", "assistant", "tool"}
 
 
-def load_records(path: Path) -> List[Dict[str, Any]]:
+def load_records(path: Path) -> list[dict[str, Any]]:
     records = []
     for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
@@ -36,7 +36,7 @@ def load_records(path: Path) -> List[Dict[str, Any]]:
     return records
 
 
-def validate_records(records: List[Dict[str, Any]]) -> List[str]:
+def validate_records(records: list[dict[str, Any]]) -> list[str]:
     errors = []
     for index, record in enumerate(records, 1):
         if not record.get("id"):
@@ -53,7 +53,7 @@ def validate_records(records: List[Dict[str, Any]]) -> List[str]:
     return errors
 
 
-def scan_secrets(text: str) -> List[str]:
+def scan_secrets(text: str) -> list[str]:
     findings = []
     for name, pattern in SECRET_PATTERNS:
         for match in pattern.findall(text):
@@ -63,7 +63,7 @@ def scan_secrets(text: str) -> List[str]:
     return findings
 
 
-def stats(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+def stats(records: list[dict[str, Any]]) -> dict[str, Any]:
     roles = Counter()
     lengths = []
     for record in records:

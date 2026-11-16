@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 
@@ -41,8 +41,8 @@ class ModelGateway:
         except ValueError:
             self.timeout_seconds = 40.0
 
-    async def complete(self, role: str, system: str, user: str, max_tokens: int = 1200) -> Dict[str, str]:
-        failures: List[str] = []
+    async def complete(self, role: str, system: str, user: str, max_tokens: int = 1200) -> dict[str, str]:
+        failures: list[str] = []
         for name, base, model, key in self.routes:
             if not base or not model or (name != "local" and not key):
                 continue
@@ -71,14 +71,14 @@ class ModelGateway:
         raise ModelUnavailable("模型服务均不可用；请启动本地 MLX 或配置外部 API。" + ", ".join(failures))
 
 
-def parse_json(text: str) -> Dict[str, Any]:
+def parse_json(text: str) -> dict[str, Any]:
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip(), flags=re.I)
     try:
         value = json.loads(text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
         start, end = text.find("{"), text.rfind("}")
         if start < 0 or end <= start:
-            raise ValueError("模型没有输出 JSON 对象")
+            raise ValueError("模型没有输出 JSON 对象") from exc
         value = json.loads(text[start:end + 1])
     if not isinstance(value, dict):
         raise ValueError("模型输出不是 JSON 对象")

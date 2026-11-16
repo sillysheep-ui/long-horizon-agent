@@ -1,6 +1,6 @@
 import unittest
 
-from product.names import title_matches, clean_place_name, dedupe_names, looks_like_place
+from product.names import clean_place_name, dedupe_names, looks_like_place, title_matches
 from product.orchestrator import _clean_activities
 
 

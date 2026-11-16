@@ -1,0 +1,23 @@
+# 项目级配置：Python 版本、ruff 静态检查、pytest 默认参数。
+# 依赖仍以 requirements.txt 为准，这里不重复声明。
+
+[project]
+name = "long-horizon-agent"
+version = "0.1.0"
+description = "长程工具决策智能体：出行规划的数据、训练、评测与产品化 Demo"
+requires-python = ">=3.12"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = ["results", "saved", "data", ".venv*", "web/node_modules", "web/dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501", "B008", "UP031"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

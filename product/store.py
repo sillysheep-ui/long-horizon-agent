@@ -4,17 +4,17 @@ import json
 import os
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class Store:
-    def __init__(self, path: Optional[str] = None) -> None:
+    def __init__(self, path: str | None = None) -> None:
         self.path = Path(path or os.getenv("TRAVEL_DB_PATH", "product_data/agent.db"))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.initialize()
@@ -67,7 +67,7 @@ class Store:
             # 进程意外退出后允许任务重跑；工作流必须是只读工具调用。
             db.execute("UPDATE jobs SET status='queued', updated_at=? WHERE status='running'", (_now(),))
 
-    def create_trip(self, query: str, conversation_id: Optional[str] = None) -> Dict[str, str]:
+    def create_trip(self, query: str, conversation_id: str | None = None) -> dict[str, str]:
         trip_id, job_id, now = uuid.uuid4().hex, uuid.uuid4().hex, _now()
         with self._connect() as db:
             db.execute("INSERT INTO trips(id,query,version,created_at,updated_at,conversation_id) VALUES(?,?,1,?,?,?)",
@@ -77,7 +77,7 @@ class Store:
         self.event(job_id, "queued", {"message": "任务已加入队列"})
         return {"trip_id": trip_id, "job_id": job_id}
 
-    def revise(self, trip_id: str, instruction: str) -> Optional[Dict[str, str]]:
+    def revise(self, trip_id: str, instruction: str) -> dict[str, str] | None:
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT query,version FROM trips WHERE id=?", (trip_id,)).fetchone()
@@ -94,7 +94,7 @@ class Store:
         self.event(job_id, "queued", {"message": "修改已提交，正在更新方案"})
         return {"trip_id": trip_id, "job_id": job_id}
 
-    def claim(self) -> Optional[Dict[str, Any]]:
+    def claim(self) -> dict[str, Any] | None:
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("""SELECT j.id,j.trip_id,j.version,j.revision,t.query,t.result_json
@@ -108,7 +108,7 @@ class Store:
             job["previous"] = json.loads(job.pop("result_json") or "null")
             return job
 
-    def finish(self, job: Dict[str, Any], result: Optional[Dict[str, Any]], error: Optional[str] = None) -> None:
+    def finish(self, job: dict[str, Any], result: dict[str, Any] | None, error: str | None = None) -> None:
         status = "failed" if error else "completed"
         with self._connect() as db:
             db.execute("UPDATE jobs SET status=?,error=?,updated_at=? WHERE id=?",
@@ -118,18 +118,18 @@ class Store:
                            (json.dumps(result, ensure_ascii=False), _now(), job["trip_id"], job["version"]))
         self.event(job["id"], status, {"message": error or "方案已完成"})
 
-    def event(self, job_id: str, kind: str, payload: Dict[str, Any]) -> None:
+    def event(self, job_id: str, kind: str, payload: dict[str, Any]) -> None:
         with self._connect() as db:
             db.execute("INSERT INTO events(job_id,kind,payload_json,created_at) VALUES(?,?,?,?)",
                        (job_id, kind, json.dumps(payload, ensure_ascii=False), _now()))
 
-    def events(self, job_id: str, after: int = 0) -> List[Dict[str, Any]]:
+    def events(self, job_id: str, after: int = 0) -> list[dict[str, Any]]:
         with self._connect() as db:
             rows = db.execute("SELECT * FROM events WHERE job_id=? AND id>? ORDER BY id", (job_id, after)).fetchall()
         return [{"id": r["id"], "kind": r["kind"], "payload": json.loads(r["payload_json"]),
                  "created_at": r["created_at"]} for r in rows]
 
-    def trip(self, trip_id: str) -> Optional[Dict[str, Any]]:
+    def trip(self, trip_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
             row = db.execute("SELECT * FROM trips WHERE id=?", (trip_id,)).fetchone()
             if row is None:
@@ -140,21 +140,21 @@ class Store:
                 "conversation_id": row["conversation_id"],
                 "result": json.loads(row["result_json"] or "null"), "jobs": [dict(j) for j in jobs]}
 
-    def job_status(self, job_id: str) -> Optional[str]:
+    def job_status(self, job_id: str) -> str | None:
         with self._connect() as db:
             row = db.execute("SELECT status FROM jobs WHERE id=?", (job_id,)).fetchone()
         return row["status"] if row else None
 
     # ---- 会话：一个会话可以有多条行程版本，消息只追加不改写 ----
 
-    def create_conversation(self, title: str = "新对话", engine: str = "classic") -> Dict[str, str]:
+    def create_conversation(self, title: str = "新对话", engine: str = "classic") -> dict[str, str]:
         conversation_id, now = uuid.uuid4().hex, _now()
         with self._connect() as db:
             db.execute("INSERT INTO conversations(id,title,engine,created_at,updated_at) VALUES(?,?,?,?,?)",
                        (conversation_id, title[:60] or "新对话", engine, now, now))
         return {"conversation_id": conversation_id, "title": title[:60] or "新对话"}
 
-    def conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+    def conversation(self, conversation_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
             row = db.execute("SELECT * FROM conversations WHERE id=?", (conversation_id,)).fetchone()
             if row is None:
@@ -169,7 +169,7 @@ class Store:
                 "trips": [dict(t) for t in trips]}
 
     def append_message(self, conversation_id: str, role: str, content: str,
-                       job_id: Optional[str] = None) -> Dict[str, Any]:
+                       job_id: str | None = None) -> dict[str, Any]:
         now = _now()
         with self._connect() as db:
             cursor = db.execute(
@@ -180,7 +180,7 @@ class Store:
         return {"id": message_id, "conversation_id": conversation_id, "role": role,
                 "content": content[:4000], "job_id": job_id, "created_at": now}
 
-    def latest_trip(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+    def latest_trip(self, conversation_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
             row = db.execute("SELECT * FROM trips WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1",
                              (conversation_id,)).fetchone()
@@ -189,7 +189,7 @@ class Store:
         return {"id": row["id"], "query": row["query"], "version": row["version"],
                 "conversation_id": row["conversation_id"]}
 
-    def continue_conversation(self, conversation_id: str, content: str) -> Optional[Dict[str, Any]]:
+    def continue_conversation(self, conversation_id: str, content: str) -> dict[str, Any] | None:
         """会话里没有行程就新建，有行程就把新消息当成修改指令。"""
         latest = self.latest_trip(conversation_id)
         if latest is None:
@@ -206,13 +206,13 @@ class Store:
                        (content[:30], _now(), conversation_id))
         return {"conversation_id": conversation_id, "kind": kind, "message": message, **created}
 
-    def conversation_of_job(self, job_id: str) -> Optional[str]:
+    def conversation_of_job(self, job_id: str) -> str | None:
         with self._connect() as db:
             row = db.execute("SELECT t.conversation_id FROM jobs j JOIN trips t ON j.trip_id=t.id "
                              "WHERE j.id=?", (job_id,)).fetchone()
         return row["conversation_id"] if row else None
 
-    def record_reply(self, job_id: str, result: Optional[Dict[str, Any]], error: Optional[str] = None) -> None:
+    def record_reply(self, job_id: str, result: dict[str, Any] | None, error: str | None = None) -> None:
         conversation_id = self.conversation_of_job(job_id)
         if not conversation_id:
             return

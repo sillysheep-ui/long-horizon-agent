@@ -1,12 +1,12 @@
 """产品侧确定性后处理：标题对证据、时间排布、预算冲突与每日收尾。"""
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from product.names import clean_place_name, title_matches
 
 
-def _as_list(value: Any, limit: int) -> List[str]:
+def _as_list(value: Any, limit: int) -> list[str]:
     return [str(x).strip()[:80] for x in value[:limit] if str(x).strip()] if isinstance(value, list) else []
 
 
@@ -18,7 +18,7 @@ def _norm_title(text: str) -> str:
     return _TITLE_NOISE.sub("", str(text)).casefold()
 
 
-def match_activity(activity: Dict[str, Any], valid_names: Dict[str, set]) -> Optional[tuple]:
+def match_activity(activity: dict[str, Any], valid_names: dict[str, set]) -> tuple | None:
     """把模型给出的活动标题对回证据里的地点名；对不上返回 None。
 
     只放宽空白/标点/大小写和包含关系，不会接受证据里没有的地点。
@@ -69,7 +69,7 @@ def _hhmm(minutes: int) -> str:
     return "%02d:%02d" % (minutes // 60, minutes % 60)
 
 
-def _fit_schedule(activities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _fit_schedule(activities: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """按开始时间排序，并把与前一项重叠的开始时间顺延到前一项结束。"""
     ordered = sorted(activities, key=lambda item: _minutes_of(item.get("start")))
     result = []
@@ -91,8 +91,8 @@ def _clip(value: Any, limit: int, fallback: str) -> str:
     return text[:limit] if text else fallback
 
 
-def _clean_activities(activities: List[Dict[str, Any]], limit: int = 4,
-                      evidence: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+def _clean_activities(activities: list[dict[str, Any]], limit: int = 4,
+                      evidence: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """统一活动字段：时间缺失就按顺序给默认值，标题必须落在证据地点名上。"""
     result = []
     for position, activity in enumerate(activities[:limit]):
@@ -163,14 +163,14 @@ def budget_conflict(query: str, days: int) -> bool:
     return amount / max(1, days) < 600
 
 
-def cities_fit_days(destinations: List[str], days: int) -> bool:
+def cities_fit_days(destinations: list[str], days: int) -> bool:
     """一天最多跨一个城市，城市数超过天数就认为约束矛盾。"""
     return len(destinations) <= max(1, int(days))
 
 
-def _finalize_days(cleaned_days: List[Dict[str, Any]], good: List[Dict[str, Any]],
-                   plan_days: List[Dict[str, Any]],
-                   keep_days: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]],
+                   plan_days: list[dict[str, Any]],
+                   keep_days: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。
 
     keep_days 是本次不动、原样保留的日期；只对 plan_days 里的日期做整理。

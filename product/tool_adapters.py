@@ -1,7 +1,7 @@
 """外部数据源适配：高德 POI 与网页搜索，输出统一的证据结构。"""
 
 import os
-from typing import Any, Dict, List
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -12,7 +12,7 @@ from tools.poi import search_pois
 from tools.web import search_web
 
 
-def _rank_search_items(hits: Any, keyword: str, city: str) -> List[Dict[str, Any]]:
+def _rank_search_items(hits: Any, keyword: str, city: str) -> list[dict[str, Any]]:
     """只保留标题或摘要与目标相关的网页，并优先展示官方来源。"""
     candidates = []
     if not isinstance(hits, list):
@@ -48,7 +48,7 @@ class ResearchTools:
     def __init__(self) -> None:
         self.amap_key = os.getenv("AMAP_MAPS_API_KEY", "")
 
-    async def web_search(self, keyword: str, city: str, evidence_id: str) -> Dict[str, Any]:
+    async def web_search(self, keyword: str, city: str, evidence_id: str) -> dict[str, Any]:
         """网页搜索：复用 tools.web 的多 provider 实现。"""
         query = (city + " " + keyword + " 地点介绍 地址")[:128]
         try:
@@ -66,7 +66,7 @@ class ResearchTools:
                               "ok" if items else "empty",
                               items=items, source="网页搜索", source_kind="web_search")
 
-    async def poi(self, keyword: str, city: str, evidence_id: str) -> Dict[str, Any]:
+    async def poi(self, keyword: str, city: str, evidence_id: str) -> dict[str, Any]:
         """高德 POI：复用 tools.poi 的结构化查询，失败时降级到网页搜索。"""
         if not self.amap_key:
             return await self.web_search(keyword, city, evidence_id)

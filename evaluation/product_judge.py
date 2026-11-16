@@ -8,13 +8,13 @@
 """
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from openai import AsyncOpenAI
 
 from product.model_gateway import parse_json
 
-CRITERIA: List[Dict[str, str]] = [
+CRITERIA: list[dict[str, str]] = [
     {"id": "c1", "dim": "concreteness", "text": "每个活动都写明了开始时间和停留时长"},
     {"id": "c2", "dim": "concreteness", "text": "每个活动的描述写了具体看什么/做什么，而不是“感受氛围”这类空话"},
     {"id": "f1", "dim": "feasibility", "text": "同一天的活动顺序与转场在时间上走得通（含交通时间）"},
@@ -46,7 +46,7 @@ JUDGE_SYSTEM_PROMPT = """你是旅行行程评审。只根据给定的用户需�
 {{"criteria": {{"c1": {{"pass": true, "reason": "…"}}, "c2": {{"pass": false, "reason": "…"}}, "f1": {{"pass": true, "reason": "…"}}, "f2": {{"pass": true, "reason": "…"}}, "p1": {{"pass": true, "reason": "…"}}, "p2": {{"pass": true, "reason": "…"}}, "b1": {{"pass": true, "reason": "…"}}, "b2": {{"pass": true, "reason": "…"}}, "r1": {{"pass": true, "reason": "…"}}, "r2": {{"pass": true, "reason": "…"}}}}, "comments": ["最需要改的一点"]}}""".format(**{item["id"]: item["text"] for item in CRITERIA})
 
 
-def score_of(parsed: Dict[str, Any]) -> Optional[float]:
+def score_of(parsed: dict[str, Any]) -> float | None:
     criteria = parsed.get("criteria") or {}
     hits = [1 for item in CRITERIA if (criteria.get(item["id"]) or {}).get("pass") is True]
     if not criteria:
@@ -54,12 +54,12 @@ def score_of(parsed: Dict[str, Any]) -> Optional[float]:
     return round(len(hits) / len(CRITERIA), 3)
 
 
-def fabrication_of(parsed: Dict[str, Any]) -> bool:
+def fabrication_of(parsed: dict[str, Any]) -> bool:
     criteria = parsed.get("criteria") or {}
     return (criteria.get("b2") or {}).get("pass") is False
 
 
-def _parse_loose(content: str) -> Dict[str, Any]:
+def _parse_loose(content: str) -> dict[str, Any]:
     """先走通用解析；失败时允许字符串内有裸换行（模型常见毛病）。"""
     try:
         return parse_json(content)
@@ -70,7 +70,7 @@ def _parse_loose(content: str) -> Dict[str, Any]:
         return json.loads(content[start:end + 1], strict=False)
 
 
-async def judge(client: AsyncOpenAI, model: str, case: Dict[str, Any], compact: Dict[str, Any]) -> Dict[str, Any]:
+async def judge(client: AsyncOpenAI, model: str, case: dict[str, Any], compact: dict[str, Any]) -> dict[str, Any]:
     payload = json.dumps({"query": case["query"], "itinerary": compact}, ensure_ascii=False)
     last_error = ""
     for attempt in range(2):

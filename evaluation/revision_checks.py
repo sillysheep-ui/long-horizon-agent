@@ -4,11 +4,11 @@
 不调模型，纯函数，方便单测与线上复用。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
-def _days(result: Dict[str, Any]) -> Dict[int, Dict[str, Any]]:
-    days: Dict[int, Dict[str, Any]] = {}
+def _days(result: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    days: dict[int, dict[str, Any]] = {}
     for day in result.get("days") or []:
         try:
             days[int(day.get("day"))] = day
@@ -17,15 +17,15 @@ def _days(result: Dict[str, Any]) -> Dict[int, Dict[str, Any]]:
     return days
 
 
-def _titles(day: Optional[Dict[str, Any]]) -> List[str]:
+def _titles(day: dict[str, Any] | None) -> list[str]:
     return [str(activity.get("title") or "") for activity in (day or {}).get("activities") or []]
 
 
-def _all_titles(result: Dict[str, Any]) -> List[str]:
+def _all_titles(result: dict[str, Any]) -> list[str]:
     return [title for day in _days(result).values() for title in _titles(day)]
 
 
-def _time_order_ok(result: Dict[str, Any]) -> bool:
+def _time_order_ok(result: dict[str, Any]) -> bool:
     for day in _days(result).values():
         starts = [str(activity.get("start") or "99:99") for activity in day.get("activities") or []]
         if starts != sorted(starts):
@@ -33,7 +33,7 @@ def _time_order_ok(result: Dict[str, Any]) -> bool:
     return True
 
 
-def _evidence_ok(result: Dict[str, Any]) -> bool:
+def _evidence_ok(result: dict[str, Any]) -> bool:
     status = {str(e.get("id")): e.get("status") for e in result.get("evidence") or []}
     for day in _days(result).values():
         for activity in day.get("activities") or []:
@@ -42,10 +42,10 @@ def _evidence_ok(result: Dict[str, Any]) -> bool:
     return True
 
 
-def check_revision(case: Dict[str, Any], before: Dict[str, Any],
-                   after: Dict[str, Any]) -> Dict[str, Optional[bool]]:
+def check_revision(case: dict[str, Any], before: dict[str, Any],
+                   after: dict[str, Any]) -> dict[str, bool | None]:
     """返回 {检查名: 通过与否}，None 表示不适用。"""
-    checks: Dict[str, Optional[bool]] = {}
+    checks: dict[str, bool | None] = {}
     before_days = _days(before)
     after_days = _days(after)
     targets = [int(day) for day in case.get("target_days") or []]
@@ -83,13 +83,13 @@ def check_revision(case: Dict[str, Any], before: Dict[str, Any],
     return checks
 
 
-def summarize_revision(records: List[Dict[str, Any]]) -> Dict[str, Any]:
-    names: List[str] = []
+def summarize_revision(records: list[dict[str, Any]]) -> dict[str, Any]:
+    names: list[str] = []
     for record in records:
         for name in record.get("checks") or {}:
             if name not in names:
                 names.append(name)
-    pass_rate: Dict[str, float] = {}
+    pass_rate: dict[str, float] = {}
     for name in names:
         values = [record["checks"][name] for record in records if name in (record.get("checks") or {})]
         values = [value for value in values if value is not None]

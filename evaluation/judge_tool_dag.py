@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """对 ReAct 与 Tool DAG 结果做交换位置的双向 LLM Judge。"""
 
 from __future__ import annotations
@@ -9,10 +8,9 @@ import json
 import os
 from pathlib import Path
 from statistics import mean
-from typing import Any, Dict, List
+from typing import Any
 
 from inference.tool_dag import extract_json_object
-
 
 JUDGE_PROMPT = """你是严格、公平的旅行 Agent 评审员。比较同一用户问题下的两个候选结果。
 只根据提供的工具轨迹与答案评分，不使用外部知识；不得因为答案更长而给高分。
@@ -27,8 +25,8 @@ overall = relevance*0.30 + completeness*0.25 + factual_safety*0.20 + tool_reason
 """
 
 
-def load_records(path: str) -> Dict[int, Dict[str, Any]]:
-    records: Dict[int, Dict[str, Any]] = {}
+def load_records(path: str) -> dict[int, dict[str, Any]]:
+    records: dict[int, dict[str, Any]] = {}
     with open(path, encoding="utf-8") as file:
         for line in file:
             if line.strip():
@@ -37,7 +35,7 @@ def load_records(path: str) -> Dict[int, Dict[str, Any]]:
     return records
 
 
-def compact_candidate(record: Dict[str, Any]) -> Dict[str, Any]:
+def compact_candidate(record: dict[str, Any]) -> dict[str, Any]:
     trajectory = []
     for message in record.get("messages", []):
         if message.get("role") == "tool":
@@ -55,7 +53,7 @@ def compact_candidate(record: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def aggregate_bidirectional(first: Dict[str, Any], second: Dict[str, Any]) -> Dict[str, Any]:
+def aggregate_bidirectional(first: dict[str, Any], second: dict[str, Any]) -> dict[str, Any]:
     dimensions = ["relevance", "completeness", "factual_safety", "tool_reasonableness", "clarity", "overall"]
     react = {key: round((float(first["A"][key]) + float(second["B"][key])) / 2, 3) for key in dimensions}
     dag = {key: round((float(first["B"][key]) + float(second["A"][key])) / 2, 3) for key in dimensions}
@@ -63,9 +61,9 @@ def aggregate_bidirectional(first: Dict[str, Any], second: Dict[str, Any]) -> Di
     return {"react": react, "tool_dag": dag, "winner": winner}
 
 
-async def judge_direction(client, model: str, query: str, a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
+async def judge_direction(client, model: str, query: str, a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     user = json.dumps({"query": query, "candidate_A": a, "candidate_B": b}, ensure_ascii=False)
-    kwargs: Dict[str, Any] = {
+    kwargs: dict[str, Any] = {
         "model": model,
         "messages": [{"role": "system", "content": JUDGE_PROMPT}, {"role": "user", "content": user}],
         "temperature": 0,
@@ -96,7 +94,7 @@ async def main(args) -> None:
     )
     semaphore = asyncio.Semaphore(args.concurrency)
 
-    async def judge_index(index: int) -> Dict[str, Any]:
+    async def judge_index(index: int) -> dict[str, Any]:
         react = compact_candidate(react_records[index])
         dag = compact_candidate(dag_records[index])
         query = str(react_records[index].get("query", ""))
@@ -108,9 +106,9 @@ async def main(args) -> None:
         return {"sample_idx": index, "query": query, **aggregate_bidirectional(first, second)}
 
     results = await asyncio.gather(*(judge_index(index) for index in indices), return_exceptions=True)
-    valid: List[Dict[str, Any]] = []
+    valid: list[dict[str, Any]] = []
     errors = []
-    for index, result in zip(indices, results):
+    for index, result in zip(indices, results, strict=False):
         if isinstance(result, Exception):
             errors.append({"sample_idx": index, "error": f"{type(result).__name__}: {result}"})
         else:

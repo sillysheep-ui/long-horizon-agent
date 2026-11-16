@@ -14,7 +14,7 @@ import os
 import random
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from evaluation.revision_checks import check_revision, summarize_revision
 from product.orchestrator import AgentWorkflow
@@ -23,15 +23,15 @@ from product.store import Store
 CASES_PATH = Path(__file__).with_name("product_revision_cases.json")
 
 
-def _titles(result: Dict[str, Any], day_number: int) -> List[str]:
+def _titles(result: dict[str, Any], day_number: int) -> list[str]:
     for day in result.get("days") or []:
         if int(day.get("day") or 0) == day_number:
             return [str(activity.get("title") or "") for activity in day.get("activities") or []]
     return []
 
 
-async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) -> Dict[str, Any]:
-    record: Dict[str, Any] = {"id": case["id"], "query": case["query"], "revision": case["revision"]}
+async def run_case(workflow: AgentWorkflow, store: Store, case: dict[str, Any]) -> dict[str, Any]:
+    record: dict[str, Any] = {"id": case["id"], "query": case["query"], "revision": case["revision"]}
     try:
         trip = store.create_trip(case["query"])
         job = store.claim()
@@ -72,7 +72,7 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) 
         return {**record, "error": str(error)[:300], "checks": {}}
 
 
-def write_report(target: Path, profile: str, summary: Dict[str, Any], records: List[Dict[str, Any]]) -> None:
+def write_report(target: Path, profile: str, summary: dict[str, Any], records: list[dict[str, Any]]) -> None:
     lines = [f"# 多轮修改评测 · {profile}", "",
              f"- 用例：{summary['cases']}",
              f"- 全部检查通过：{summary['all_passed']}/{summary['cases']}（{summary['all_passed_rate']:.0%}）",
@@ -96,7 +96,7 @@ def write_report(target: Path, profile: str, summary: Dict[str, Any], records: L
             continue
         lines.append(f"### {record['id']}")
         lines.append(f"修改：{record['revision']}")
-        for before_day, after_day in zip(record.get("before_days") or [], record["after_days"]):
+        for before_day, after_day in zip(record.get("before_days") or [], record["after_days"], strict=False):
             lines.append(f"- 第 {after_day['day']} 天：{'/'.join(before_day['titles'])} → {'/'.join(after_day['titles'])}")
         lines.append("")
     (target / "report.md").write_text("\n".join(lines), encoding="utf-8")

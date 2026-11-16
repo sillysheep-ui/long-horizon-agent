@@ -4,7 +4,6 @@ import types
 import unittest
 from unittest.mock import AsyncMock, patch
 
-
 os.environ.setdefault("AMAP_MAPS_API_KEY", "test-key")
 
 try:

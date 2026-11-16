@@ -5,7 +5,7 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from inference.tool_dag import ToolDAGError, ToolPlan
 
@@ -13,14 +13,14 @@ REPAIR_LIMIT = 4
 DAY_ID = re.compile(r"^d(\d+)-")
 
 
-def _day_of(evidence: Dict[str, Any]) -> Optional[int]:
+def _day_of(evidence: dict[str, Any]) -> int | None:
     matched = DAY_ID.match(str(evidence.get("id") or ""))
     return int(matched.group(1)) if matched else None
 
 
-def assess_days(days: List[Dict[str, Any]], evidence: List[Dict[str, Any]]) -> Dict[str, Any]:
+def assess_days(days: list[dict[str, Any]], evidence: list[dict[str, Any]]) -> dict[str, Any]:
     """返回每天的来源覆盖情况与风险分，风险分只反映可证据化的问题。"""
-    buckets: Dict[int, Dict[str, int]] = {
+    buckets: dict[int, dict[str, int]] = {
         day["day"]: {"ok": 0, "failed": 0, "empty": 0} for day in days if isinstance(day, dict)
     }
     for item in evidence:
@@ -38,9 +38,9 @@ def assess_days(days: List[Dict[str, Any]], evidence: List[Dict[str, Any]]) -> D
             buckets[day_number]["empty"] += 1
 
     risk = 0.0
-    reasons: List[str] = []
-    uncovered_days: List[int] = []
-    summary: List[Dict[str, Any]] = []
+    reasons: list[str] = []
+    uncovered_days: list[int] = []
+    summary: list[dict[str, Any]] = []
     for day in days:
         if not isinstance(day, dict):
             continue
@@ -70,13 +70,13 @@ def assess_days(days: List[Dict[str, Any]], evidence: List[Dict[str, Any]]) -> D
 
 
 def build_repair_plan(
-    days: List[Dict[str, Any]],
-    evidence: List[Dict[str, Any]],
+    days: list[dict[str, Any]],
+    evidence: list[dict[str, Any]],
     *,
     limit: int = REPAIR_LIMIT,
     max_nodes: int = 18,
     node_timeout_seconds: float = 45.0,
-) -> Optional[ToolPlan]:
+) -> ToolPlan | None:
     """为未覆盖的日期生成“城市 + 景点”补查计划；没有缺口时返回 None。"""
     assessment = assess_days(days, evidence)
     missing = set(assessment["uncovered_days"])
@@ -87,7 +87,7 @@ def build_repair_plan(
         for item in evidence
         if isinstance(item, dict) and item.get("status") == "ok"
     }
-    nodes: List[Dict[str, Any]] = []
+    nodes: list[dict[str, Any]] = []
     for day in days:
         if not isinstance(day, dict) or day["day"] not in missing:
             continue

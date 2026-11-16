@@ -1,6 +1,6 @@
 """行程排程：补足数量、时间不重叠。"""
 
-from product.orchestrator import _duration_minutes, _fit_schedule, _finalize_days
+from product.orchestrator import _duration_minutes, _finalize_days, _fit_schedule
 
 
 def test_duration_parsing():

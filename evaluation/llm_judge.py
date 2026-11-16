@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
 # 文件描述: 模型效果综合评估
 # --------------------------------------------
@@ -8,14 +7,13 @@ import asyncio
 import json
 import os
 import re
-import time
 from statistics import mean
 
 import numpy as np
-from openai import AsyncOpenAI
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
-from prompts.prompt import llm_judge_system_prompt 
+from prompts.prompt import llm_judge_system_prompt
 
 # 加载环境变量
 load_dotenv()
@@ -149,7 +147,7 @@ class LLMJudge:
 
     async def process_batch(self, prediction, reference, query, chunk_task_size=20):
         """并发处理所有数据"""
-        tasks = [self.compute(p, r, q) for p, r, q in zip(prediction, reference, query)]
+        tasks = [self.compute(p, r, q) for p, r, q in zip(prediction, reference, query, strict=False)]
         split_tasks = self.chunk_by_size(tasks, chunk_task_size)
         final_results = []
         for idx, single_task in enumerate(split_tasks):

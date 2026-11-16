@@ -1,10 +1,8 @@
 """产品侧三段提示词：需求提取、行程规划（在 planner.py）、行程回答。"""
 
-from typing import List, Optional
 
 from product.pace import PACE_RULES
 from product.revision import describe_targets
-
 
 INTAKE_SYSTEM_PROMPT = (
     "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、"
@@ -51,7 +49,7 @@ TARGETED_ANSWER_SUFFIX = (
 )
 
 
-def build_answer_system(pace: str, targets: Optional[List[int]] = None) -> str:
+def build_answer_system(pace: str, targets: list[int] | None = None) -> str:
     """组装回答提示词：节奏规则注入第 3 条，定向修改时追加只输出目标日的要求。"""
     text = ANSWER_SYSTEM_PROMPT % (PACE_RULES[pace],)
     if targets:

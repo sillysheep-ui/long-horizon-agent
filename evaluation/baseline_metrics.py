@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ReAct 与 Tool DAG 基线记录的无外部依赖汇总逻辑。"""
 
 from __future__ import annotations
@@ -6,12 +5,13 @@ from __future__ import annotations
 import json
 import math
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
 from statistics import mean
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 
-def percentile(values: Iterable[float], q: float) -> Optional[float]:
+def percentile(values: Iterable[float], q: float) -> float | None:
     ordered = sorted(float(v) for v in values)
     if not ordered:
         return None
@@ -26,11 +26,11 @@ def percentile(values: Iterable[float], q: float) -> Optional[float]:
     return ordered[lower] * (1 - weight) + ordered[upper] * weight
 
 
-def _round(value: Optional[float], digits: int = 2) -> Optional[float]:
+def _round(value: float | None, digits: int = 2) -> float | None:
     return None if value is None else round(value, digits)
 
 
-def summarize_records(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(records)
     if total == 0:
         return {"samples": 0}
@@ -76,8 +76,8 @@ def summarize_records(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def load_jsonl(path: str) -> List[Dict[str, Any]]:
-    records: List[Dict[str, Any]] = []
+def load_jsonl(path: str) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
     with open(path, encoding="utf-8") as file:
         for line in file:
             if line.strip():
@@ -92,8 +92,8 @@ def _fmt(value: Any, suffix: str = "") -> str:
 
 
 def build_markdown_report(
-    react_summary: Optional[Dict[str, Any]],
-    dag_summary: Optional[Dict[str, Any]],
+    react_summary: dict[str, Any] | None,
+    dag_summary: dict[str, Any] | None,
 ) -> str:
     lines = [
         "# ReAct vs Tool DAG 基线测评",
@@ -104,7 +104,7 @@ def build_markdown_report(
         "|---|---:|---:|",
     ]
 
-    def get(summary: Optional[Dict[str, Any]], *keys: str) -> Any:
+    def get(summary: dict[str, Any] | None, *keys: str) -> Any:
         current: Any = summary
         for key in keys:
             if not isinstance(current, dict):
@@ -142,9 +142,9 @@ def build_markdown_report(
 
 def write_summary_files(
     output_dir: str,
-    react_records: Optional[List[Dict[str, Any]]] = None,
-    dag_records: Optional[List[Dict[str, Any]]] = None,
-) -> Dict[str, Any]:
+    react_records: list[dict[str, Any]] | None = None,
+    dag_records: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
     react_summary = summarize_records(react_records or []) if react_records is not None else None

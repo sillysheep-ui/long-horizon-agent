@@ -3,7 +3,7 @@
 import asyncio
 import json
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from inference.tool_dag import ToolDAGScheduler
 from product.planner import days_to_tool_plan
@@ -21,7 +21,7 @@ def _evidence(evidence_id, keyword, city, fetched_at=None, status="ok"):
         "source_kind": "map_poi" if status == "ok" else "none",
         "verification_level": "address_verified" if status == "ok" else "none",
         "simulated": False,
-        "fetched_at": fetched_at or datetime.now(timezone.utc).isoformat(),
+        "fetched_at": fetched_at or datetime.now(UTC).isoformat(),
         "reason": "",
         "items": [{"name": "西湖", "address": "杭州市西湖区"}],
         "reused": False,
@@ -92,7 +92,7 @@ class ExecutorTests(unittest.TestCase):
 
     def test_refetches_stale_evidence(self):
         tools = FakeTools()
-        stale = datetime.now(timezone.utc) - timedelta(days=2)
+        stale = datetime.now(UTC) - timedelta(days=2)
         executor = ResearchExecutor(tools, [_evidence("d9-p9", "西湖", "杭州", stale.isoformat())])
         output = asyncio.run(executor("poi", {"city": "杭州", "keyword": "西湖"}, "d1-p1"))
         self.assertEqual(json.loads(output)["id"], "d1-p1")

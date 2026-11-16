@@ -4,8 +4,9 @@
 是真实数据还是模拟数据。这里集中定义字段和默认值，避免各个工具各写一套。
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any
 
 STATUSES = ("ok", "empty", "failed", "unavailable")
 SOURCE_KINDS = ("map_poi", "web_search", "simulated", "none")
@@ -16,7 +17,7 @@ _DEFAULT_LEVELS = {"map_poi": "address_verified", "web_search": "source_linked"}
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def build_evidence(
@@ -26,15 +27,15 @@ def build_evidence(
     city: str,
     status: str,
     *,
-    items: Optional[List[Dict[str, Any]]] = None,
+    items: list[dict[str, Any]] | None = None,
     source: str = "",
     source_kind: str = "none",
     simulated: bool = False,
     verification_level: str = "none",
     reason: str = "",
-    fetched_at: Optional[str] = None,
+    fetched_at: str | None = None,
     **extra: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """构造一条字段齐全的证据；非法状态直接报错，避免静默写坏数据。"""
     if status not in STATUSES:
         raise ValueError("未知的证据状态: " + str(status))
@@ -68,7 +69,7 @@ def build_evidence(
     return evidence
 
 
-def normalize_evidence(item: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_evidence(item: dict[str, Any]) -> dict[str, Any]:
     """补齐历史数据或测试桩里缺失的字段，已有值保持不变。"""
     evidence = dict(item)
     kind = str(evidence.get("kind") or "")
@@ -91,5 +92,5 @@ def normalize_evidence(item: Dict[str, Any]) -> Dict[str, Any]:
     return evidence
 
 
-def normalize_all(items: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def normalize_all(items: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return [normalize_evidence(item) for item in items]

@@ -2,49 +2,66 @@
 
 import json
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
 from product.pace import detect_pace
 from product.planner import (
-    PLANNER_SYSTEM_PROMPT, build_planner_prompt, days_to_tool_plan, queries_for_day,
+    PLANNER_SYSTEM_PROMPT,
+    build_planner_prompt,
+    days_to_tool_plan,
+    queries_for_day,
 )
 from product.postprocess import (
-    _as_list, _clean_activities, _declares_duration, _finalize_days, budget_conflict,
-    cities_fit_days, match_activity,
+    _as_list,
+    _clean_activities,
+    _declares_duration,
+    _finalize_days,
+    budget_conflict,
+    cities_fit_days,
+    match_activity,
 )
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
 from product.provenance import normalize_all
 from product.revision import (
-    compact_days, days_to_revision_plan, describe_targets, merge_days,
-    out_of_range_days, parse_target_days, split_by_targets,
+    compact_days,
+    days_to_revision_plan,
+    describe_targets,
+    merge_days,
+    out_of_range_days,
+    parse_target_days,
+    split_by_targets,
 )
 from product.store import Store
 from product.tool_adapters import ResearchTools
 from product.tool_runtime import ResearchExecutor
 from product.trace import (
-    _critical_path_ms, _fabricated_costs, _span, _time_order_ok, _tool_spans,
+    _critical_path_ms,
+    _fabricated_costs,
+    _span,
+    _time_order_ok,
+    _tool_spans,
 )
 
 
 class AgentWorkflow:
-    def __init__(self, store: Store, model: Optional[ModelGateway] = None,
-                 tools: Optional[ResearchTools] = None) -> None:
+    def __init__(self, store: Store, model: ModelGateway | None = None,
+                 tools: ResearchTools | None = None) -> None:
         self.store = store
         self.model = model or ModelGateway()
         self.tools = tools or ResearchTools()
 
-    def _event(self, job: Dict[str, Any], stage: str, message: str,
-               extra: Optional[Dict[str, Any]] = None) -> None:
+    def _event(self, job: dict[str, Any], stage: str, message: str,
+               extra: dict[str, Any] | None = None) -> None:
         self.store.event(job["id"], "progress", {"stage": stage, "message": message, **(extra or {})})
 
-    async def run(self, job: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, job: dict[str, Any]) -> dict[str, Any]:
         started = time.monotonic()
         query = job["query"]
-        calls: List[Dict[str, str]] = []
-        stages: List[Dict[str, Any]] = []
+        calls: list[dict[str, str]] = []
+        stages: list[dict[str, Any]] = []
         prior = job.get("previous") or {}
         revision_text = str(job.get("revision") or "").strip()
         prior_days = prior.get("days") if isinstance(prior.get("days"), list) else []
@@ -53,7 +70,7 @@ class AgentWorkflow:
             if revision_text and prior_days and prior.get("constraints") else []
         )
 
-        def finish(trace_status: str, **result: Any) -> Dict[str, Any]:
+        def finish(trace_status: str, **result: Any) -> dict[str, Any]:
             trace = _span("run", "run", trace_status, (time.monotonic() - started) * 1000,
                           {"status": result.get("status"), "stages": len(stages)}, children=stages)
             return {**result, "trace": trace,
@@ -171,7 +188,7 @@ class AgentWorkflow:
 
         self._event(job, "research", "正在并行查询地点来源", {"tool_count": len(tool_plan.nodes)})
         prior_evidence = normalize_all(prior.get("evidence", []))
-        keep_evidence: List[Dict[str, Any]] = []
+        keep_evidence: list[dict[str, Any]] = []
         if targets:
             keep_evidence, _ = split_by_targets(prior_evidence, targets)
         executor = ResearchExecutor(self.tools, keep_evidence if targets else prior_evidence)
@@ -304,7 +321,7 @@ class AgentWorkflow:
                              "filled": filled, "final": final_count,
                              "fabricated_cost": fabricated, "time_order_ok": order_ok},
                             error_type="density_miss" if dropped else None))
-        revision_applied: Optional[bool] = None
+        revision_applied: bool | None = None
         if targets:
             unchanged = 0
             for day_number in targets:

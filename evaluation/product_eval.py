@@ -14,20 +14,20 @@ import os
 import random
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from openai import AsyncOpenAI
 
 from evaluation.product_checks import check_result, combined_score, summarize
-from evaluation.stage_checks import evaluator_health, summarize_trajectory
 from evaluation.product_judge import judge as judge_itinerary
+from evaluation.stage_checks import evaluator_health, summarize_trajectory
 from product.orchestrator import AgentWorkflow
 from product.store import Store
 
 CASES_PATH = Path(__file__).with_name("product_cases.json")
 
 
-def _compact(result: Dict[str, Any]) -> Dict[str, Any]:
+def _compact(result: dict[str, Any]) -> dict[str, Any]:
     days = []
     for day in result.get("days") or []:
         days.append({
@@ -54,7 +54,7 @@ def _compact(result: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) -> Dict[str, Any]:
+async def run_case(workflow: AgentWorkflow, store: Store, case: dict[str, Any]) -> dict[str, Any]:
     try:
         store.create_trip(case["query"])
         job = store.claim()
@@ -72,8 +72,8 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: Dict[str, Any]) 
                 "checks": {}, "elapsed": 0.0}
 
 
-def write_report(target: Path, profile: str, summary: Dict[str, Any], records: List[Dict[str, Any]],
-                 split: str = "all", health: Dict[str, Any] | None = None) -> None:
+def write_report(target: Path, profile: str, summary: dict[str, Any], records: list[dict[str, Any]],
+                 split: str = "all", health: dict[str, Any] | None = None) -> None:
     lines = [f"# 产品行程评测 · {profile} · {split}", "", f"- 用例：{summary['cases']}",
              f"- 确定性检查全过：{summary['all_checks_passed']}/{summary['cases']}（平均通过率 {summary['hard_mean']}）",
              f"- rubric 均分：{summary['rubric_mean']}（0–1，10 条清单）",
@@ -95,11 +95,11 @@ def write_report(target: Path, profile: str, summary: Dict[str, Any], records: L
             else ("待改进" if rubric is not None else "待人工")
         lines.append(f"| {record['id']} | {record.get('status') or record.get('error', '错误')[:20]} | "
                      f"{record['elapsed']}s | {failed} | {rubric} | {score} | {verdict} |")
-    stage_failed: Dict[str, List[str]] = {}
-    stage_totals: Dict[str, List[bool]] = {}
-    error_counts: Dict[tuple, int] = {}
-    attributions: Dict[str, int] = {}
-    branch_rates: Dict[str, List[float]] = {}
+    stage_failed: dict[str, list[str]] = {}
+    stage_totals: dict[str, list[bool]] = {}
+    error_counts: dict[tuple, int] = {}
+    attributions: dict[str, int] = {}
+    branch_rates: dict[str, list[float]] = {}
     for record in records:
         trajectory = record.get("trajectory") or {}
         for stage, info in (trajectory.get("stages") or {}).items():

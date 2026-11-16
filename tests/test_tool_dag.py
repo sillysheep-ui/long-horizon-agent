@@ -9,8 +9,8 @@ from inference.tool_dag import (
     ToolNode,
     ToolPlan,
     detect_tool_business_error,
-    resolve_references,
     extract_json_object,
+    resolve_references,
 )
 
 

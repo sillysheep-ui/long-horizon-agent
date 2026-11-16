@@ -12,9 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install test dependencies
-        run: python -m pip install pytest numpy fastapi httpx python-dotenv openai
+        run: python -m pip install pytest numpy fastapi httpx python-dotenv openai ruff==0.17.5
+      - name: Lint Python files
+        run: python -m ruff check product evaluation tests scripts
       - name: Compile Python files
         run: |
           python -m compileall -q inference prompts tools utils data_pipeline evaluation training tests product scripts
