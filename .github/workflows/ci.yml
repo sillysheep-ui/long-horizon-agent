@@ -43,6 +43,7 @@ jobs:
             tests/test_product_tool_adapters.py \
             tests/test_revision_checks.py \
             tests/test_tools_web.py \
+            tests/test_tool_web_search.py \
             tests/test_stage_checks.py \
             tests/test_codex_task.py \
             tests/test_text_utils.py
