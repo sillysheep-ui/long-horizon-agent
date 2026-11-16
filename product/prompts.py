@@ -6,10 +6,14 @@ from product.revision import describe_targets
 
 INTAKE_SYSTEM_PROMPT = (
     "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、"
-    "days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组、conflicts 字符串数组。"
-    "未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；""destinations 只放能订票到达的城市或地区（如 杭州、苏州、千岛湖），景点（西湖、灵山、太湖）一律放 preferences；""若某个名字同时像景点、又已在 preferences 里，就只保留在 preferences，不要放进 destinations；"
-    "只有完全看不出目的地时才留空。conflicts 用一句话列出需求中的硬冲突"
-    "（例如“五天带老人孩子预算 1000 元”“人均五百还想住五星酒店”“没说明玩几天”），没有冲突就给空数组。"
+    "days 1-7 整数、budget 字符串、named_places 字符串数组、preferences 字符串数组、"
+    "missing_required 字符串数组、conflicts 字符串数组。"
+    "未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations。"
+    "destinations 只放能订票到达的城市或地区（如 杭州、苏州、千岛湖）；"
+    "named_places 只放用户原话里点名的具体地点（西湖、灵隐寺、迪士尼），必须逐字照抄，没点名就给空数组；"
+    "活动、餐饮偏好、风格（看日落、喝咖啡、人少、别太赶）一律放 preferences。"
+    "conflicts 只写真正无法同时满足的硬冲突（预算与住宿档位对不上、没说明玩几天），"
+    "排期松紧、景点多寡这类不算冲突，给空数组。"
 )
 
 

@@ -128,3 +128,11 @@ class FinalizeDaysTests(unittest.TestCase):
 def test_emoji_label_is_not_a_place_name():
     from product.names import clean_place_name
     assert clean_place_name("📍定位") == ""
+
+
+def test_clean_named_places_keeps_verbatim_only():
+    from product.postprocess import clean_named_places
+
+    assert clean_named_places(["西湖", "灵隐寺", "故宫"], "杭州两天，想去西湖和灵隐寺") == ["西湖", "灵隐寺"]
+    assert clean_named_places(["西湖", "西湖"], "西湖") == ["西湖"]
+    assert clean_named_places(None, "西湖") == []

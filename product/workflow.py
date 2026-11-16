@@ -18,6 +18,7 @@ from product.postprocess import (
     _as_list,
     _blocking_conflict,
     _clean_activities,
+    clean_named_places,
     _declares_duration,
     _finalize_days,
     budget_conflict,
@@ -108,6 +109,8 @@ class AgentWorkflow:
             intake = await self.model.complete("需求 Agent", INTAKE_SYSTEM_PROMPT, intake_query, max_tokens=500)
             calls.append({k: intake[k] for k in ("role", "provider", "model")})
             constraints = parse_json(intake["content"])
+            constraints["named_places"] = clean_named_places(
+                constraints.get("named_places"), intake_query)
             destinations = _as_list(constraints.get("destinations"), 4)
             declared = _declares_duration(intake_query)
             intake_attributes = {"days": constraints.get("days"), "cities": destinations,

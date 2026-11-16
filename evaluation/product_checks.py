@@ -186,7 +186,7 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
             no_fabricated_cost = False
             break
 
-    return {
+    checks = {
         "complete": result.get("status") == "complete",
         "day_count": bool(days) and (expected_days is None or len(days) == expected_days),
         "density": bool(days) and all(min_count <= len(_activities(d)) <= max_count for d in days),
@@ -213,6 +213,23 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         "title_matches_evidence": title_matches_evidence,
         "no_fabricated_cost": no_fabricated_cost,
     }
+    wanted = [str(place).strip() for place in case.get("named_places") or [] if str(place).strip()]
+    if wanted:
+        checks["named_places_covered"] = _named_places_covered(wanted, titles)
+    return checks
+
+
+def _squash(text: Any) -> str:
+    return re.sub(r"[\s\W_]+", "", str(text or ""))
+
+
+def _named_places_covered(wanted: list[str], titles: list[str]) -> bool:
+    flattened = [_squash(title) for title in titles if _squash(title)]
+    for place in wanted:
+        target = _squash(place)
+        if not target or not any(target in title or title in target for title in flattened):
+            return False
+    return True
 
 
 def combined_score(checks: dict[str, bool], rubric: Any, fabrication: bool = False) -> Any:

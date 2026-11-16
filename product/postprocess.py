@@ -148,6 +148,19 @@ def chinese_number(text: str) -> int:
     return total + section + number
 
 
+def clean_named_places(values: Any, text: str, limit: int = 6) -> list[str]:
+    """只保留用户原话里逐字出现的地点名，模型编的删掉。"""
+    if not isinstance(values, list):
+        return []
+    source = str(text or "")
+    result: list[str] = []
+    for value in values[:limit]:
+        name = str(value).strip()[:40]
+        if name and name in source and name not in result:
+            result.append(name)
+    return result
+
+
 HARD_CONFLICT_WORDS = ("预算", "超支", "五星", "豪华", "高档", "别墅", "住不起", "不够")
 TIME_CONFLICT_WORDS = ("没说明玩几天", "没说几天", "玩几天", "天数不够")
 
