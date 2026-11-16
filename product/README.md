@@ -77,7 +77,7 @@ python3 -m uvicorn product.api:app --port 8000
 
 | 字段 | 含义 | 取值 |
 | --- | --- | --- |
-| `source` | 来源名称 | 高德地图 POI / DeepSeek 网页搜索 / 模拟数据 |
+| `source` | 来源名称 | 高德地图 POI / 网页搜索 / 模拟数据 |
 | `source_kind` | 来源类型 | `map_poi` / `web_search` / `simulated` / `none` |
 | `status` | 查询结果 | `ok` / `empty` / `failed` / `unavailable` |
 | `fetched_at` | 查询时间（UTC ISO） | 历史记录缺失时为空，页面显示“查询时间未知” |
@@ -112,7 +112,7 @@ python3 -m evaluation.revision_eval --profile api_only
 | `product/workflow.py` | 主流程：需求 → 计划 → 查询 → 核验 → 回答 |
 | `product/planner.py` | 规划提示词与 ToolPlan 构造 |
 | `product/prompts.py` | 需求提取与回答提示词 |
-| `product/tool_adapters.py` | 高德 POI（复用 `tools/poi.py`）、DeepSeek 网页搜索兜底 |
+| `product/tool_adapters.py` | 高德 POI（`tools/poi.py`）、网页搜索（`tools/web.py`） |
 | `product/postprocess.py` | 标题对证据、时间排布、每日收尾 |
 | `product/trace.py` | 执行轨迹 span 与派生指标 |
 | `product/orchestrator.py` | 兼容入口（只做转发） |

@@ -1,4 +1,4 @@
-"""外部数据源适配：高德 POI 与 DeepSeek 网页搜索，输出统一的证据结构。"""
+"""外部数据源适配：高德 POI 与网页搜索，输出统一的证据结构。"""
 
 import os
 from typing import Any, Dict, List
@@ -9,6 +9,7 @@ import httpx
 from product.names import clean_place_name, dedupe_names, looks_like_place
 from product.provenance import build_evidence
 from tools.poi import search_pois
+from tools.web import search_web
 
 
 def _rank_search_items(hits: Any, keyword: str, city: str) -> List[Dict[str, Any]]:
@@ -46,30 +47,24 @@ def _rank_search_items(hits: Any, keyword: str, city: str) -> List[Dict[str, Any
 class ResearchTools:
     def __init__(self) -> None:
         self.amap_key = os.getenv("AMAP_MAPS_API_KEY", "")
-        self.search_key = os.getenv("DEEPSEEK_API_KEY") or (
-            os.getenv("OPENAI_API_KEY", "") if "api.deepseek.com" in os.getenv("OPENAI_BASE_URL", "") else "")
 
     async def web_search(self, keyword: str, city: str, evidence_id: str) -> Dict[str, Any]:
-        if not self.search_key:
+        """网页搜索：复用 tools.web 的多 provider 实现。"""
+        query = (city + " " + keyword + " 地点介绍 地址")[:128]
+        try:
+            hits = await search_web(query, limit=8)
+        except RuntimeError:
             return build_evidence(evidence_id, "web", keyword, city, "unavailable",
                                   source="网页搜索", source_kind="none",
                                   reason="未配置可用的地点搜索服务")
-        try:
-            async with httpx.AsyncClient(timeout=18) as client:
-                response = await client.post("https://api.deepseek.com/v1/tools/search",
-                    headers={"Authorization": "Bearer " + self.search_key},
-                    json={"query": (city + " " + keyword + " 地点介绍 地址")[0:128], "count": 8,
-                          "need_content": False})
-                response.raise_for_status()
-                data = response.json()
-            items = _rank_search_items(data.get("results"), keyword, city)
-            return build_evidence(evidence_id, "web", keyword, city,
-                                  "ok" if items else "empty",
-                                  items=items, source="DeepSeek 网页搜索", source_kind="web_search")
-        except (httpx.HTTPError, ValueError, KeyError):
+        except (httpx.HTTPError, ValueError):
             return build_evidence(evidence_id, "web", keyword, city, "failed",
-                                  source="DeepSeek 网页搜索", source_kind="web_search",
+                                  source="网页搜索", source_kind="none",
                                   reason="网页搜索暂时不可用")
+        items = _rank_search_items(hits, keyword, city)
+        return build_evidence(evidence_id, "web", keyword, city,
+                              "ok" if items else "empty",
+                              items=items, source="网页搜索", source_kind="web_search")
 
     async def poi(self, keyword: str, city: str, evidence_id: str) -> Dict[str, Any]:
         """高德 POI：复用 tools.poi 的结构化查询，失败时降级到网页搜索。"""
