@@ -4,10 +4,10 @@ set -euo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # ===== SFT config =====
-MODEL_PATH="pretrained/Qwen/Qwen3-4B-Instruct-2507"
-TRAIN_DATA="data/final/sft_train.jsonl"
-VAL_DATA="data/final/sft_val.jsonl"
-OUTPUT_DIR="saved/output/qwen3_4b_sft_4gpu"
+MODEL_PATH="${MODEL_PATH:-pretrained/Qwen/Qwen3-4B-Instruct-2507}"
+TRAIN_DATA="${TRAIN_DATA:-data/final/sft_train.jsonl}"
+VAL_DATA="${VAL_DATA:-data/final/sft_val.jsonl}"
+OUTPUT_DIR="${OUTPUT_DIR:-saved/output/qwen3_4b_sft_4gpu}"
 
 # Multi-GPU setup
 export CUDA_VISIBLE_DEVICES=0,1,2,3
@@ -30,4 +30,5 @@ swift sft \
   --save_steps 200 \
   --eval_steps 50 \
   --logging_steps 5 \
-  --output_dir "${OUTPUT_DIR}"
+  --output_dir "${OUTPUT_DIR}" \
+  ${EXTRA_ARGS:-}
