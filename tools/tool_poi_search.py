@@ -11,13 +11,13 @@ from dotenv import load_dotenv
 from utils.markdown import json2md
 from utils.text import truncate_text
 from qwen_agent.tools.base import BaseTool, register_tool
-from utils.amap_client import amap_get
+from tools.poi import search_pois
 
 # 加载环境变量
 load_dotenv()
 
-AMAP_MAPS_API_KEY = os.environ["AMAP_MAPS_API_KEY"]
-MAX_POI_RESULTS = os.environ.get("MAX_POI_RESULTS", 3)
+AMAP_MAPS_API_KEY = os.environ.get("AMAP_MAPS_API_KEY", "")
+MAX_POI_RESULTS = int(os.environ.get("MAX_POI_RESULTS", 3))
 
 
 @register_tool("poi_search", allow_overwrite=True)
@@ -51,37 +51,13 @@ class POISearch(BaseTool):
         except Exception:
             return "[POISearch] Invalid request format: Input must be a JSON object containing 'address' field"
 
-        url = "https://restapi.amap.com/v5/place/text"
-        params = {
-            "key": AMAP_MAPS_API_KEY,
-            "keywords": address,
-            "page_size": MAX_POI_RESULTS, 
-            "show_fields": "business",
-        }
-        if region:
-            params["region"] = region
+        try:
+            data = await search_pois(address, region)
+        except RuntimeError as exc:
+            raise Exception(str(exc))
 
-        result, _ = await amap_get(url, params)
-
-        if result.get("status") != "1":
-            msg = result.get("info", "unknown error")
-            raise Exception(f"API response error: {msg}")
-
-        pois = result.get("pois")
-        if not pois:
-            geocode_params = {"key": AMAP_MAPS_API_KEY, "address": address}
-            if region:
-                geocode_params["city"] = region
-            geocode, _ = await amap_get(
-                "https://restapi.amap.com/v3/geocode/geo",
-                geocode_params,
-            )
-            geocodes = geocode.get("geocodes") or []
-            if geocodes:
-                return truncate_text(json2md(geocodes[:int(MAX_POI_RESULTS)]))
-            raise Exception("No POI or geocode data available.")
-
-        return truncate_text(json2md(pois))
+        payload = data.get("pois") or data.get("geocodes") or []
+        return truncate_text(json2md(payload[:MAX_POI_RESULTS]))
 
 
 if __name__ == "__main__":

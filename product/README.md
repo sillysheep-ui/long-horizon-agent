@@ -112,7 +112,7 @@ python3 -m evaluation.revision_eval --profile api_only
 | `product/workflow.py` | 主流程：需求 → 计划 → 查询 → 核验 → 回答 |
 | `product/planner.py` | 规划提示词与 ToolPlan 构造 |
 | `product/prompts.py` | 需求提取与回答提示词 |
-| `product/tool_adapters.py` | 高德 POI、DeepSeek 网页搜索 |
+| `product/tool_adapters.py` | 高德 POI（复用 `tools/poi.py`）、DeepSeek 网页搜索兜底 |
 | `product/postprocess.py` | 标题对证据、时间排布、每日收尾 |
 | `product/trace.py` | 执行轨迹 span 与派生指标 |
 | `product/orchestrator.py` | 兼容入口（只做转发） |

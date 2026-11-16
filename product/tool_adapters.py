@@ -8,6 +8,7 @@ import httpx
 
 from product.names import clean_place_name, dedupe_names, looks_like_place
 from product.provenance import build_evidence
+from tools.poi import search_pois
 
 
 def _rank_search_items(hits: Any, keyword: str, city: str) -> List[Dict[str, Any]]:
@@ -71,16 +72,11 @@ class ResearchTools:
                                   reason="网页搜索暂时不可用")
 
     async def poi(self, keyword: str, city: str, evidence_id: str) -> Dict[str, Any]:
+        """高德 POI：复用 tools.poi 的结构化查询，失败时降级到网页搜索。"""
         if not self.amap_key:
             return await self.web_search(keyword, city, evidence_id)
         try:
-            async with httpx.AsyncClient(timeout=12) as client:
-                response = await client.get("https://restapi.amap.com/v5/place/text", params={
-                    "key": self.amap_key, "keywords": keyword, "region": city, "page_size": 3})
-                response.raise_for_status()
-                data = response.json()
-            if data.get("status") != "1":
-                return await self.web_search(keyword, city, evidence_id)
+            data = await search_pois(keyword, city)
             items = []
             for poi in data.get("pois") or []:
                 location = str(poi.get("location", "")).split(",")
@@ -96,5 +92,5 @@ class ResearchTools:
             return build_evidence(evidence_id, "poi", keyword, city,
                                   "ok" if items else "empty",
                                   items=items, source="高德地图 POI", source_kind="map_poi")
-        except (httpx.HTTPError, ValueError):
+        except (RuntimeError, httpx.HTTPError, ValueError):
             return await self.web_search(keyword, city, evidence_id)
