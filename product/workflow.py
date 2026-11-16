@@ -296,6 +296,9 @@ class AgentWorkflow:
             answer_failed = True
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
         valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
+        valid_coords = {(e["id"], item["name"]): item.get("coordinates")
+                        for e in good for item in e.get("items", [])
+                        if item.get("name") and item.get("coordinates")}
         cleaned_days = []
         seen_titles = set()
         raw_count = 0
@@ -312,7 +315,8 @@ class AgentWorkflow:
                     continue
                 seen_titles.add(matched[1])
                 grounded_count += 1
-                matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1]})
+                matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1],
+                                           "coordinates": valid_coords.get((matched[0], matched[1]))})
             hours_for_day = day_hours(windows, day.get("day"))
             cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
                                  "activities": _clean_activities(
@@ -325,6 +329,7 @@ class AgentWorkflow:
                 day_evidence = [e for e in good if e["id"].startswith("d%d-" % day["day"]) and e.get("items")]
                 activities = _clean_activities([{
                     "title": e["items"][0]["name"], "evidence_id": e["id"],
+                    "coordinates": e["items"][0].get("coordinates"),
                     "description": "可作为当天的候选地点；请通过来源页面核对地址、开放时间和交通。",
                     "transport": "交通未核实", "cost": "未核实"} for e in day_evidence])
                 cleaned_days.append({"day": day["day"], "city": day["city"], "activities": activities})

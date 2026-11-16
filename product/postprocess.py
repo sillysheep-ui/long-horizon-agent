@@ -3,6 +3,7 @@
 import re
 from typing import Any
 
+from product.geo import order_nearest, parse_coord, transit_minutes
 from product.names import clean_place_name, title_matches
 from product.pace import DEFAULT_DAY_HOURS, count_bounds, hours_from_text
 
@@ -68,6 +69,33 @@ def _minutes_of(start: str) -> int:
 def _hhmm(minutes: int) -> str:
     minutes = max(0, min(23 * 60 + 59, minutes))
     return "%02d:%02d" % (minutes // 60, minutes % 60)
+
+
+def _schedule_day(activities: list[dict[str, Any]], hours: float) -> list[dict[str, Any]]:
+    """按距离重排并插入交通时间；没有坐标时退回只修重叠。"""
+    if not any(parse_coord(activity) for activity in activities):
+        return _fit_schedule(activities)
+    ordered = order_nearest(activities)
+    start_minutes = _minutes_of(ordered[0].get("start") or DEFAULT_STARTS[0])
+    started_at = start_minutes
+    cursor = start_minutes
+    previous = None
+    result = []
+    for activity in ordered:
+        coord = parse_coord(activity)
+        if previous and coord:
+            minutes = transit_minutes(previous, coord)
+            cursor += minutes
+            if str(activity.get("transport") or "") in ("", "交通未核实"):
+                activity = {**activity, "transport": "打车约 %d 分钟（估算）" % minutes}
+        start = max(cursor, _minutes_of(activity.get("start")))
+        cursor = start + _duration_minutes(activity.get("duration"))
+        result.append({**activity, "start": _hhmm(start)})
+        previous = coord or previous
+    while len(result) > 1 and (cursor - started_at) > hours * 60:
+        result.pop()
+        cursor = _minutes_of(result[-1]["start"]) + _duration_minutes(result[-1].get("duration"))
+    return result
 
 
 def _fit_schedule(activities: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -275,7 +303,7 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                 if len(activities) >= floor:
                     break
         result.append({"day": planned["day"], "city": day.get("city") or planned.get("city"),
-                       "activities": _fit_schedule(activities)[:high]})
+                       "activities": _schedule_day(activities, hours)[:high]})
     result.extend(kept)
     result.sort(key=lambda item: int(item.get("day") or 0))
     return result
