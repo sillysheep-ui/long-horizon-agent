@@ -60,14 +60,36 @@ def hours_from_text(text: Any) -> float | None:
     return float(CN_DIGITS.get(raw, 0)) or None
 
 
-def count_bounds(hours: float, pace: str) -> tuple[int, int]:
+COUNT_PATTERNS = (
+    re.compile(r"(?:想看|想逛|想玩|要去|安排|逛|看)\s*([0-9一两二三四五六七八九十])\s*(?:个|处|家)"),
+    re.compile(r"([0-9一两二三四五六七八九十])\s*(?:个|处)\s*(?:地方|地点|景点|活动|园子|博物馆|公园)"),
+)
+
+
+def requested_count(*texts: Any) -> int | None:
+    """用户原话里点名的地点个数，例如“想看 3 个”“去三个景点”。"""
+    joined = " ".join(str(text or "") for text in texts)
+    for pattern in COUNT_PATTERNS:
+        match = pattern.search(joined)
+        if not match:
+            continue
+        raw = match.group(1)
+        value = int(raw) if raw.isdigit() else (10 if raw == "十" else CN_DIGITS.get(raw, 0))
+        if 1 <= value <= 6:
+            return value
+    return None
+
+
+def count_bounds(hours: float, pace: str, requested: int | None = None) -> tuple[int, int]:
     """按可用时长与单个活动的时长/间隔，算出当天合理的活动数区间。"""
     plan = PACE_PLAN[pace]
     low_unit = plan["activity"][0] + plan["gap"][0] / 60
     high_unit = plan["activity"][1] + plan["gap"][1] / 60
     upper = min(4, max(1, int(hours / low_unit)))
-    if hours <= 7.0:  # 半天窗口（5–7 小时）最多两个活动
+    if hours <= 7.0 and not requested:  # 半天默认两个；用户点名数量时以用户为准
         upper = min(upper, 2)
+    if requested:
+        return max(1, requested), max(1, requested)
     lower = max(1, int(hours / high_unit))
     return min(lower, upper), max(1, upper)
 

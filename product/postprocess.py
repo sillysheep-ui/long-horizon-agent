@@ -229,7 +229,8 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                    plan_days: list[dict[str, Any]],
                    keep_days: list[dict[str, Any]] | None = None,
                    windows: list[dict[str, Any]] | None = None,
-                   pace: str = "normal") -> list[dict[str, Any]]:
+                   pace: str = "normal",
+                   requested: int | None = None) -> list[dict[str, Any]]:
     """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。
 
     keep_days 是本次不动、原样保留的日期；只对 plan_days 里的日期做整理。
@@ -249,8 +250,8 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
             used.add(title)
             activities.append({**activity, "title": title})
         hours = day_hours(windows, planned.get("day"))
-        low, high = count_bounds(hours, pace)
-        floor = max(1, min(2, low, high))
+        low, high = count_bounds(hours, pace, requested)
+        floor = max(1, min(requested or 2, high))
         if len(activities) < floor:
             for evidence in good:
                 if not evidence["id"].startswith("d%d-" % planned["day"]):

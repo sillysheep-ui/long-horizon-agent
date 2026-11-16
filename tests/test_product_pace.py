@@ -1,7 +1,7 @@
 import unittest
 
 from evaluation.product_checks import check_result
-from product.pace import PACE_LIMITS, PACE_RULES, detect_pace
+from product.pace import PACE_LIMITS, PACE_RULES, count_bounds, detect_pace, requested_count
 
 
 def _case(query: str) -> dict:
@@ -73,6 +73,13 @@ class PaceAwareChecksTests(unittest.TestCase):
         checks = check_result(_case("轻松一点，慢慢玩"), _result(activities))
         self.assertTrue(checks["density"])
         self.assertTrue(checks["day_load"])
+
+    def test_requested_count_overrides_half_day_cap(self):
+        self.assertEqual(requested_count("苏州半天，想看3个园林"), 3)
+        self.assertEqual(requested_count("想逛两个博物馆"), 2)
+        self.assertIsNone(requested_count("苏州半天"))
+        self.assertEqual(count_bounds(6, "packed", 3), (3, 3))
+        self.assertEqual(count_bounds(6, "packed"), (2, 2))
 
 
 if __name__ == "__main__":

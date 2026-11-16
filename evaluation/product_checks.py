@@ -161,6 +161,7 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
     pace = detect_pace(case.get("query"))
     plan = PACE_PLAN[pace]
     windows = _windows(result)
+    requested = (result.get("constraints") or {}).get("requested_count")
 
     def _hours(day: dict[str, Any]) -> float:
         return windows.get(int(day.get("day") or 0), DEFAULT_DAY_HOURS)
@@ -168,7 +169,7 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
     def _bounds(day: dict[str, Any]) -> tuple[int, int]:
         hours = windows.get(int(day.get("day") or 0))
         if hours:
-            return count_bounds(hours, pace)
+            return count_bounds(hours, pace, requested)
         return PACE_LIMITS[pace][0], PACE_LIMITS[pace][1]
     activities = [a for d in days for a in _activities(d)]
     titles = [str(a.get("title") or "") for a in activities]

@@ -7,7 +7,7 @@ from typing import Any
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
 from product.model_gateway import ModelGateway, parse_json
-from product.pace import count_bounds, detect_pace
+from product.pace import count_bounds, detect_pace, requested_count
 from product.planner import (
     PLANNER_SYSTEM_PROMPT,
     build_planner_prompt,
@@ -133,6 +133,7 @@ class AgentWorkflow:
             constraints["days"] = days_count
             windows = detect_day_windows(intake_query, revision_text, days=days_count)
             constraints["day_windows"] = windows
+            constraints["requested_count"] = requested_count(intake_query, revision_text)
             constraints["pace"] = detect_pace(intake_query, revision_text)
             conflicts = _as_list(constraints.get("conflicts"), 3)
             if not declared:
@@ -315,7 +316,7 @@ class AgentWorkflow:
             hours_for_day = day_hours(windows, day.get("day"))
             cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
                                  "activities": _clean_activities(
-                                     matched_activities, limit=count_bounds(hours_for_day, pace)[1],
+                                     matched_activities, limit=count_bounds(hours_for_day, pace, constraints.get("requested_count"))[1],
                                      evidence={e["id"]: e for e in evidence})})
         if not any(d["activities"] for d in cleaned_days):
             answer_failed = True
@@ -338,9 +339,11 @@ class AgentWorkflow:
                 [day for day in cleaned_days if int(day.get("day") or 0) in target_set],
                 good,
                 [day for day in days if int(day.get("day") or 0) in target_set],
-                keep_days=kept_days, windows=windows, pace=pace)
+                keep_days=kept_days, windows=windows, pace=pace,
+                requested=constraints.get("requested_count"))
         else:
-            cleaned_days = _finalize_days(cleaned_days, good, days, windows=windows, pace=pace)
+            cleaned_days = _finalize_days(cleaned_days, good, days, windows=windows, pace=pace,
+                                          requested=constraints.get("requested_count"))
         final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
         fabricated = _fabricated_costs(cleaned_days, evidence)
         dropped = max(0, raw_count - grounded_count)
