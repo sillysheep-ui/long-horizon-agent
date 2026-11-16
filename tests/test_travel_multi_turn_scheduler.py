@@ -8,6 +8,8 @@ import importlib.util
 import sys
 import types
 import os
+
+import pytest
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,6 +25,13 @@ def load_plugin():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(scope="module")
+def module():
+    if not PLUGIN.is_file() or importlib.util.find_spec("swift") is None:
+        pytest.skip("需要 ms-swift 插件与 swift 包，当前环境未安装")
+    return load_plugin()
 
 
 class FakeTool:

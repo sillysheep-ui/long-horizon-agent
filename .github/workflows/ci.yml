@@ -46,4 +46,10 @@ jobs:
             tests/test_tool_web_search.py \
             tests/test_stage_checks.py \
             tests/test_codex_task.py \
-            tests/test_text_utils.py
+            tests/test_text_utils.py \
+            tests/test_product_pace.py \
+            tests/test_product_schedule.py \
+            tests/test_examples.py \
+            tests/test_around_search.py \
+            tests/test_build_opd_state_dataset.py \
+            tests/test_travel_multi_turn_scheduler.py
