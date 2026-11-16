@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import json
 import os
+import random
 import time
 from pathlib import Path
 from typing import Any, Dict, List
@@ -78,7 +79,8 @@ def write_report(target: Path, profile: str, summary: Dict[str, Any], records: L
              f"- rubric 均分：{summary['rubric_mean']}（0–1，10 条清单）",
              f"- 综合分均值：{summary['score_mean']}（0.6×硬检查 + 0.4×rubric − 编造扣分）",
              f"- 可交付：{summary['deliverable']}/{summary['cases']}",
-             f"- 平均耗时：{summary['latency_mean']}s", "",
+             f"- 平均耗时：{summary['latency_mean']}s",
+             f"- 随机种子：{summary.get('seed')} / 裁判模型：{summary.get('judge_model')}", "",
              "## 检查通过率", "", "| 检查 | 通过率 |", "|---|---|"]
     lines += [f"| {name} | {rate:.0%} |" for name, rate in summary["check_pass_rate"].items()]
     lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | rubric | 综合分 | 判定 |",
@@ -168,7 +170,9 @@ async def main() -> None:
     parser.add_argument("--split", default="all", choices=["all", "dev", "test", "holdout"])
     parser.add_argument("--judge2-model", default="", help="第二裁判模型，用于估计裁判一致性")
     parser.add_argument("--judge-model", default="", help="覆盖 JUDGE_MODEL_ID")
+    parser.add_argument("--seed", type=int, default=0, help="随机种子，写入报告便于复现")
     args = parser.parse_args()
+    random.seed(args.seed)
 
     os.environ["MODEL_PROFILE"] = args.profile
     cases = [c for c in json.loads(CASES_PATH.read_text())
@@ -204,6 +208,8 @@ async def main() -> None:
               f"rubric={(record.get('judge') or {}).get('rubric')} score={record.get('score')}")
 
     summary = summarize(records)
+    summary["seed"] = args.seed
+    summary["judge_model"] = judge_model
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = Path(args.out or f"results/product_eval/{stamp}-{args.profile}")
     health = evaluator_health(records)

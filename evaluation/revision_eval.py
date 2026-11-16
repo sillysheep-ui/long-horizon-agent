@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import json
 import os
+import random
 import time
 from pathlib import Path
 from typing import Any, Dict, List
@@ -109,7 +110,9 @@ async def main() -> None:
     parser.add_argument("--ids", default="", help="逗号分隔的用例 id")
     parser.add_argument("--db", default="")
     parser.add_argument("--out", default="")
+    parser.add_argument("--seed", type=int, default=0, help="随机种子，写入报告便于复现")
     args = parser.parse_args()
+    random.seed(args.seed)
 
     os.environ["MODEL_PROFILE"] = args.profile
     cases = json.loads(CASES_PATH.read_text())
@@ -132,6 +135,7 @@ async def main() -> None:
               f"applied={record.get('revision_applied')} changed={record.get('changed_days')} failed={failed}")
 
     summary = summarize_revision(records)
+    summary["seed"] = args.seed
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = Path(args.out or f"results/product_eval/{stamp}-revision-{args.profile}")
     target.mkdir(parents=True, exist_ok=True)
