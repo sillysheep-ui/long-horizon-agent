@@ -7,7 +7,7 @@ from product.revision import describe_targets
 INTAKE_SYSTEM_PROMPT = (
     "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、"
     "days 1-7 整数、budget 字符串、preferences 字符串数组、missing_required 字符串数组、conflicts 字符串数组。"
-    "未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；"
+    "未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations；""destinations 只放能订票到达的城市或地区（如 杭州、苏州、千岛湖），景点（西湖、灵山、太湖）一律放 preferences；""若某个名字同时像景点、又已在 preferences 里，就只保留在 preferences，不要放进 destinations；"
     "只有完全看不出目的地时才留空。conflicts 用一句话列出需求中的硬冲突"
     "（例如“五天带老人孩子预算 1000 元”“人均五百还想住五星酒店”“没说明玩几天”），没有冲突就给空数组。"
 )

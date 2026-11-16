@@ -130,3 +130,27 @@ def test_repeated_clarify_keeps_original_request(tmp_path):
     assert result["status"] == "needs_clarification"
     assert "周末想出去玩两天" in model.intake_prompts[1]
     assert "我也不知道去哪" in model.intake_prompts[1]
+
+
+class MixedDestinationModel(ClarifyModel):
+    """把景点混进 destinations，偏好里也有。"""
+
+    async def complete(self, role, system, user, max_tokens=1200):
+        if role == "需求 Agent":
+            self.intake_prompts.append(user)
+            self.intake_calls += 1
+            payload = {"departure_city": "", "destinations": ["无锡", "太湖", "灵山"],
+                       "days": 2, "budget": "1500", "preferences": ["太湖", "灵山"],
+                       "missing_required": [], "conflicts": []}
+            return {"role": role, "provider": "fake", "model": "fake",
+                    "content": json.dumps(payload, ensure_ascii=False)}
+        return await super().complete(role, system, user, max_tokens)
+
+
+def test_attractions_in_destinations_are_trimmed(tmp_path):
+    store = Store(str(tmp_path / "mixed.db"))
+    workflow = AgentWorkflow(store, MixedDestinationModel(), FakeTools())
+    store.create_trip("无锡两天，想去太湖和灵山，预算 1500 元")
+    result = asyncio.run(workflow.run(store.claim()))
+    assert result["status"] == "complete"
+    assert result["constraints"]["destinations"] == ["无锡"]

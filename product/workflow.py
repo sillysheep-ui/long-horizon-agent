@@ -141,6 +141,13 @@ class AgentWorkflow:
                                     error_type="missed_budget" if budget_clash else "should_clarify"))
                 return finish("ok", status="needs_clarification", question="需求里有冲突：%s。想先调整哪一项？" % reason,
                               constraints=constraints, model_calls=calls, days=[], evidence=[])
+            preferences = _as_list(constraints.get("preferences"), 6)
+            if not cities_fit_days(destinations, days_count) and preferences:
+                trimmed = [item for item in destinations if item not in preferences]
+                if trimmed and len(trimmed) < len(destinations) and cities_fit_days(trimmed, days_count):
+                    self._event(job, "intake", "把偏好里的景点从目的地里移除", {"dropped": len(destinations) - len(trimmed)})
+                    destinations = trimmed
+                    constraints["destinations"] = trimmed
             if not cities_fit_days(destinations, days_count):
                 stages.append(_span("intake", "stage", "failed",
                                     (time.monotonic() - intake_started) * 1000,
