@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 在线rollout 
+# 文件描述: 在线rollout
 # --------------------------------------------
 
 import argparse
-import json_repair
 import asyncio
 import importlib.util
 import json
@@ -12,10 +10,11 @@ import os
 import re
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
+import json_repair
 import torch
+from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # 加载环境变量
@@ -109,7 +108,7 @@ def apply_system_tool_call_limit(system_prompt: str, max_tool_calls: int) -> str
     return system_prompt
 
 
-def normalize_system_prompt_inplace(messages: List[Dict[str, Any]], max_tool_calls: int) -> bool:
+def normalize_system_prompt_inplace(messages: list[dict[str, Any]], max_tool_calls: int) -> bool:
     if not messages or messages[0].get("role") != "system":
         return False
     messages[0] = {
@@ -122,7 +121,7 @@ def normalize_system_prompt_inplace(messages: List[Dict[str, Any]], max_tool_cal
     return True
 
 
-def load_jsonl_row(path: str, idx: int) -> Dict[str, Any]:
+def load_jsonl_row(path: str, idx: int) -> dict[str, Any]:
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     if idx < 0 or idx >= len(lines):
         raise IndexError(f"sample_idx {idx} out of range, total: {len(lines)}")
@@ -153,8 +152,8 @@ def load_tool(tools_dir: str, tool_name: str):
     return cls()
 
 
-def parse_tool_calls(text: str) -> List[Dict[str, Any]]:
-    def _normalize_calls(payload: Any) -> List[Dict[str, Any]]:
+def parse_tool_calls(text: str) -> list[dict[str, Any]]:
+    def _normalize_calls(payload: Any) -> list[dict[str, Any]]:
         if isinstance(payload, dict):
             # OpenAI style: {"tool_calls":[...]}
             if isinstance(payload.get("tool_calls"), list):
@@ -189,7 +188,7 @@ def parse_tool_calls(text: str) -> List[Dict[str, Any]]:
         try:
             tool_calls = [json.loads(k) for k in raw_tools]
             return _normalize_calls(tool_calls)
-        except:
+        except Exception:
             try:
                 tool_calls = [json_repair.loads(k) for k in raw_tools]
                 tool_calls = [k for k in tool_calls if isinstance(k, dict)]
@@ -199,7 +198,7 @@ def parse_tool_calls(text: str) -> List[Dict[str, Any]]:
                     tool_calls = [json_repair.loads(k) for k in raw_tools]
                     tool_calls = [k for k in tool_calls if isinstance(k, dict)]
                 return _normalize_calls(tool_calls)
-            except:
+            except Exception:
                 return []
 
     m = re.search(r"<tool_calls>\s*(.*?)\s*</tool_calls>", text, re.S)
@@ -217,7 +216,7 @@ def has_partial_tool_call(text: str) -> bool:
     return "<tool_call>" in text and "</tool_call>" not in text
 
 
-def extract_call(call: Dict[str, Any]) -> Tuple[Optional[str], Dict[str, Any]]:
+def extract_call(call: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     function_obj = call.get("function")
     if isinstance(function_obj, dict):
         fn = function_obj.get("name") or call.get("name")
@@ -244,8 +243,8 @@ def extract_call(call: Dict[str, Any]) -> Tuple[Optional[str], Dict[str, Any]]:
     return fn, args
 
 
-def canonical_tool_call_signature(tool_calls: List[Dict[str, Any]]) -> str:
-    normalized: List[Dict[str, Any]] = []
+def canonical_tool_call_signature(tool_calls: list[dict[str, Any]]) -> str:
+    normalized: list[dict[str, Any]] = []
     for call in tool_calls:
         fn, args = extract_call(call)
         normalized.append({"name": fn or "", "arguments": args or {}})
@@ -256,14 +255,14 @@ def is_lnglat(text: str) -> bool:
     return bool(re.fullmatch(r"\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*", text or ""))
 
 
-def extract_first_lnglat(text: str) -> Optional[str]:
+def extract_first_lnglat(text: str) -> str | None:
     m = re.search(r"-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?", text or "")
     if not m:
         return None
     return m.group(0).replace(" ", "")
 
 
-async def retry_route_with_poi_if_needed(args, call_args: Dict[str, Any]) -> Optional[str]:
+async def retry_route_with_poi_if_needed(args, call_args: dict[str, Any]) -> str | None:
     origin = str(call_args.get("origin", ""))
     destination = str(call_args.get("destination", ""))
     if not origin or not destination:
@@ -309,7 +308,7 @@ def extract_answer_text(text: str) -> str:
     return m.group(1).strip()
 
 
-def infer_once(model, tokenizer, messages: List[Dict[str, str]], args) -> str:
+def infer_once(model, tokenizer, messages: list[dict[str, str]], args) -> str:
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     enc = tokenizer(prompt, return_tensors="pt")
     enc = {k: v.to(model.device) for k, v in enc.items()}
@@ -325,7 +324,7 @@ def infer_once(model, tokenizer, messages: List[Dict[str, str]], args) -> str:
     return tokenizer.decode(out[0][enc["input_ids"].shape[-1]:], skip_special_tokens=True)
 
 
-def infer_once_vllm(llm, tokenizer, messages: List[Dict[str, str]], args) -> str:
+def infer_once_vllm(llm, tokenizer, messages: list[dict[str, str]], args) -> str:
     from vllm import SamplingParams
 
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -378,7 +377,7 @@ def infer(model_or_llm, tokenizer, messages, args):
         return infer_once(model_or_llm, tokenizer, messages, args)
 
 
-async def execute_tool(tools_dir: str, fn: str, call_args: Dict[str, Any],
+async def execute_tool(tools_dir: str, fn: str, call_args: dict[str, Any],
                        tool_call_id: str, args) -> str:
     """执行单个工具调用并返回格式化后的结果字符串"""
     if not fn:
@@ -419,12 +418,12 @@ async def execute_tool(tools_dir: str, fn: str, call_args: Dict[str, Any],
 
 
 async def tool_loop(
-    messages: List[Dict[str, Any]],
+    messages: list[dict[str, Any]],
     args,
     tokenizer,
     model_or_llm,
     tools_dir: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """核心 tool loop — run_single 和 interactive_chat 共用。
 
     参数:
@@ -525,7 +524,7 @@ async def tool_loop(
         no_tool_no_answer_retries = 0
 
         valid_tool_calls_in_round = 0
-        round_tool_outputs: List[Dict[str, Any]] = []
+        round_tool_outputs: list[dict[str, Any]] = []
         for i, call in enumerate(tool_calls, start=1):
             fn, call_args = extract_call(call)
             tool_call_id = call.get("id") if isinstance(call, dict) else None
@@ -621,7 +620,7 @@ async def tool_loop(
     }
 
 
-async def run_single(args, tokenizer, model, llm, sample_idx: int) -> Dict[str, Any]:
+async def run_single(args, tokenizer, model, llm, sample_idx: int) -> dict[str, Any]:
     base_dir = str(Path(args.tools_dir).resolve().parent)
     if base_dir not in sys.path:
         sys.path.insert(0, base_dir)
@@ -744,7 +743,7 @@ if __name__ == "__main__":
     for i in range(start_idx, end_idx):
         try:
             result = asyncio.run(run_single(args, tokenizer, model, llm, i))
-        except:
+        except Exception:
             print(f"sample_idx={i} inference failed, skipped.")
             continue
         if args.output_path:

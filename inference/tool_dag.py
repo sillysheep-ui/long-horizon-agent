@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
 """Tool DAG 的数据模型、校验、参数解析与异步调度器。"""
 
 from __future__ import annotations
 
-import asyncio
 import ast
+import asyncio
 import hashlib
 import json
 import re
 import time
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Mapping, Optional, Set
-
+from typing import Any
 
 REFERENCE_RE = re.compile(r"^\{\{\s*([A-Za-z0-9_-]+)(?:\.([A-Za-z0-9_.,-]+))?\s*\}\}$")
 ANY_REFERENCE_RE = re.compile(r"\{\{\s*([A-Za-z0-9_-]+)(?:\.[A-Za-z0-9_.,-]+)?\s*\}\}")
@@ -25,13 +24,13 @@ class ToolDAGError(ValueError):
 class ToolNode:
     id: str
     tool: str
-    arguments: Dict[str, Any]
-    depends_on: List[str] = field(default_factory=list)
+    arguments: dict[str, Any]
+    depends_on: list[str] = field(default_factory=list)
     timeout_seconds: float = 15.0
     retries: int = 0
 
     @classmethod
-    def from_dict(cls, raw: Mapping[str, Any]) -> "ToolNode":
+    def from_dict(cls, raw: Mapping[str, Any]) -> ToolNode:
         node_id = str(raw.get("id", "")).strip()
         tool = str(raw.get("tool", "")).strip()
         arguments = raw.get("arguments", {})
@@ -68,16 +67,16 @@ class ToolNode:
 @dataclass
 class ToolPlan:
     goal: str
-    nodes: List[ToolNode]
-    repair_actions: List[str] = field(default_factory=list)
+    nodes: list[ToolNode]
+    repair_actions: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(
         cls,
         raw: Mapping[str, Any],
-        allowed_tools: Optional[Set[str]] = None,
+        allowed_tools: set[str] | None = None,
         max_nodes: int = 12,
-    ) -> "ToolPlan":
+    ) -> ToolPlan:
         if not isinstance(raw, Mapping):
             raise ToolDAGError("DAG 根节点必须是 JSON 对象")
         raw_nodes = raw.get("nodes")
@@ -90,7 +89,7 @@ class ToolPlan:
         plan.validate(allowed_tools=allowed_tools)
         return plan
 
-    def validate(self, allowed_tools: Optional[Set[str]] = None) -> None:
+    def validate(self, allowed_tools: set[str] | None = None) -> None:
         by_id = {node.id: node for node in self.nodes}
         if len(by_id) != len(self.nodes):
             raise ToolDAGError("DAG 节点 id 不能重复")
@@ -110,8 +109,8 @@ class ToolPlan:
                     "但未在 depends_on 中声明"
                 )
 
-        visiting: Set[str] = set()
-        visited: Set[str] = set()
+        visiting: set[str] = set()
+        visited: set[str] = set()
 
         def visit(node_id: str) -> None:
             if node_id in visiting:
@@ -127,12 +126,12 @@ class ToolPlan:
         for node_id in by_id:
             visit(node_id)
 
-    def prune_semantic_redundancy(self) -> "ToolPlan":
+    def prune_semantic_redundancy(self) -> ToolPlan:
         """删除常见的“伪工具回答”叶节点和可被宽泛周边检索覆盖的重复叶节点。"""
         nodes = list(self.nodes)
         original_count = len(nodes)
 
-        def depended_ids(items: List[ToolNode]) -> Set[str]:
+        def depended_ids(items: list[ToolNode]) -> set[str]:
             return {dep for item in items for dep in item.depends_on}
 
         depended = depended_ids(nodes)
@@ -175,7 +174,7 @@ class ToolPlan:
         pruned.validate()
         return pruned
 
-    def prune_irrelevant_to_query(self, query: str) -> "ToolPlan":
+    def prune_irrelevant_to_query(self, query: str) -> ToolPlan:
         """按用户显式意图删除 Planner 擅自扩展的工具，并保持依赖闭包合法。"""
         text = str(query or "")
         food_terms = ("美食", "餐厅", "餐馆", "餐饮", "吃", "寻味", "小吃", "菜馆", "饭店")
@@ -225,7 +224,7 @@ class ToolPlan:
         pruned.validate()
         return pruned
 
-    def fit_max_nodes(self, max_nodes: int) -> "ToolPlan":
+    def fit_max_nodes(self, max_nodes: int) -> ToolPlan:
         """通过逐步删除低优先级叶节点压缩 DAG，同时保持依赖闭包合法。"""
         if max_nodes < 1:
             raise ToolDAGError("max_nodes 必须大于 0")
@@ -247,9 +246,9 @@ class ToolPlan:
         return fitted
 
 
-def _collect_reference_nodes(value: Any) -> Set[str]:
+def _collect_reference_nodes(value: Any) -> set[str]:
     if isinstance(value, Mapping):
-        found: Set[str] = set()
+        found: set[str] = set()
         for item in value.values():
             found.update(_collect_reference_nodes(item))
         return found
@@ -268,7 +267,7 @@ class NodeResult:
     node_id: str
     tool: str
     status: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
     output: str = ""
     error: str = ""
     latency_ms: float = 0.0
@@ -276,7 +275,7 @@ class NodeResult:
     cache_hit: bool = False
 
 
-def extract_json_object(text: str) -> Dict[str, Any]:
+def extract_json_object(text: str) -> dict[str, Any]:
     """从模型输出中提取 JSON；兼容 markdown code fence 与前后解释。"""
     cleaned = (text or "").strip()
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.S | re.I)
@@ -369,7 +368,7 @@ def resolve_references(value: Any, outputs: Mapping[str, Any]) -> Any:
     return re.sub(r"\{\{\s*([A-Za-z0-9_-]+)(?:\.([A-Za-z0-9_.,-]+))?\s*\}\}", replace, value)
 
 
-ToolExecutor = Callable[[str, Dict[str, Any], str], Awaitable[str]]
+ToolExecutor = Callable[[str, dict[str, Any], str], Awaitable[str]]
 
 
 BUSINESS_ERROR_PATTERNS = (
@@ -400,11 +399,11 @@ class ToolDAGScheduler:
         self.max_concurrency = max(1, max_concurrency)
         self.fail_fast = fail_fast
         self.enable_cache = enable_cache
-        self._cache: Dict[str, str] = {}
+        self._cache: dict[str, str] = {}
         self._semaphore = asyncio.Semaphore(self.max_concurrency)
 
     @staticmethod
-    def _cache_key(tool: str, arguments: Dict[str, Any]) -> str:
+    def _cache_key(tool: str, arguments: dict[str, Any]) -> str:
         payload = json.dumps(
             {"tool": tool, "arguments": arguments},
             ensure_ascii=False,
@@ -479,12 +478,12 @@ class ToolDAGScheduler:
             attempts=node.retries + 1,
         )
 
-    async def run(self, plan: ToolPlan) -> Dict[str, Any]:
+    async def run(self, plan: ToolPlan) -> dict[str, Any]:
         plan.validate()
         pending = {node.id: node for node in plan.nodes}
-        results: Dict[str, NodeResult] = {}
-        outputs: Dict[str, Any] = {}
-        levels: List[List[str]] = []
+        results: dict[str, NodeResult] = {}
+        outputs: dict[str, Any] = {}
+        levels: list[list[str]] = []
         started = time.perf_counter()
 
         while pending:

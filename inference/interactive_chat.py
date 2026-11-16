@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
 # 文件描述: 用户追问式多轮交互（含长短期记忆）
 # 功能:
@@ -11,16 +10,9 @@
 import argparse
 import asyncio
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any
 
 from dotenv import load_dotenv
-
-# 加载环境变量
-load_dotenv()
-
-# ---------- 从 run_tool_loop_infer 复用全部核心函数 ----------
-
-from prompts.prompt import MEMORY_SYSTEM_PROMPT, MEMORY_USER_PROMPT
 
 from inference.run_tool_loop_infer import (
     infer,
@@ -29,7 +21,10 @@ from inference.run_tool_loop_infer import (
     normalize_system_prompt_inplace,
     tool_loop,
 )
+from prompts.prompt import MEMORY_SYSTEM_PROMPT, MEMORY_USER_PROMPT
 
+# 加载环境变量
+load_dotenv()
 
 # ---------- 记忆压缩 ----------
 
@@ -67,7 +62,7 @@ def _compress_memory(tokenizer, model_or_llm, args_proxy,
 
 def _build_messages(system_prompt: str,
                     long_term_memory: str,
-                    user_input: str) -> List[Dict[str, Any]]:
+                    user_input: str) -> list[dict[str, Any]]:
     """构建本轮 tool loop 的初始消息"""
     messages = [{"role": "system", "content": system_prompt}]
 
@@ -159,8 +154,9 @@ async def main():
             args.override_system_prompt_idx,
         )
     else:
-        from prompts.prompt import COLDSTART_SYSTEM_PROMPT
         from datetime import date
+
+        from prompts.prompt import COLDSTART_SYSTEM_PROMPT
         system_prompt = (
             COLDSTART_SYSTEM_PROMPT
             .replace("__CURRENT_DATE__", date.today().strftime("%Y-%m-%d"))

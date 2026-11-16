@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """基于 Tool DAG 的旅行规划推理入口。
 
 流程: Planner 生成结构化 DAG -> 调度器并发执行 -> Answerer 汇总结果。
@@ -13,9 +12,8 @@ import json
 import time
 from datetime import date
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any
 
-from prompts.prompt import COLDSTART_SYSTEM_PROMPT
 from inference.run_tool_loop_infer import (
     TOOL_CLASS_MAP,
     _extract_tag_block,
@@ -44,7 +42,7 @@ from inference.tool_verifier import (
     merge_plans,
     should_attempt_evidence_repair,
 )
-
+from prompts.prompt import COLDSTART_SYSTEM_PROMPT
 
 PLANNER_SYSTEM_PROMPT = """你是旅行规划 Agent 的任务编译器。请把用户需求编译成可并发执行的 Tool DAG。
 
@@ -149,7 +147,7 @@ def compile_plan(
             "locations": route_entities,
             "required_legs": [
                 {"origin": origin, "destination": destination}
-                for origin, destination in zip(route_entities, route_entities[1:])
+                for origin, destination in zip(route_entities, route_entities[1:], strict=False)
             ],
         }, ensure_ascii=False)
         user_content += f"\n\n<route_intent>{route_intent}</route_intent>"
@@ -264,7 +262,7 @@ async def execute_verified_dag(
     args,
     user_query: str,
     executor,
-) -> tuple[ToolPlan, Dict[str, Any], Dict[str, Any]]:
+) -> tuple[ToolPlan, dict[str, Any], dict[str, Any]]:
     """执行 DAG；仅在证据高风险时生成一个修复候选并增量补图。"""
     planning_started = time.perf_counter()
     plan = compile_plan(model_or_llm, tokenizer, args, user_query)
@@ -279,7 +277,7 @@ async def execute_verified_dag(
     dag_result = await scheduler.run(plan)
     tool_execution_latency_ms = (time.perf_counter() - tool_started) * 1000
     evidence_check = assess_evidence(user_query, plan, dag_result)
-    metadata: Dict[str, Any] = {
+    metadata: dict[str, Any] = {
         "plan": getattr(plan, "verification", {}),
         "evidence_initial": evidence_check.to_dict(),
         "evidence_repair_triggered": False,
@@ -352,8 +350,8 @@ async def execute_verified_dag(
     return plan, dag_result, metadata
 
 
-def _evidence_payload(dag_result: Dict[str, Any], max_chars: int) -> str:
-    compact_results: List[Dict[str, Any]] = []
+def _evidence_payload(dag_result: dict[str, Any], max_chars: int) -> str:
+    compact_results: list[dict[str, Any]] = []
     results = dag_result["results"]
     per_result_chars = max(600, max_chars // max(1, len(results)))
     for result in results:
@@ -373,8 +371,8 @@ def generate_answer(
     tokenizer,
     args,
     user_query: str,
-    dag_result: Dict[str, Any],
-    verification_alert: Dict[str, Any] | None = None,
+    dag_result: dict[str, Any],
+    verification_alert: dict[str, Any] | None = None,
 ) -> str:
     evidence = _evidence_payload(dag_result, args.answer_evidence_max_chars)
     alert = ""
@@ -433,13 +431,13 @@ def generate_answer(
     return answer
 
 
-async def run_react_fallback(model_or_llm, tokenizer, args, user_query: str) -> Dict[str, Any]:
+async def run_react_fallback(model_or_llm, tokenizer, args, user_query: str) -> dict[str, Any]:
     system_prompt = (
         COLDSTART_SYSTEM_PROMPT
         .replace("__CURRENT_DATE__", date.today().strftime("%Y-%m-%d"))
         .replace("__MAX_TOOL_CALL__", str(args.system_max_tool_calls))
     )
-    messages: List[Dict[str, Any]] = [
+    messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_query},
     ]
@@ -447,7 +445,7 @@ async def run_react_fallback(model_or_llm, tokenizer, args, user_query: str) -> 
     return await tool_loop(messages, args, tokenizer, model_or_llm, args.tools_dir)
 
 
-async def run(args) -> Dict[str, Any]:
+async def run(args) -> dict[str, Any]:
     total_started = time.perf_counter()
     user_query = args.query or _extract_query_from_dataset(args.dataset_path, args.sample_idx)
     backend_started = time.perf_counter()
@@ -456,8 +454,7 @@ async def run(args) -> Dict[str, Any]:
     model_or_llm = llm if args.infer_backend == "vllm" else model
 
     try:
-        planner_started = time.perf_counter()
-        async def executor(tool: str, arguments: Dict[str, Any], node_id: str) -> str:
+        async def executor(tool: str, arguments: dict[str, Any], node_id: str) -> str:
             return await execute_tool(args.tools_dir, tool, arguments, node_id, args)
         plan, dag_result, verifier = await execute_verified_dag(
             model_or_llm, tokenizer, args, user_query, executor

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tool DAG 的低成本风险验证、候选选择与增量合并。"""
 
 from __future__ import annotations
@@ -6,10 +5,9 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 from inference.tool_dag import ToolNode, ToolPlan, _collect_reference_nodes
-
 
 EMPTY_MARKERS = (
     "no poi data available",
@@ -54,10 +52,10 @@ def assess_answer_consistency(query: str, answer: str) -> VerificationResult:
 @dataclass
 class VerificationResult:
     risk: float
-    reasons: List[str] = field(default_factory=list)
-    missing_requirements: List[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
+    missing_requirements: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "risk": round(self.risk, 4),
             "reasons": self.reasons,
@@ -72,7 +70,7 @@ def _plan_text(plan: ToolPlan) -> str:
     }, ensure_ascii=False)
 
 
-def extract_route_entities(query: str) -> List[str]:
+def extract_route_entities(query: str) -> list[str]:
     """从多途经点路线请求中提取保持用户顺序的地点链。"""
     multi_stop = any(term in query for term in ("途径", "经停", "经过", "再去", "顺路", "怎么走"))
     multi_stop = multi_stop or bool(re.search(r"从.+经.*?(?:到|再去)", query))
@@ -101,8 +99,8 @@ def extract_route_entities(query: str) -> List[str]:
 def assess_plan(query: str, plan: ToolPlan, max_nodes: int = 8) -> VerificationResult:
     rendered = _plan_text(plan)
     risk = 0.0
-    reasons: List[str] = []
-    missing: List[str] = []
+    reasons: list[str] = []
+    missing: list[str] = []
 
     entities = extract_route_entities(query)
     for entity in entities:
@@ -116,7 +114,7 @@ def assess_plan(query: str, plan: ToolPlan, max_nodes: int = 8) -> VerificationR
     if len(entities) >= 2:
         route_nodes = [node for node in plan.nodes if node.tool == "route_planning"]
         missing_edges = []
-        for origin, destination in zip(entities, entities[1:]):
+        for origin, destination in zip(entities, entities[1:], strict=False):
             matched = any(
                 str(node.arguments.get("origin", "")).strip() == origin
                 and str(node.arguments.get("destination", "")).strip() == destination
@@ -195,10 +193,10 @@ def assess_plan(query: str, plan: ToolPlan, max_nodes: int = 8) -> VerificationR
     return VerificationResult(min(1.0, risk), list(dict.fromkeys(reasons)), missing)
 
 
-def assess_evidence(query: str, plan: ToolPlan, dag_result: Dict[str, Any]) -> VerificationResult:
+def assess_evidence(query: str, plan: ToolPlan, dag_result: dict[str, Any]) -> VerificationResult:
     risk = 0.0
-    reasons: List[str] = []
-    missing: List[str] = []
+    reasons: list[str] = []
+    missing: list[str] = []
     results = dag_result.get("results", [])
     failed = [item for item in results if item.get("status") != "success"]
     empty = [
@@ -212,7 +210,7 @@ def assess_evidence(query: str, plan: ToolPlan, dag_result: Dict[str, Any]) -> V
             f"{item.get('tool', '')}:{json.dumps(item.get('arguments', {}), ensure_ascii=False)}"
             for item in failed
         )
-    def has_same_context_success(item: Dict[str, Any]) -> bool:
+    def has_same_context_success(item: dict[str, Any]) -> bool:
         """同一工具、同一中心点的并行近义检索可互为部分证据。"""
         arguments = item.get("arguments", {})
         context = str(arguments.get("location") or arguments.get("region") or "").strip()
@@ -292,7 +290,7 @@ def should_attempt_evidence_repair(verification: VerificationResult) -> bool:
 
 def build_targeted_evidence_repair(
     plan: ToolPlan,
-    dag_result: Dict[str, Any],
+    dag_result: dict[str, Any],
     max_nodes: int,
 ) -> ToolPlan | None:
     """为“附近检索为空”构建确定性半径扩展，不调用第二次 Planner。"""
@@ -302,7 +300,7 @@ def build_targeted_evidence_repair(
         (node.tool, json.dumps(node.arguments, ensure_ascii=False, sort_keys=True))
         for node in plan.nodes
     }
-    additions: List[ToolNode] = []
+    additions: list[ToolNode] = []
     existing_ids = {node.id for node in plan.nodes}
     for result in dag_result.get("results", []):
         if result.get("tool") != "around_search":
