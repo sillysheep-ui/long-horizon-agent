@@ -98,12 +98,17 @@ class AgentWorkflow:
                                  "decision": "proceed"}))
         else:
             self._event(job, "intake", "正在理解日期、目的地和预算")
+            intake_query = query
+            if prior.get("status") == "needs_clarification" and revision_text:
+                intake_query = "%s\n（上一轮追问：%s。用户回答：%s）" % (
+                    query, prior.get("question") or "", revision_text)
+                self._event(job, "intake", "结合上一轮追问继续理解需求")
             intake_started = time.monotonic()
-            intake = await self.model.complete("需求 Agent", INTAKE_SYSTEM_PROMPT, query, max_tokens=500)
+            intake = await self.model.complete("需求 Agent", INTAKE_SYSTEM_PROMPT, intake_query, max_tokens=500)
             calls.append({k: intake[k] for k in ("role", "provider", "model")})
             constraints = parse_json(intake["content"])
             destinations = _as_list(constraints.get("destinations"), 4)
-            declared = _declares_duration(query)
+            declared = _declares_duration(intake_query)
             intake_attributes = {"days": constraints.get("days"), "cities": destinations,
                                  "days_declared": declared}
             if not destinations:
@@ -117,7 +122,7 @@ class AgentWorkflow:
             except (TypeError, ValueError):
                 days_count = 1
             constraints["days"] = days_count
-            constraints["pace"] = detect_pace(query, revision_text)
+            constraints["pace"] = detect_pace(intake_query, revision_text)
             conflicts = _as_list(constraints.get("conflicts"), 3)
             if not declared:
                 stages.append(_span("intake", "stage", "failed",
@@ -126,7 +131,7 @@ class AgentWorkflow:
                                     error_type="missing_days"))
                 return finish("ok", status="needs_clarification", question="打算玩几天？",
                               constraints=constraints, model_calls=calls, days=[], evidence=[])
-            budget_clash = budget_conflict(query, days_count)
+            budget_clash = budget_conflict(intake_query, days_count)
             if conflicts or budget_clash:
                 reason = "；".join(conflicts[:2]) or "预算和住宿标准对不上"
                 stages.append(_span("intake", "stage", "failed",
