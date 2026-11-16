@@ -6,12 +6,12 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from transformers import AutoTokenizer
 
 
-def load_jsonl(path: Path) -> List[Dict[str, Any]]:
+def load_jsonl(path: Path) -> list[dict[str, Any]]:
     with path.open(encoding="utf-8") as handle:
         return [json.loads(line) for line in handle if line.strip()]
 
@@ -33,7 +33,7 @@ def main() -> None:
 
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer, trust_remote_code=True)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    summary: Dict[str, Any] = {
+    summary: dict[str, Any] = {
         "tokenizer": args.tokenizer,
         "max_model_len": args.max_model_len,
         "max_input_len": max_input_len,
@@ -46,8 +46,8 @@ def main() -> None:
         source = args.input_dir / f"{split}.jsonl"
         target = args.output_dir / f"{split}.jsonl"
         rows = load_jsonl(source)
-        kept: List[Dict[str, Any]] = []
-        dropped: List[Dict[str, Any]] = []
+        kept: list[dict[str, Any]] = []
+        dropped: list[dict[str, Any]] = []
 
         for row_index, row in enumerate(rows):
             messages = row["messages"]

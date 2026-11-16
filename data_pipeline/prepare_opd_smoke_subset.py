@@ -4,7 +4,6 @@
 import json
 from pathlib import Path
 
-
 SOURCE = Path("data/final/teacher_rl_pool_protocol_v2.jsonl")
 OUTPUT = Path("data/final/opd_smoke_short_queries_20260821.jsonl")
 INDICES = (10, 14, 25, 29, 53, 71)

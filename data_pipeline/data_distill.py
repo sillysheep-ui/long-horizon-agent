@@ -1,43 +1,34 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
 # 文件描述: 蒸馏推理路径和答案
 # --------------------------------------------
 
-import json
-import re
-import os
-import ast
-import sys
-import time
-import json5
-import hashlib
 import asyncio
 import datetime
+import json
+import os
+import time
+
 import json_repair
-from pathlib import Path
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 from qwen_agent.agents.fncall_agent import FnCallAgent
 from qwen_agent.llm.schema import Message
+from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
-from transformers import AutoTokenizer
-from transformers import PreTrainedTokenizerFast
-from openai import AsyncOpenAI
-
-from utils import logging as agent_logging
-from tools.tool_web_search import WebSearch
+from prompts.prompt import AGENTIC_SYSTEM_PROMPT
+from tools.tool_around_search import AroundSearch
+from tools.tool_catering import CateringSearch
+from tools.tool_distance_matrix import DistanceMatrix
+from tools.tool_hotel import HotelSearch
+from tools.tool_poi_search import POISearch
+from tools.tool_route_planning import RoutePlanning
+from tools.tool_train_ticket import TrainTicketsSearch
+from tools.tool_transport import FlightsSearch
 from tools.tool_visit import Visit
 from tools.tool_weather import WeatherSearch
-from tools.tool_transport import FlightsSearch
-from tools.tool_train_ticket import TrainTicketsSearch
-from tools.tool_route_planning import RoutePlanning
-from tools.tool_poi_search import POISearch
-from tools.tool_around_search import AroundSearch
-from tools.tool_hotel import HotelSearch
-from tools.tool_distance_matrix import DistanceMatrix
-from tools.tool_catering import CateringSearch
-from prompts.prompt import AGENTIC_SYSTEM_PROMPT
-
+from tools.tool_web_search import WebSearch
+from utils import logging as agent_logging
 
 # 初始化logger
 logger = agent_logging.get_logger(__name__)
@@ -139,11 +130,10 @@ class MultiTurnReactAgent(FnCallAgent):
         self, data, client: AsyncOpenAI, save_path: str | None = None
     ) -> list[list[Message]]:
         start_time = time.time()
-        qid = data["qid"]
         question = data["question"]
         answer = data.get("answer", "")
         self.user_prompt = question
-        system_prompt = AGENTIC_SYSTEM_PROMPT 
+        system_prompt = AGENTIC_SYSTEM_PROMPT
         cur_date = today_date()
         system_prompt = system_prompt.replace("__CURRENT_DATE__", str(cur_date))
         system_prompt = system_prompt.replace("__MAX_TOOL_CALL__", str(self.max_llm_calls_per_run))
@@ -201,14 +191,14 @@ class MultiTurnReactAgent(FnCallAgent):
                                 "arguments": json_repair.loads(item.function.arguments)
                             } for item in message.tool_calls
                         ]
-                    except:
+                    except Exception:
                         tool_calls = []
-                        logger.warn(f"Parse tool_calls {matches} failed")
+                        logger.warning(f"Parse tool_calls {message.tool_calls} failed")
                 tasks = [self.custom_call_tool(tool_call) for tool_call in tool_calls]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
                 # 处理异常情况
-                for tool_call, result in zip(tool_calls, results):
+                for tool_call, result in zip(tool_calls, results, strict=False):
                     if isinstance(result, Exception):
                         result = "<tool_response>\n" + f"Fetch {tool_call} response failed." + "\n</tool_response>"
 
@@ -327,14 +317,14 @@ class MultiTurnReactAgent(FnCallAgent):
         self,
         data: dict[str, str] | list[dict],
         client: AsyncOpenAI,
-        save_path: str | None = None 
-    ) -> dict:
+        save_path: str | None = None
+    ) -> None:
         if isinstance(data, dict):
-            result = await self.run_agent(data, client, save_path=save_path)
+            await self.run_agent(data, client, save_path=save_path)
         elif isinstance(data, list):
             for item in data:
                 try:
-                    result = await self.run_agent(item, client, save_path=save_path)
+                    await self.run_agent(item, client, save_path=save_path)
                 except Exception:
                     logger.warning(f"rollout question: {item['question']} failed.")
 

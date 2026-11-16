@@ -11,7 +11,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 ACTION_RATIONALES = {
     "continue_tool": "已有证据尚不足以覆盖用户约束，继续获取缺失事实。",
     "replan": "当前证据链失效或动作无新增信息，应调整查询目标或工具路径。",

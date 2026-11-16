@@ -11,7 +11,6 @@ import hashlib
 import json
 from pathlib import Path
 
-
 ROOT = Path("data/final")
 
 

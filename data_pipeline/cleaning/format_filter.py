@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 规则过滤 
+# 文件描述: 规则过滤
 # --------------------------------------------
 
 import argparse
 import json
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from prompts.prompt import COLDSTART_SYSTEM_PROMPT 
-
+from prompts.prompt import COLDSTART_SYSTEM_PROMPT
 
 TOOL_CALL_BLOCK_RE = re.compile(r"<tool_call>\s*(\[.*?\])\s*</tool_call>", re.S)
 TOOL_RESPONSE_RE = re.compile(r"<tool_response>\s*(.*?)\s*</tool_response>", re.S)
@@ -60,7 +58,7 @@ def normalize_system_prompt(system_content: str) -> str:
     )
 
 
-def normalize_tool_call(call: dict[str, Any]) -> Optional[dict[str, Any]]:
+def normalize_tool_call(call: dict[str, Any]) -> dict[str, Any] | None:
     fn = call.get("function") or {}
     name = fn.get("name")
     if not isinstance(name, str) or not name:
@@ -129,7 +127,7 @@ def convert_and_clean_conversations(
         content = str(turn.get("content", ""))
 
         match_think = THINK_RE.search(content)
-        think_content = match_think.group(1).strip() if match_think else "" 
+        think_content = match_think.group(1).strip() if match_think else ""
 
         if think_content:
             think_content = f"<think>{think_content}</think>\n\n"
@@ -165,7 +163,7 @@ def convert_and_clean_conversations(
                 out.append(
                     {
                         "role": "assistant",
-                        "content": f"{think_content}{tool_call_content}" 
+                        "content": f"{think_content}{tool_call_content}"
                     }
                 )
 

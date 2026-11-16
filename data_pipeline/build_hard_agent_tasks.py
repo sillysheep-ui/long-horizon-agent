@@ -6,7 +6,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 CASES = [
     ("成都", "九寨沟", "周末两天", "自驾、避开高风险路段、沿途安排一晚住宿"),
     ("上海", "黄山", "下周末", "高铁优先、若天气不适合登山需给出替代方案"),

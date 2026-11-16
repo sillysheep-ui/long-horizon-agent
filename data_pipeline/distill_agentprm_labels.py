@@ -13,7 +13,6 @@ from typing import Any
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
-
 SYSTEM = """你是工具型 Agent 的过程监督教师。只能依据给出的状态、工具证据和候选动作判断，不能补充外部事实。
 评估目标是下一步行动的可靠性、约束覆盖、事实安全与工具成本。不要因为行动更多就给高分，也不要因为回答/终止就天然扣分。
 所有输出必须是一个合法 JSON 对象，不要输出 Markdown。"""
@@ -86,7 +85,7 @@ async def main(args: argparse.Namespace) -> None:
         for begin in range(0, len(pending), args.batch_size):
             batch = pending[begin : begin + args.batch_size]
             results = await asyncio.gather(*(label_one(client, model, task, semaphore) for task in batch), return_exceptions=True)
-            for task, result in zip(batch, results):
+            for task, result in zip(batch, results, strict=False):
                 row = result if not isinstance(result, Exception) else {"task_id": task["task_id"], "error": f"{type(result).__name__}: {result}"}
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
                 handle.flush()

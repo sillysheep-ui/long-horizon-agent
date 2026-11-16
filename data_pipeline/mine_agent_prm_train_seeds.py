@@ -8,7 +8,6 @@ import json
 import re
 from pathlib import Path
 
-
 PATTERNS = {
     "time": r"今天|明天|周末|[0-9]+天|[0-9]+月|早|晚|小时|日期|假期",
     "budget": r"预算|[0-9]+元|花费|价格|便宜|省钱|经济",

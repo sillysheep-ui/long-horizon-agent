@@ -1,21 +1,21 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 质量打分过滤 
+# 文件描述: 质量打分过滤
 # --------------------------------------------
 
 import argparse
-import json_repair
-import re
 import json
 import os
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 from urllib import error, request
+
+import json_repair
 from dotenv import load_dotenv
 
-from prompts.prompt import DATA_JUDGE_PROMPT 
+from prompts.prompt import DATA_JUDGE_PROMPT
 
 # 加载环境变量
 load_dotenv()
@@ -85,7 +85,7 @@ def summarize_tool_trajectory(conversations: list[dict[str, Any]]) -> dict[str, 
             if raw_tools:
                 try:
                     tool_calls = [json.loads(k) for k in raw_tools]
-                except:
+                except Exception:
                     tool_calls = [json_repair.loads(k) for k in raw_tools]
 
                 tool_names.extend([info["name"] for info in tool_calls])
@@ -124,7 +124,7 @@ def build_prompt(
 ) -> str:
     trajectory_str = json.dumps(trajectory, ensure_ascii=False)
     return DATA_JUDGE_PROMPT.replace("__QUESTION__", question).replace("__ANSWER__",
-         answer).replace("__TRAJECTORY__", trajectory_str) 
+         answer).replace("__TRAJECTORY__", trajectory_str)
 
 
 def extract_json_object(text: str) -> str:

@@ -14,7 +14,6 @@ import random
 import re
 from pathlib import Path
 
-
 COMPLEXITY_TERMS = (
     "途经", "依次", "路线", "行程", "预算", "住宿", "餐饮", "高铁", "自驾",
     "多天", "三天", "两天", "一天", "周末", "亲子", "景点",

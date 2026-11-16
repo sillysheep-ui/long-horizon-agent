@@ -8,7 +8,6 @@ import hashlib
 import json
 from pathlib import Path
 
-
 # 总计 893：与 893 条真实状态 1:1 配平，同时保证每一种失败模式都出现。
 QUOTAS = {"premature_answer": 300, "redundant_tool": 220, "tool_failure": 260, "unsupported_terminal": 113}
 

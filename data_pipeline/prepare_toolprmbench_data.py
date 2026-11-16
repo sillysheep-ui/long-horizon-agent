@@ -8,7 +8,6 @@ import hashlib
 import json
 from pathlib import Path
 
-
 PROMPT = """Given the interaction history, function description and two actions, which action is the correct intermediate step that could help in finishing the task:
 ## history: {history}
 

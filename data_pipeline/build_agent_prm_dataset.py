@@ -13,7 +13,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-
 ACTION_SPACE = [
     "continue_tool",
     "answer",

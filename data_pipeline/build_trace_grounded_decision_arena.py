@@ -50,7 +50,7 @@ def main():
         raise ValueError("任务数与结果文件不匹配")
 
     arena = []
-    for task, path in zip(tasks, paths):
+    for task, path in zip(tasks, paths, strict=False):
         result = json.loads(path.read_text(encoding="utf-8"))
         state = base_state(task, result)
         terminal_id = f"{task['id']}::terminal"

@@ -8,7 +8,6 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-
 ROOT = Path("data/final")
 SYSTEM = """你是旅行工具 Agent 的过程奖励模型。根据当前状态、工具证据和候选动作，输出严格 JSON：
 对单个行动给出 process_quality(1-5)、risk_types、recommended_action、confidence、reason；
@@ -48,8 +47,10 @@ def main() -> None:
     for _, items in grouped.items():
         items.sort(key=lambda row: hashlib.sha256(row["id"].encode()).hexdigest())
         split = int(len(items) * 0.9)
-        train.extend(items[:split]); val.extend(items[split:])
-    train.sort(key=lambda row: row["id"]); val.sort(key=lambda row: row["id"])
+        train.extend(items[:split])
+        val.extend(items[split:])
+    train.sort(key=lambda row: row["id"])
+    val.sort(key=lambda row: row["id"])
     for path, items in ((ROOT / "agent_prm_v2_train.jsonl", train), (ROOT / "agent_prm_v2_val.jsonl", val)):
         with path.open("w", encoding="utf-8") as handle:
             for row in items:
