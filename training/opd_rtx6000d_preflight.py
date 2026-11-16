@@ -9,11 +9,11 @@ import importlib.metadata
 import json
 import shutil
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
-def version_tuple(value: str) -> Tuple[int, ...]:
-    parts: List[int] = []
+def version_tuple(value: str) -> tuple[int, ...]:
+    parts: list[int] = []
     for part in value.split("+")[0].split("."):
         digits = "".join(ch for ch in part if ch.isdigit())
         if not digits:
@@ -22,7 +22,7 @@ def version_tuple(value: str) -> Tuple[int, ...]:
     return tuple(parts)
 
 
-def package_version(name: str) -> Optional[str]:
+def package_version(name: str) -> str | None:
     try:
         return importlib.metadata.version(name)
     except importlib.metadata.PackageNotFoundError:
@@ -35,9 +35,9 @@ def main() -> int:
     parser.add_argument("--min-memory-gib", type=float, default=80.0)
     args = parser.parse_args()
 
-    report: Dict[str, Any] = {"status": "FAIL", "blockers": [], "warnings": []}
-    blockers: List[str] = report["blockers"]
-    warnings: List[str] = report["warnings"]
+    report: dict[str, Any] = {"status": "FAIL", "blockers": [], "warnings": []}
+    blockers: list[str] = report["blockers"]
+    warnings: list[str] = report["warnings"]
 
     try:
         import torch
