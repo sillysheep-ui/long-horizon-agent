@@ -48,7 +48,35 @@ docker compose down            # 停容器，保留 data/
 docker compose down --rmi local -v   # 连镜像一起删
 ```
 
-## 5. 本地模型（可选）
+## 5. 没有 Docker Desktop 的 macOS（Lima 方案）
+
+macOS 上 Docker 需要一台 Linux 虚拟机。如果不想装 Docker Desktop（需要管理员权限、且
+ghcr.io 与 Docker Hub 在部分网络下不可达），可以用 Lima 手工起一台，再用里面的 Docker：
+
+```bash
+brew install lima            # 或用 GitHub Release 的 lima-*-Darwin-arm64.tar.gz
+mkdir -p ~/.lima-images
+curl -fL -o ~/.lima-images/noble-server-cloudimg-arm64.img \
+  https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cloud-images/noble/current/noble-server-cloudimg-arm64.img
+# 把 deploy/lima.yaml 里的 images.location 改成上面的绝对路径
+limactl start deploy/lima.yaml --name=app --tty=false
+limactl shell app -- sudo docker version
+```
+
+之后所有 Docker 命令都套一层：
+
+```bash
+limactl shell app -- sudo docker build -t long-horizon-agent:local ~/long-horizon-agent
+limactl shell app -- sudo docker run -d --name app -p 8000:8000 \
+  --env-file ~/long-horizon-agent/.env \
+  -e TRAVEL_DB_PATH=/app/data/agent.db \
+  -v ~/long-horizon-agent/data:/app/data \
+  long-horizon-agent:local
+```
+
+Lima 会把虚拟机里监听 8000 的端口转发到宿主机 `127.0.0.1:8000`。
+
+## 6. 本地模型（可选）
 
 容器内没有 MLX，也没有 7.5G 权重。若要用 `MODEL_PROFILE=local_first`：
 
@@ -63,7 +91,7 @@ docker run ... -e LOCAL_MODEL_BASE_URL=http://host.docker.internal:8080/v1 \
 
 注意 macOS 上 Docker Desktop 才自带 `host.docker.internal`；colima 需要加 `--add-host` 或改用宿主机局域网 IP。
 
-## 6. 已知限制
+## 7. 已知限制
 
 - 镜像只包含 `product/` 与 `inference/`，评测脚本、训练脚本不进镜像。
 - 没有鉴权、限流和 HTTPS；要公网访问请放在反向代理后面。

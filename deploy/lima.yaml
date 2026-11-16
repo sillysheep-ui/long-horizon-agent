@@ -1,0 +1,47 @@
+# 在 macOS 上没有 Docker Desktop 时，用 Lima 跑一台 Linux 虚拟机来提供 Docker。
+#
+# 准备镜像（国内网络可用清华镜像，约 600MB）：
+#   mkdir -p ~/.lima-images
+#   curl -fL -o ~/.lima-images/noble-server-cloudimg-arm64.img \
+#     https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cloud-images/noble/current/noble-server-cloudimg-arm64.img
+#
+# 启动：
+#   limactl start deploy/lima.yaml --name=app --tty=false
+#   limactl shell app -- sudo docker ps
+#
+# 之后用 `limactl shell app -- sudo docker ...` 代替本机 docker 命令。
+
+vmType: vz
+os: Linux
+arch: aarch64
+images:
+  # 改成你本机下载后的绝对路径；也可以用 file:// 形式。
+  - location: /tmp/lima-images/noble-server-cloudimg-arm64.img
+    arch: aarch64
+cpus: 4
+memory: 8GiB
+disk: 40GiB
+mounts:
+  - location: "~"
+    writable: true
+containerd:
+  system: false
+  user: false
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eux
+      # 国内网络：把 Ubuntu 源换到清华镜像，否则 apt 会超时。
+      for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
+        [ -f "$f" ] || continue
+        sed -i 's|http://archive.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' "$f" || true
+        sed -i 's|http://security.ubuntu.com/ubuntu|https://mirrors.tuna.tsinghua.edu.cn/ubuntu|g' "$f" || true
+      done
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io
+      systemctl enable --now docker
+      # Docker Hub 直连不通时，用可访问的镜像源。
+      mkdir -p /etc/docker
+      printf '{"registry-mirrors":["https://docker.m.daocloud.io","https://registry.cn-hangzhou.aliyuncs.com"]}\n' > /etc/docker/daemon.json
+      systemctl restart docker
