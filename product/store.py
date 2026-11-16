@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from product.intent import classify_intent, describe_trip
+
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
@@ -189,10 +191,37 @@ class Store:
         return {"id": row["id"], "query": row["query"], "version": row["version"],
                 "conversation_id": row["conversation_id"]}
 
+    def latest_result(self, conversation_id: str) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute("SELECT result_json FROM trips WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1",
+                             (conversation_id,)).fetchone()
+        if row is None or not row["result_json"]:
+            return None
+        try:
+            return json.loads(row["result_json"])
+        except json.JSONDecodeError:
+            return None
+
     def continue_conversation(self, conversation_id: str, content: str) -> dict[str, Any] | None:
-        """会话里没有行程就新建，有行程就把新消息当成修改指令。"""
+        """先判断意图：新行程、改行程、问行程、闲聊。"""
         latest = self.latest_trip(conversation_id)
-        if latest is None:
+        intent = classify_intent(content, has_trip=latest is not None)
+        prior = self.latest_result(conversation_id) if latest is not None else None
+        if prior is not None and prior.get("status") == "needs_clarification" and intent["intent"] != "new_trip":
+            intent = {"intent": "revise_trip", "reason": "上一轮在等用户补充信息", "target_days": []}
+        if latest is not None and intent["intent"] in ("ask", "chat"):
+            message = self.append_message(conversation_id, "user", content)
+            if intent["intent"] == "ask":
+                answer = describe_trip(self.latest_result(conversation_id), intent["target_days"])
+            else:
+                answer = "我先按现有行程理解。想改哪一天，或者想重新规划去哪里，直接说就行。"
+            reply = self.append_message(conversation_id, "assistant", answer)
+            with self._connect() as db:
+                db.execute("UPDATE conversations SET title=?,updated_at=? WHERE id=? AND title IN ('新对话','')",
+                           (content[:30], _now(), conversation_id))
+            return {"conversation_id": conversation_id, "kind": "answer", "intent": intent,
+                    "message": message, "reply": reply}
+        if latest is None or intent["intent"] == "new_trip":
             created = self.create_trip(content, conversation_id=conversation_id)
             kind = "trip"
         else:
@@ -204,7 +233,7 @@ class Store:
         with self._connect() as db:
             db.execute("UPDATE conversations SET title=?,updated_at=? WHERE id=? AND title IN ('新对话','')",
                        (content[:30], _now(), conversation_id))
-        return {"conversation_id": conversation_id, "kind": kind, "message": message, **created}
+        return {"conversation_id": conversation_id, "kind": kind, "intent": intent, "message": message, **created}
 
     def conversation_of_job(self, job_id: str) -> str | None:
         with self._connect() as db:
