@@ -134,5 +134,234 @@
       "fallback",
       "outofrange"
     ]
+  },
+  {
+    "id": "rev-chengdu-day2-panda",
+    "query": "从上海去成都玩三天，喜欢美食",
+    "revision": "第二天改成看熊猫",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": []
+  },
+  {
+    "id": "rev-xian-day1-museum",
+    "query": "北京去西安两天，想看历史",
+    "revision": "第一天换成博物馆",
+    "target_days": [
+      1
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": []
+  },
+  {
+    "id": "rev-suzhou-day2-oldtown",
+    "query": "上海去苏州两天，喜欢园林",
+    "revision": "第二天换成古镇",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": []
+  },
+  {
+    "id": "rev-qingdao-day2-seaside",
+    "query": "北京去青岛三天，喜欢海",
+    "revision": "第二天换成海边",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": []
+  },
+  {
+    "id": "rev-xiamen-day1-snacks",
+    "query": "上海去厦门两天，喜欢小吃",
+    "revision": "第一天全换成当地小吃",
+    "target_days": [
+      1
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": []
+  },
+  {
+    "id": "rev-chongqing-day2-night",
+    "query": "成都去重庆两天",
+    "revision": "第二天换成夜景",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": []
+  },
+  {
+    "id": "rev-hangzhou-lastday-tea",
+    "query": "上海去杭州三天，喜欢自然",
+    "revision": "最后一天换成茶园",
+    "target_days": [
+      3
+    ],
+    "expect": "targeted",
+    "difficulty": "medium",
+    "tags": []
+  },
+  {
+    "id": "rev-nanjing-day2-history",
+    "query": "上海去南京两天",
+    "revision": "第二天换成历史景点",
+    "target_days": [
+      2
+    ],
+    "expect": "targeted",
+    "difficulty": "hard",
+    "tags": [
+      "day2"
+    ]
+  },
+  {
+    "id": "rev-xian-budget-up",
+    "query": "北京去西安两天，预算3000",
+    "revision": "预算加到5000，住得好一点",
+    "target_days": [],
+    "expect": "full",
+    "difficulty": "medium",
+    "tags": [
+      "budget"
+    ]
+  },
+  {
+    "id": "rev-hangzhou-relaxed",
+    "query": "上海去杭州两天",
+    "revision": "每天只安排两个活动，轻松一点",
+    "target_days": [],
+    "expect": "full",
+    "difficulty": "medium",
+    "tags": [
+      "pace"
+    ]
+  },
+  {
+    "id": "rev-suzhou-packed",
+    "query": "上海去苏州两天",
+    "revision": "整体紧凑一点，多去几个地方",
+    "target_days": [],
+    "expect": "full",
+    "difficulty": "medium",
+    "tags": [
+      "pace"
+    ]
+  },
+  {
+    "id": "rev-xian-day5-out-of-range",
+    "query": "北京去西安两天",
+    "revision": "第五天去华山",
+    "target_days": [],
+    "expect": "clarify",
+    "difficulty": "easy",
+    "tags": [
+      "out-of-range"
+    ]
+  },
+  {
+    "id": "rev-qingdao-budget-clash",
+    "query": "北京去青岛两天，预算800",
+    "revision": "第二天住五星酒店",
+    "target_days": [],
+    "expect": "clarify",
+    "difficulty": "medium",
+    "tags": [
+      "budget"
+    ]
+  },
+  {
+    "id": "rev-chengdu-three-cities",
+    "query": "上海去成都玩两天",
+    "revision": "这两天还想去重庆和西安",
+    "target_days": [],
+    "expect": "clarify",
+    "difficulty": "hard",
+    "tags": [
+      "city-conflict"
+    ]
+  },
+  {
+    "id": "ask-hangzhou-day2",
+    "query": "从上海去杭州玩两天，喜欢自然",
+    "revision": "第二天几点出发？",
+    "target_days": [
+      2
+    ],
+    "expect": "answer",
+    "difficulty": "easy",
+    "tags": [
+      "question"
+    ]
+  },
+  {
+    "id": "ask-hangzhou-budget",
+    "query": "从上海去杭州玩两天，预算1500",
+    "revision": "这个预算够吗？",
+    "target_days": [],
+    "expect": "answer",
+    "difficulty": "easy",
+    "tags": [
+      "question"
+    ]
+  },
+  {
+    "id": "ask-xian-day1",
+    "query": "北京去西安两天，想看兵马俑",
+    "revision": "第一天去哪里？",
+    "target_days": [
+      1
+    ],
+    "expect": "answer",
+    "difficulty": "easy",
+    "tags": [
+      "question"
+    ]
+  },
+  {
+    "id": "follow-hangzhou-missing",
+    "query": "帮我规划一个周末旅行",
+    "revision": "去杭州，两天，喜欢自然和咖啡",
+    "target_days": [],
+    "expect": "followup",
+    "difficulty": "medium",
+    "tags": [
+      "clarify"
+    ],
+    "days": 2
+  },
+  {
+    "id": "follow-chengdu-days",
+    "query": "想去成都玩",
+    "revision": "三天吧，喜欢美食和熊猫",
+    "target_days": [],
+    "expect": "followup",
+    "difficulty": "medium",
+    "tags": [
+      "clarify"
+    ],
+    "days": 3
+  },
+  {
+    "id": "follow-xian-vague",
+    "query": "帮我安排一下西安",
+    "revision": "两天，想看兵马俑和大雁塔",
+    "target_days": [],
+    "expect": "followup",
+    "difficulty": "medium",
+    "tags": [
+      "clarify"
+    ],
+    "days": 2
   }
 ]

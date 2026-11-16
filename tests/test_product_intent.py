@@ -44,3 +44,20 @@ class IntentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IdempotencyTests(unittest.TestCase):
+    def test_duplicate_message_returns_same_job(self):
+        import tempfile
+        from pathlib import Path
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        store = Store(str(Path(tmp.name) / "dup.db"))
+        cid = store.create_conversation()["conversation_id"]
+        first = store.continue_conversation(cid, "从上海去杭州玩两天")
+        second = store.continue_conversation(cid, "从上海去杭州玩两天")
+        self.assertTrue(second.get("duplicate"))
+        self.assertEqual(first["job_id"], second["job_id"])
+        with store._connect() as db:
+            count = db.execute("SELECT COUNT(*) AS n FROM jobs").fetchone()["n"]
+        self.assertEqual(count, 1)

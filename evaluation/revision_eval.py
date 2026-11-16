@@ -16,7 +16,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from evaluation.revision_checks import check_revision, summarize_revision
+from evaluation.revision_checks import (
+    check_answer_turn,
+    check_followup,
+    check_revision,
+    summarize_revision,
+)
 from product.orchestrator import AgentWorkflow
 from product.store import Store
 
@@ -31,33 +36,47 @@ def _titles(result: dict[str, Any], day_number: int) -> list[str]:
 
 
 async def run_case(workflow: AgentWorkflow, store: Store, case: dict[str, Any]) -> dict[str, Any]:
+    """一条用例 = 新建会话 → 首次规划 → 第二轮消息（改/问/补充）。"""
     record: dict[str, Any] = {"id": case["id"], "query": case["query"], "revision": case["revision"]}
     try:
-        trip = store.create_trip(case["query"])
+        conversation = store.create_conversation()["conversation_id"]
+        store.continue_conversation(conversation, case["query"])
         job = store.claim()
         if job is None:
-            return {**record, "error": "任务未入队", "checks": {}}
+            return {**record, "error": "首次任务未入队", "checks": {}}
         started = time.monotonic()
         before = await workflow.run(job)
         store.finish(job, before)
         record["first_elapsed"] = round(time.monotonic() - started, 2)
         record["first_status"] = before.get("status")
-        if before.get("status") != "complete":
-            return {**record, "error": f"首次规划未完成：{before.get('status')}", "checks": {}}
+        version_before = store.latest_trip(conversation)["version"]
 
-        store.revise(trip["trip_id"], case["revision"])
+        second = store.continue_conversation(conversation, case["revision"])
+        expect = case.get("expect", "targeted")
+        if second.get("kind") == "answer":
+            record["kind"] = "answer"
+            record["reply"] = (second.get("reply") or {}).get("content", "")
+            record["checks"] = check_answer_turn(case, record["reply"], version_before,
+                                                 store.latest_trip(conversation)["version"],
+                                                 before, store.latest_result(conversation) or before)
+            return record
+
         job = store.claim()
         if job is None:
-            return {**record, "error": "修改任务未入队", "checks": {}}
+            return {**record, "error": "第二轮任务未入队", "checks": {}}
         started = time.monotonic()
         after = await workflow.run(job)
         store.finish(job, after)
+        record["kind"] = second.get("kind")
         record["elapsed"] = round(time.monotonic() - started, 2)
         record["status"] = after.get("status")
         record["revision_applied"] = after.get("revision_applied")
         targets = [int(day) for day in case.get("target_days") or []]
+        if expect == "followup":
+            record["checks"] = check_followup(case, before, after)
+        else:
+            record["checks"] = check_revision(case, before, after)
         record["changed_days"] = [day for day in targets if _titles(after, day) != _titles(before, day)]
-        record["checks"] = check_revision(case, before, after)
         record["before_days"] = [
             {"day": day.get("day"), "titles": _titles(before, int(day.get("day") or 0))}
             for day in before.get("days") or []

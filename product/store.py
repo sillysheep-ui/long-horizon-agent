@@ -191,6 +191,19 @@ class Store:
         return {"id": row["id"], "query": row["query"], "version": row["version"],
                 "conversation_id": row["conversation_id"]}
 
+    def _duplicate_reply(self, conversation_id: str, content: str) -> dict[str, Any] | None:
+        """同一条消息在排队或执行中时直接返回原任务，避免重试生成两个版本。"""
+        with self._connect() as db:
+            row = db.execute("""SELECT m.id,m.content,m.job_id,j.status,j.trip_id,j.version
+                FROM messages m JOIN jobs j ON m.job_id=j.id
+                WHERE m.conversation_id=? AND m.role='user' AND m.content=?
+                ORDER BY m.id DESC LIMIT 1""", (conversation_id, content)).fetchone()
+        if row is None or row["status"] not in ("queued", "running"):
+            return None
+        kind = "trip" if row["version"] == 1 else "revision"
+        return {"conversation_id": conversation_id, "kind": kind, "duplicate": True,
+                "job_id": row["job_id"], "trip_id": row["trip_id"], "version": row["version"]}
+
     def latest_result(self, conversation_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
             row = db.execute("SELECT result_json FROM trips WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1",
@@ -205,6 +218,9 @@ class Store:
     def continue_conversation(self, conversation_id: str, content: str) -> dict[str, Any] | None:
         """先判断意图：新行程、改行程、问行程、闲聊。"""
         latest = self.latest_trip(conversation_id)
+        duplicate = self._duplicate_reply(conversation_id, content)
+        if duplicate is not None:
+            return duplicate
         intent = classify_intent(content, has_trip=latest is not None)
         prior = self.latest_result(conversation_id) if latest is not None else None
         if prior is not None and prior.get("status") == "needs_clarification" and intent["intent"] != "new_trip":

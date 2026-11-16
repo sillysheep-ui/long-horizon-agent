@@ -96,14 +96,39 @@ def summarize_revision(records: list[dict[str, Any]]) -> dict[str, Any]:
         pass_rate[name] = round(sum(1 for value in values if value) / len(values), 3) if values else 0.0
     applicable = [record for record in records if record.get("checks")]
     all_passed = sum(1 for record in applicable if all(v for v in record["checks"].values() if v is not None))
-    changed = [record for record in records if record.get("changed_days")]
+    targeted = [record for record in applicable if record.get("changed_days") is not None]
+    changed = [record for record in targeted if record.get("changed_days")]
     return {
         "cases": len(records),
         "errors": sum(1 for record in records if record.get("error")),
         "all_passed": all_passed,
         "all_passed_rate": round(all_passed / len(applicable), 3) if applicable else 0.0,
         "pass_rate": pass_rate,
-        "targeted_with_change": f"{len(changed)}/{len(applicable)}",
+        "targeted_with_change": f"{len(changed)}/{len(targeted)}",
         "first_elapsed_mean": round(sum(r.get("first_elapsed", 0) for r in records) / max(1, len(records)), 2),
         "revision_elapsed_mean": round(sum(r.get("elapsed", 0) for r in records) / max(1, len(records)), 2),
+    }
+
+def check_answer_turn(case: dict[str, Any], reply: str, version_before: int,
+                      version_after: int, before: dict[str, Any],
+                      after: dict[str, Any]) -> dict[str, bool | None]:
+    """问行程类消息：要有回答、提到对应那天、不能悄悄新建版本。"""
+    targets = [int(day) for day in case.get("target_days") or []]
+    markers = [f"第{day}天" for day in targets] + [f"第{day}天" for day in targets]
+    return {
+        "answered": bool(str(reply or "").strip()),
+        "mentions_day": all(marker in reply for marker in set(markers)) if targets else True,
+        "no_new_version": version_after == version_before,
+        "trip_intact": _all_titles(before) == _all_titles(after),
+    }
+
+
+def check_followup(case: dict[str, Any], before: dict[str, Any],
+                   after: dict[str, Any]) -> dict[str, bool | None]:
+    """先追问、补充后能产出完整行程。"""
+    expected_days = int(case.get("days") or 0)
+    return {
+        "asked_first": before.get("status") == "needs_clarification",
+        "completed": after.get("status") == "complete",
+        "day_count": (not expected_days) or len(_days(after)) == expected_days,
     }
