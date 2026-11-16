@@ -340,6 +340,8 @@ bash scripts/train_rl.sh
 
 运行前需要根据 [`.env.example`](.env.example) 配置模型与工具服务。
 
+复现范围（哪些能复现、哪些不能）与环境要求见 [`docs/REPRODUCE.md`](docs/REPRODUCE.md)。
+
 开发辅助（可选）：把自包含的编码任务派给 Codex CLI，产出与改动落盘后人工审查。
 
 ```bash
@@ -376,4 +378,5 @@ results/original_protocol/  原协议逐题 Judge 分数与汇总
 - 真实工具调用需要自行配置 API Key；
 - 训练需要 GPU、vLLM、DeepSpeed 和 ms-swift 环境；
 - Judge 评测需要外部裁判模型服务；
+- 训练数据与模型权重不随仓库分发，复现边界见 [`docs/REPRODUCE.md`](docs/REPRODUCE.md)。
 - 结果来自 80 题双向配对评测，不代表任意线上流量分布。
