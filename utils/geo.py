@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """地理参数规范化与不依赖外部 API 的保守距离估算。"""
 
 from __future__ import annotations
 
 import math
 import re
-from typing import List, Tuple
-
 
 COORD_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)")
 
@@ -21,7 +18,7 @@ def normalize_location(value: str) -> str:
     return f"{lng:.6f},{lat:.6f}"
 
 
-def split_locations(value: str) -> List[str]:
+def split_locations(value: str) -> list[str]:
     return [normalize_location(item) for item in str(value).split("|") if item.strip()]
 
 

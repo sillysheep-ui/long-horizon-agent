@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: json转markdown 
+# 文件描述: json转markdown
 # --------------------------------------------
 
 def json2md(json_block: dict, depth: int = 1, htag: str = "#") -> str:
@@ -21,12 +20,12 @@ def json2md(json_block: dict, depth: int = 1, htag: str = "#") -> str:
         nonlocal markdown
         markdown += "\n"
 
-    def parseList(l, depth):
-        for i, value in enumerate(l):
+    def parseList(items, depth):
+        for i, value in enumerate(items):
             addHeader(str(i + 1), depth)
 
             if not isinstance(value, (dict, list)):
-                index = l.index(value)
+                index = items.index(value)
                 addValue(index, value)
             else:
                 parseDict(value, depth)

@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 日志打印工具 
+# 文件描述: 日志打印工具
 # --------------------------------------------
 
 
@@ -17,7 +16,6 @@ import os
 import sys
 import sysconfig
 from pathlib import Path
-from typing import Optional
 
 
 def _load_stdlib_logging():
@@ -39,7 +37,7 @@ if __name__ == "logging":
 else:
     _logging = _load_stdlib_logging()
 
-    # 导出常用名称，以便在导入 deep_research.logging 时方便使用 
+    # 导出常用名称，以便在导入 deep_research.logging 时方便使用
     getLogger = _logging.getLogger
     Logger = _logging.Logger
     StreamHandler = _logging.StreamHandler
@@ -64,7 +62,7 @@ else:
             return record.levelno <= self.level
 
 
-    def _parse_level(level: Optional[str | int]) -> int:
+    def _parse_level(level: str | int | None) -> int:
         """解析日志的等级"""
 
         env_level = level if level is not None else os.getenv(_ENV_LEVEL_KEY, "INFO")
@@ -81,7 +79,7 @@ else:
         return resolved
 
 
-    def setup_logging(level: Optional[str | int] = None) -> _logging.Logger:
+    def setup_logging(level: str | int | None = None) -> _logging.Logger:
         """
         配置root logger，包括console和文件
         - Console：INFO 及以下级别输出到标准输出 (stdout)；WARNING 及以上级别输出到标准错误输出 (stderr)。
@@ -105,13 +103,13 @@ else:
         stdout_handler.setFormatter(formatter)
         root.addHandler(stdout_handler)
 
-        # WARNING及以上写到stderr 
+        # WARNING及以上写到stderr
         stderr_handler = _logging.StreamHandler(stream=sys.stderr)
         stderr_handler.setLevel(_logging.WARNING)
         stderr_handler.setFormatter(formatter)
         root.addHandler(stderr_handler)
 
-        # 写到文件 
+        # 写到文件
         if _LOG_DIR.exists() and _LOG_DIR.is_dir():
             try:
                 app_log_path = _LOG_DIR / "app.log"
@@ -134,7 +132,7 @@ else:
         return root
 
 
-    def get_logger(name: Optional[str] = None) -> _logging.Logger:
+    def get_logger(name: str | None = None) -> _logging.Logger:
         """返回一个具有全局配置的logger."""
 
         setup_logging()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """高德 Web API 共享客户端：跨工具缓存、限速与临时错误重试。"""
 
 from __future__ import annotations
@@ -7,10 +6,10 @@ import asyncio
 import json
 import os
 import time
-from typing import Any, Dict, Mapping, Tuple
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
-
 
 TRANSIENT_INFOS = {
     "CUQPS_HAS_EXCEEDED_THE_LIMIT",
@@ -18,7 +17,7 @@ TRANSIENT_INFOS = {
     "UNKNOWN_ERROR",
 }
 
-_cache: Dict[str, Dict[str, Any]] = {}
+_cache: dict[str, dict[str, Any]] = {}
 _lock = None
 _lock_loop = None
 _last_request_at = 0.0
@@ -44,7 +43,7 @@ async def amap_get(
     *,
     retries: int = 3,
     min_interval_seconds: float | None = None,
-) -> Tuple[Dict[str, Any], bool]:
+) -> tuple[dict[str, Any], bool]:
     """返回 ``(响应 JSON, 是否缓存命中)``。仅缓存业务成功响应。"""
     global _last_request_at
     request_params = dict(params)
@@ -58,7 +57,7 @@ async def amap_get(
         if min_interval_seconds is None
         else min_interval_seconds
     )
-    last_result: Dict[str, Any] = {}
+    last_result: dict[str, Any] = {}
     for attempt in range(retries + 1):
         async with _get_lock():
             delay = interval - (time.monotonic() - _last_request_at)
