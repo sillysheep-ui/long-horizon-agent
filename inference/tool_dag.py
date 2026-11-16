@@ -361,7 +361,7 @@ def resolve_references(value: Any, outputs: Mapping[str, Any]) -> Any:
         if node_id not in outputs:
             raise ToolDAGError(f"引用了尚无结果的节点 {node_id}")
         resolved = _lookup_path(outputs[node_id], path or "")
-        if isinstance(resolved, (dict, list)):
+        if isinstance(resolved, dict | list):
             return json.dumps(resolved, ensure_ascii=False)
         return str(resolved)
 

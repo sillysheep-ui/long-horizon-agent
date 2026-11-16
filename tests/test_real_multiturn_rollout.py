@@ -83,7 +83,7 @@ def main():
         mask_turns = item.get("response_loss_mask") or item.get("response", {}).get("response_loss_mask") or []
         if token_turns and isinstance(token_turns[0], int):
             token_turns = [token_turns]
-        if mask_turns and isinstance(mask_turns[0], (int, float)):
+        if mask_turns and isinstance(mask_turns[0], int | float):
             mask_turns = [mask_turns]
         print("response_token_lengths:", [len(turn) for turn in token_turns])
         print("response_mask_lengths:", [len(turn) for turn in mask_turns])

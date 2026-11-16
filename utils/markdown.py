@@ -11,7 +11,7 @@ def json2md(json_block: dict, depth: int = 1, htag: str = "#") -> str:
 
     def parseDict(d, depth):
         for k in d:
-            if isinstance(d[k], (dict, list)):
+            if isinstance(d[k], dict | list):
                 addHeader(k, depth)
                 parseJSON(d[k], depth + 1)
             else:
@@ -24,7 +24,7 @@ def json2md(json_block: dict, depth: int = 1, htag: str = "#") -> str:
         for i, value in enumerate(items):
             addHeader(str(i + 1), depth)
 
-            if not isinstance(value, (dict, list)):
+            if not isinstance(value, dict | list):
                 index = items.index(value)
                 addValue(index, value)
             else:

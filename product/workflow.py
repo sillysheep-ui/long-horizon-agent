@@ -18,12 +18,12 @@ from product.postprocess import (
     _as_list,
     _blocking_conflict,
     _clean_activities,
-    detect_day_span,
     _declares_duration,
     _finalize_days,
     budget_conflict,
     cities_fit_days,
     clean_named_places,
+    detect_day_span,
     match_activity,
 )
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
