@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
 # 文件描述: 美食搜索工具
 # --------------------------------------------
 
 
-import os
 import asyncio
-from dotenv import load_dotenv
+import os
 
-from utils.markdown import json2md
-from utils.text import truncate_text
+from dotenv import load_dotenv
 from qwen_agent.tools.base import BaseTool, register_tool
+
 from utils.amap_client import amap_get
 from utils.geo import normalize_location
+from utils.markdown import json2md
+from utils.text import truncate_text
 
 # 加载环境变量
 load_dotenv()

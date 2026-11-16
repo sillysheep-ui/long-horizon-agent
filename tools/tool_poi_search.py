@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: POI搜工具 
+# 文件描述: POI搜工具
 # --------------------------------------------
 
 
 import asyncio
 import os
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
+from qwen_agent.tools.base import BaseTool, register_tool
+
+from tools.poi import search_pois
 from utils.markdown import json2md
 from utils.text import truncate_text
-from qwen_agent.tools.base import BaseTool, register_tool
-from tools.poi import search_pois
 
 # 加载环境变量
 load_dotenv()
@@ -54,7 +54,7 @@ class POISearch(BaseTool):
         try:
             data = await search_pois(address, region)
         except RuntimeError as exc:
-            raise Exception(str(exc))
+            raise Exception(str(exc)) from exc
 
         payload = data.get("pois") or data.get("geocodes") or []
         return truncate_text(json2md(payload[:MAX_POI_RESULTS]))

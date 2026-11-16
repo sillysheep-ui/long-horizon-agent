@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 路线规划工具 
+# 文件描述: 路线规划工具
 # --------------------------------------------
 
 
 import asyncio
 import os
-from dotenv import load_dotenv
 
-from utils.markdown import json2md
-from utils.text import truncate_text
+from dotenv import load_dotenv
 from qwen_agent.tools.base import BaseTool, register_tool
+
 from utils.amap_client import amap_get
 from utils.geo import haversine_km, normalize_location
+from utils.markdown import json2md
+from utils.text import truncate_text
 
 # 加载环境变量
 load_dotenv()
@@ -51,7 +51,7 @@ async def get_citycode(location: str):
 
     try:
         citycode = result["regeocode"]["addressComponent"]["citycode"]
-    except:
+    except Exception:
         citycode = None
 
     return citycode

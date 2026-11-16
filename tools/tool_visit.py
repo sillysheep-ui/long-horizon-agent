@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 网页抓取工具 
+# 文件描述: 网页抓取工具
 # --------------------------------------------
 
 
@@ -21,7 +20,6 @@ from qwen_agent.tools.base import BaseTool, register_tool
 
 from prompts.prompt import EXTRACTOR_PROMPT
 from utils import logging as agent_logging
-
 
 # 加载环境变量
 load_dotenv()
@@ -108,8 +106,6 @@ class Visit(BaseTool):
         except Exception:
             return "[Visit] Invalid request format: Input must be a JSON object containing 'url' and 'goal' fields"
 
-        start_time = time.time()
-
         if isinstance(url, str):
             logger.debug(f"Visiting single URL: {url}")
             response = await self.readpage(url, goal)
@@ -117,13 +113,12 @@ class Visit(BaseTool):
             response = []
             logger.debug(f"Visiting multiple URLs: {url}")
             assert isinstance(url, list)
-            start_time = time.time()
 
             # 并行调用 readpage
             tasks = [self.readpage(u, goal) for u in url]
             results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=VISIT_SERVER_TIMEOUT)
 
-            for u, result in zip(url, results):
+            for u, result in zip(url, results, strict=False):
                 if isinstance(result, Exception):
                     cur_response = f"Error fetching content {u}: {result}"
                 else:
@@ -375,8 +370,6 @@ class Visit(BaseTool):
             raw = raw.replace("```json", "").replace("```", "").strip()
 
         logger.debug("Final raw response:", len(raw))
-
-        parse_retry_times = 0
 
         try:
             raw_obj = json.loads(raw)

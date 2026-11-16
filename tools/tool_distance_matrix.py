@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
 # 文件描述: 距离矩阵工具
 # --------------------------------------------
 
 
-import os
 import asyncio
-from dotenv import load_dotenv
+import os
 
-from utils.markdown import json2md
-from utils.text import truncate_text
+from dotenv import load_dotenv
 from qwen_agent.tools.base import BaseTool, register_tool
+
 from utils.amap_client import amap_get
 from utils.geo import haversine_km, normalize_location, split_locations
+from utils.markdown import json2md
+from utils.text import truncate_text
 
 # 加载环境变量
 load_dotenv()
@@ -81,7 +81,7 @@ class DistanceMatrix(BaseTool):
 
         results = result.get("results")
         if not results:
-            return f"No distance data available for the given locations."
+            return "No distance data available for the given locations."
 
         formatted = []
         for item in results:

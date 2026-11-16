@@ -5,7 +5,7 @@
 
 import asyncio
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -33,7 +33,7 @@ def has_provider() -> bool:
     return bool(_firecrawl_available() or deepseek_key())
 
 
-def _normalize(items: Any) -> List[Dict[str, str]]:
+def _normalize(items: Any) -> list[dict[str, str]]:
     result = []
     for item in items or []:
         if hasattr(item, "model_dump"):
@@ -51,7 +51,7 @@ def _normalize(items: Any) -> List[Dict[str, str]]:
     return result
 
 
-async def _firecrawl_items(query: str, limit: int) -> Optional[List[Dict[str, str]]]:
+async def _firecrawl_items(query: str, limit: int) -> list[dict[str, str]] | None:
     if not _firecrawl_available():
         return None
     from firecrawl import Firecrawl
@@ -63,7 +63,7 @@ async def _firecrawl_items(query: str, limit: int) -> Optional[List[Dict[str, st
     return _normalize(raw) or None
 
 
-async def _deepseek_items(query: str, limit: int) -> Optional[List[Dict[str, str]]]:
+async def _deepseek_items(query: str, limit: int) -> list[dict[str, str]] | None:
     key = deepseek_key()
     if not key:
         return None
@@ -76,7 +76,7 @@ async def _deepseek_items(query: str, limit: int) -> Optional[List[Dict[str, str
     return _normalize(data.get("results")) or None
 
 
-async def search_web(query: str, limit: int = 8) -> List[Dict[str, str]]:
+async def search_web(query: str, limit: int = 8) -> list[dict[str, str]]:
     """按顺序尝试 Firecrawl、DeepSeek；都不可用时抛 ``RuntimeError``。"""
     if not has_provider():
         raise RuntimeError("未配置可用的搜索服务")

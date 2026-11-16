@@ -1,29 +1,24 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: Tavily网页抓取工具 
+# 文件描述: Tavily网页抓取工具
 # --------------------------------------------
 
 
 import asyncio
-import random
-import itertools
 import copy
 import json
 import os
-import time
-import requests
-import aiohttp
-import tiktoken
-import json_repair
+import random
 
+import aiohttp
+import json_repair
+import tiktoken
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from qwen_agent.tools.base import BaseTool, register_tool
-
-from utils import logging as agent_logging
-from prompts.prompt import EXTRACTOR_PROMPT
 from tavily import AsyncTavilyClient
 
+from prompts.prompt import EXTRACTOR_PROMPT
+from utils import logging as agent_logging
 
 # 加载环境变量
 load_dotenv()
@@ -81,7 +76,7 @@ class Visit(BaseTool):
                 api_key=os.environ.get("OPENAI_API_KEY")
             )
         else:
-            self._llm_client = summary_client 
+            self._llm_client = summary_client
         self._tavily_clients = [AsyncTavilyClient(api_key=api_key) for api_key in TAVILY_API_KEY]
 
 
@@ -92,8 +87,6 @@ class Visit(BaseTool):
         except Exception:
             return "[Visit] Invalid request format: Input must be a JSON object containing 'url' and 'goal' fields"
 
-        start_time = time.time()
-
         if isinstance(url, str):
             logger.debug(f"Visiting single URL: {url}")
             response = await self.readpage(url, goal)
@@ -101,13 +94,12 @@ class Visit(BaseTool):
             response = []
             logger.debug(f"Visiting multiple URLs: {url}")
             assert isinstance(url, list)
-            start_time = time.time()
 
             # 并行调用 readpage
             tasks = [self.readpage(u, goal) for u in url]
             results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=VISIT_SERVER_TIMEOUT)
 
-            for u, result in zip(url, results):
+            for u, result in zip(url, results, strict=False):
                 if isinstance(result, Exception):
                     cur_response = f"Error fetching content {u}: {result}"
                 else:
@@ -149,7 +141,7 @@ class Visit(BaseTool):
                 f"html_readpage {url} attempt {attempt + 1}/{max_attempts}"
             )
             client = random.choice(self._tavily_clients)
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession():
                 try:
                     response = await client.extract(urls=[url])
                     content = response["results"][0]['raw_content']
@@ -226,8 +218,6 @@ class Visit(BaseTool):
             raw = raw.replace("```json", "").replace("```", "").strip()
 
         logger.debug("Final raw response:", len(raw))
-
-        parse_retry_times = 0
 
         try:
             raw_obj = json.loads(raw)

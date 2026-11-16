@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 网页搜索工具 
+# 文件描述: 网页搜索工具
 # --------------------------------------------
 
 
 import asyncio
 import os
-from typing import Any, Dict
+from typing import Any
 
 from dotenv import load_dotenv
 from qwen_agent.tools.base import BaseTool, register_tool
 
 from tools.web import _firecrawl_available, _firecrawl_items
-
 
 # 加载环境变量
 load_dotenv()
@@ -22,7 +20,7 @@ SEARCH_TIMEOUT_SECONDS = float(os.getenv("SEARCH_TIMEOUT_SECONDS", "35"))
 FIRECRAWL_SEARCH_LIMIT = int(os.getenv("FIRECRAWL_SEARCH_LIMIT", 5))
 
 
-def _format_ref_item(index: int, item: Dict[str, Any]) -> str:
+def _format_ref_item(index: int, item: dict[str, Any]) -> str:
     title = item.get("title") or item.get("name") or ""
     url = item.get("url") or item.get("link") or ""
     description = item.get("description") or item.get("snippet") or ""

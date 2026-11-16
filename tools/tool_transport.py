@@ -1,24 +1,23 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 机票查询工具 
+# 文件描述: 机票查询工具
 # --------------------------------------------
 
 
 import asyncio
+import json
 import logging
 import os
-import json
-import httpx
-from openai import AsyncOpenAI
+
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
+from qwen_agent.tools.base import BaseTool, register_tool
+
+from prompts.prompt import TRANSPORT_SYSTEM_PROMPT
 
 # 加载环境变量
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-from prompts.prompt import TRANSPORT_SYSTEM_PROMPT
-from qwen_agent.tools.base import BaseTool, register_tool
 
 
 @register_tool("flights_search", allow_overwrite=True)

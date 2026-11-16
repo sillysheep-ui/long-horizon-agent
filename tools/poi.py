@@ -5,7 +5,7 @@
 """
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 from utils.amap_client import amap_get
 
@@ -17,7 +17,7 @@ def _max_results() -> int:
     return int(os.environ.get("MAX_POI_RESULTS", 3))
 
 
-async def search_pois(address: str, region: Optional[str] = None) -> Dict[str, Any]:
+async def search_pois(address: str, region: str | None = None) -> dict[str, Any]:
     """按文本查地点，返回 ``{"pois": [...]}`` 或 ``{"geocodes": [...]}``。
 
     未配置 key 或接口报错时抛 ``RuntimeError``，消息沿用原工具文案。
@@ -26,7 +26,7 @@ async def search_pois(address: str, region: Optional[str] = None) -> Dict[str, A
     if not key:
         raise RuntimeError("未配置 AMAP_MAPS_API_KEY")
 
-    params: Dict[str, Any] = {
+    params: dict[str, Any] = {
         "key": key,
         "keywords": address,
         "page_size": _max_results(),
@@ -43,7 +43,7 @@ async def search_pois(address: str, region: Optional[str] = None) -> Dict[str, A
     if pois:
         return {"pois": pois}
 
-    geocode_params: Dict[str, Any] = {"key": key, "address": address}
+    geocode_params: dict[str, Any] = {"key": key, "address": address}
     if region:
         geocode_params["city"] = region
     geocode, _ = await amap_get(GEOCODE_URL, geocode_params)

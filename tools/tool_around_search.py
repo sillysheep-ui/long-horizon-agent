@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: 周边搜工具 
+# 文件描述: 周边搜工具
 # --------------------------------------------
 
 
-import os
 import asyncio
-from dotenv import load_dotenv
+import os
 
-from utils.markdown import json2md
-from utils.text import truncate_text
+from dotenv import load_dotenv
 from qwen_agent.tools.base import BaseTool, register_tool
+
 from utils.amap_client import amap_get
 from utils.geo import normalize_location
+from utils.markdown import json2md
+from utils.text import truncate_text
 
 # 加载环境变量
 load_dotenv()
@@ -125,7 +125,7 @@ class AroundSearch(BaseTool):
                 batches = await asyncio.gather(*(search_one(item) for item in fallback_keywords))
                 seen: set[str] = set()
                 merged = []
-                for item, rows in batches:
+                for _item, rows in batches:
                     for row in rows:
                         identity = str(row.get("id") or row.get("name") or "")
                         if identity and identity not in seen:

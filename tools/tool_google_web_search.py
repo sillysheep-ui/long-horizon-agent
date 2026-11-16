@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 # --------------------------------------------
-# 文件描述: google搜索工具 
+# 文件描述: google搜索工具
 # --------------------------------------------
 
 
-import os
 import asyncio
-import json
 import itertools
+import json
+import os
 
 import aiohttp
 from dotenv import load_dotenv
 from qwen_agent.tools.base import BaseTool, register_tool
-
 
 # 加载环境变量
 load_dotenv()
@@ -66,7 +64,7 @@ class WebSearch(BaseTool):
 
         last_exc = None
         async with aiohttp.ClientSession() as session:
-            for attempt in range(GOOGLE_MAX_RETRIES):
+            for _attempt in range(GOOGLE_MAX_RETRIES):
                 try:
                     headers = {"X-API-KEY": _rr_keys.get_key(), "Content-Type": "application/json"}
                     async with session.post(
