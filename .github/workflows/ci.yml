@@ -36,6 +36,7 @@ jobs:
             tests/test_product_cases.py \
             tests/test_product_checks.py \
             tests/test_product_conversations.py \
+            tests/test_product_clarify_flow.py \
             tests/test_product_coverage.py \
             tests/test_product_judge.py \
             tests/test_product_names.py \

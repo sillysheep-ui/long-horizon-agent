@@ -18,11 +18,11 @@ from product.postprocess import (
     _as_list,
     _blocking_conflict,
     _clean_activities,
-    clean_named_places,
     _declares_duration,
     _finalize_days,
     budget_conflict,
     cities_fit_days,
+    clean_named_places,
     match_activity,
 )
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
