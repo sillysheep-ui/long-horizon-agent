@@ -205,6 +205,7 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         "time_order": bool(days) and all(
             [str(a.get("start")) for a in _activities(d)] == sorted(str(a.get("start")) for a in _activities(d))
             for d in days),
+        "half_day": True,
         "fields_filled": bool(activities) and all(
             a.get("start") and a.get("duration") and a.get("transport") and a.get("cost") for a in activities),
         "evidence_ok": bool(activities) and all(
@@ -213,6 +214,9 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         "title_matches_evidence": title_matches_evidence,
         "no_fabricated_cost": no_fabricated_cost,
     }
+    if any(token in str(case.get("query") or "") for token in ("半天", "大半天")):
+        checks["half_day"] = bool(days) and all(
+            1 <= len(_activities(d)) <= 2 and 4.5 <= _total_hours(_activities(d)) <= 7.5 for d in days)
     wanted = [str(place).strip() for place in case.get("named_places") or [] if str(place).strip()]
     if wanted:
         checks["named_places_covered"] = _named_places_covered(wanted, titles)

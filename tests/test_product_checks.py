@@ -55,6 +55,18 @@ class CheckResultTests(unittest.TestCase):
         checks = check_result({"days": 1, "cities": ["杭州"]}, result)
         self.assertTrue(checks["city_coverage"])
 
+
+    def test_half_day_needs_two_activities(self):
+        three = [make_activity("西湖", "09:30"), make_activity("苏博", "12:00"), make_activity("平江路", "15:00")]
+        checks = check_result({"days": 1, "query": "苏州只有半天"}, make_result([make_day(1, three)]))
+        self.assertFalse(checks["half_day"])
+
+    def test_half_day_two_activities_pass(self):
+        two = [{**make_activity("拙政园", "09:30"), "duration": "3 小时"},
+               {**make_activity("苏博", "13:00"), "duration": "2.5 小时"}]
+        checks = check_result({"days": 1, "query": "苏州只有半天"}, make_result([make_day(1, two)]))
+        self.assertTrue(checks["half_day"])
+
     def test_flags_fabricated_cost(self):
         result = make_result([make_day(1, [make_activity(cost="门票 60 元"), make_activity("灵隐寺", "14:00")])],
                              evidence=[{"id": "d1-p1", "status": "ok", "items": [{"name": "西湖"}]}])

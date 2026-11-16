@@ -148,6 +148,15 @@ def chinese_number(text: str) -> int:
     return total + section + number
 
 
+HALF_DAY_WORDS = ("半天", "大半天", "half day", "half-day")
+
+
+def detect_day_span(*texts: Any) -> str:
+    """半天/大半天 → half；其余按整天。"""
+    joined = " ".join(str(text) for text in texts if text)
+    return "half" if any(word in joined for word in HALF_DAY_WORDS) else "full"
+
+
 def clean_named_places(values: Any, text: str, limit: int = 6) -> list[str]:
     """只保留用户原话里逐字出现的地点名，模型编的删掉。"""
     if not isinstance(values, list):
@@ -193,7 +202,8 @@ def cities_fit_days(destinations: list[str], days: int) -> bool:
 
 def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]],
                    plan_days: list[dict[str, Any]],
-                   keep_days: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+                   keep_days: list[dict[str, Any]] | None = None,
+                   max_activities: int = 4) -> list[dict[str, Any]]:
     """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。
 
     keep_days 是本次不动、原样保留的日期；只对 plan_days 里的日期做整理。
@@ -212,7 +222,8 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                 continue
             used.add(title)
             activities.append({**activity, "title": title})
-        if len(activities) < 2:
+        floor = min(2, max_activities)
+        if len(activities) < floor:
             for evidence in good:
                 if not evidence["id"].startswith("d%d-" % planned["day"]):
                     continue
@@ -230,12 +241,12 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                         "cost": "未核实",
                         "evidence_id": evidence["id"],
                     })
-                    if len(activities) >= 2:
+                    if len(activities) >= floor:
                         break
-                if len(activities) >= 2:
+                if len(activities) >= floor:
                     break
         result.append({"day": planned["day"], "city": day.get("city") or planned.get("city"),
-                       "activities": _fit_schedule(activities)[:4]})
+                       "activities": _fit_schedule(activities)[:max_activities]})
     result.extend(kept)
     result.sort(key=lambda item: int(item.get("day") or 0))
     return result

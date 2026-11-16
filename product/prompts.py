@@ -6,12 +6,13 @@ from product.revision import describe_targets
 
 INTAKE_SYSTEM_PROMPT = (
     "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、"
-    "days 1-7 整数、budget 字符串、named_places 字符串数组、preferences 字符串数组、"
+    "days 1-7 整数、day_span 字符串（half 或 full）、budget 字符串、named_places 字符串数组、preferences 字符串数组、"
     "missing_required 字符串数组、conflicts 字符串数组。"
     "未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations。"
     "destinations 只放能订票到达的城市或地区（如 杭州、苏州、千岛湖）；"
     "named_places 只放用户原话里点名的具体地点（西湖、灵隐寺、迪士尼），必须逐字照抄，没点名就给空数组；"
     "活动、餐饮偏好、风格（看日落、喝咖啡、人少、别太赶）一律放 preferences。"
+    "day_span：用户说半天/大半天/只有一个上午或下午填 half，否则填 full。"
     "conflicts 只写真正无法同时满足的硬冲突（预算与住宿档位对不上、没说明玩几天），"
     "排期松紧、景点多寡这类不算冲突，给空数组。"
 )
@@ -31,7 +32,8 @@ ANSWER_SYSTEM_PROMPT = (
     "1. 地点只能来自证据：title 必须精确等于某条成功证据 items 里的 name，evidence_id 指向那一条；"
     "不合适就换一个证据地点，绝不虚构。display_title 必填：16 字以内的展示名（如“湖滨咖啡馆”）。\n"
     "2. 时间要能照着走：duration 写清停留多久，相邻活动不重叠，start 按当天从早到晚排列。\n"
-    "3. 节奏：%s。数量是排完时间的结果，不要为了凑数硬加同类地点。\n"
+    "3. 节奏：%s。数量是排完时间的结果，不要为了凑数硬加同类地点；"
+    "constraints.day_span 为 half 时，每天最多 2 个活动、停留总时长 5–7 小时，不要排 3 个。\n"
     "4. 一天里尽量覆盖不同时段、不同类型（景点/街区/餐饮/博物馆），同一类型不超过 2 个。\n"
     "5. description 写具体动作：看哪个展厅、走哪条路线、点什么菜；"
     "不要写“感受氛围”“湖光山色”这类空话。\n"
