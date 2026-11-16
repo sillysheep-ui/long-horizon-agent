@@ -104,6 +104,22 @@ python3 -m evaluation.revision_eval --profile api_only
 
 结果写入 `results/product_eval/<时间戳>-<profile>/`（`report.md` 与 `records.json`），该目录不入库。
 
+## 代码结构
+
+| 文件 | 职责 |
+|---|---|
+| `product/api.py` | FastAPI 路由与会话接口 |
+| `product/workflow.py` | 主流程：需求 → 计划 → 查询 → 核验 → 回答 |
+| `product/planner.py` | 规划提示词与 ToolPlan 构造 |
+| `product/prompts.py` | 需求提取与回答提示词 |
+| `product/tool_adapters.py` | 高德 POI、DeepSeek 网页搜索 |
+| `product/postprocess.py` | 标题对证据、时间排布、每日收尾 |
+| `product/trace.py` | 执行轨迹 span 与派生指标 |
+| `product/orchestrator.py` | 兼容入口（只做转发） |
+| `product/coverage.py` / `product/revision.py` / `product/provenance.py` | 覆盖度、定向修改、来源标记 |
+
+`from product.orchestrator import AgentWorkflow` 仍然可用；新代码建议直接从 `product.workflow` 导入。
+
 ## 验证
 
 ```bash
