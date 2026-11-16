@@ -105,6 +105,14 @@ bash scripts/train_sft.sh      # SFT 冷启动
 bash scripts/train_rl.sh       # 多轮 GRPO
 ```
 
+先用样例跑通流程（不需要完整数据）：
+
+```bash
+python3 scripts/check_examples.py
+TRAIN_DATA=examples/sft_sample.jsonl VAL_DATA=examples/sft_sample.jsonl \
+  EXTRA_ARGS="--max_steps 20" bash scripts/train_sft.sh
+```
+
 要真正重跑训练，还需要：
 
 - GPU（多卡）+ vLLM 0.11 + DeepSpeed + ms-swift 环境
@@ -122,6 +130,7 @@ bash scripts/train_rl.sh       # 多轮 GRPO
 - 全部代码
 - 评测用例：`evaluation/product_cases.json`（152 条）、`evaluation/product_revision_cases.json`（10 条）
 - 原始协议评测结果：`results/original_protocol/`（8 个 jsonl / summary）
+- 脱敏训练样例：`examples/sft_sample.jsonl`（60 条，仅用于格式说明与流程跑通）
 
 **不在仓库中：**
 
