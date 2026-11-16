@@ -318,7 +318,7 @@ pip install -r requirements.txt
 
 ```bash
 python3 -m pytest tests -q
-ruff check product evaluation tests scripts
+ruff check .
 ```
 
 Python 版本见 `pyproject.toml`（3.12），lint 规则也在那里配置。

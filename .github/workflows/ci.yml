@@ -16,7 +16,7 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install pytest numpy fastapi httpx python-dotenv openai ruff==0.17.5
       - name: Lint Python files
-        run: python -m ruff check product evaluation tests scripts
+        run: python -m ruff check .
       - name: Compile Python files
         run: |
           python -m compileall -q inference prompts tools utils data_pipeline evaluation training tests product scripts
