@@ -148,6 +148,16 @@ def chinese_number(text: str) -> int:
     return total + section + number
 
 
+HARD_CONFLICT_WORDS = ("预算", "超支", "五星", "豪华", "高档", "别墅", "住不起", "不够")
+TIME_CONFLICT_WORDS = ("没说明玩几天", "没说几天", "玩几天", "天数不够")
+
+
+def _blocking_conflict(text: str) -> bool:
+    """只有“预算和住宿档位对不上”“没说玩几天”这类才值得打断用户。"""
+    value = str(text or "")
+    return any(word in value for word in HARD_CONFLICT_WORDS + TIME_CONFLICT_WORDS)
+
+
 def budget_conflict(query: str, days: int) -> bool:
     """预算与“五星/豪华”明显不匹配时算冲突。"""
     match = BUDGET_PATTERN.search(query or "")

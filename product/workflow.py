@@ -16,6 +16,7 @@ from product.planner import (
 )
 from product.postprocess import (
     _as_list,
+    _blocking_conflict,
     _clean_activities,
     _declares_duration,
     _finalize_days,
@@ -132,8 +133,9 @@ class AgentWorkflow:
                 return finish("ok", status="needs_clarification", question="打算玩几天？",
                               constraints=constraints, model_calls=calls, days=[], evidence=[])
             budget_clash = budget_conflict(intake_query, days_count)
-            if conflicts or budget_clash:
-                reason = "；".join(conflicts[:2]) or "预算和住宿标准对不上"
+            blocking = [item for item in conflicts if _blocking_conflict(item)]
+            if blocking or budget_clash:
+                reason = "；".join(blocking[:2]) or "预算和住宿标准对不上"
                 stages.append(_span("intake", "stage", "failed",
                                     (time.monotonic() - intake_started) * 1000,
                                     {**intake_attributes, "days": days_count, "decision": "clarify",
@@ -141,6 +143,9 @@ class AgentWorkflow:
                                     error_type="missed_budget" if budget_clash else "should_clarify"))
                 return finish("ok", status="needs_clarification", question="需求里有冲突：%s。想先调整哪一项？" % reason,
                               constraints=constraints, model_calls=calls, days=[], evidence=[])
+            if conflicts:
+                self._event(job, "intake", "忽略非阻断冲突", {"conflicts": conflicts[:3]})
+                constraints["conflicts"] = []
             preferences = _as_list(constraints.get("preferences"), 6)
             if not cities_fit_days(destinations, days_count) and preferences:
                 trimmed = [item for item in destinations if item not in preferences]

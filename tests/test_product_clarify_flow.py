@@ -154,3 +154,42 @@ def test_attractions_in_destinations_are_trimmed(tmp_path):
     result = asyncio.run(workflow.run(store.claim()))
     assert result["status"] == "complete"
     assert result["constraints"]["destinations"] == ["无锡"]
+
+
+class ConflictModel(ClarifyModel):
+    """需求里带一条 conflicts，用于验证阻断规则。"""
+
+    def __init__(self, conflict):
+        super().__init__()
+        self.conflict = conflict
+
+    async def complete(self, role, system, user, max_tokens=1200):
+        if role == "需求 Agent":
+            self.intake_prompts.append(user)
+            self.intake_calls += 1
+            payload = {"departure_city": "上海", "destinations": ["苏州"], "days": 1,
+                       "budget": "800", "preferences": ["园林"], "conflicts": [self.conflict]}
+            return {"role": role, "provider": "fake", "model": "fake",
+                    "content": json.dumps(payload, ensure_ascii=False)}
+        if role == "规划 Agent":
+            content = json.dumps({"days": [{"day": 1, "city": "苏州", "poi_queries": ["拙政园"]}]},
+                                 ensure_ascii=False)
+            return {"role": role, "provider": "fake", "model": "fake", "content": content}
+        return await super().complete(role, system, user, max_tokens)
+
+
+def test_soft_conflict_does_not_block_planning(tmp_path):
+    store = Store(str(tmp_path / "soft.db"))
+    workflow = AgentWorkflow(store, ConflictModel("只有半天时间却按一天计算，行程过紧"), FakeTools())
+    store.create_trip("苏州只有半天，想拍园林")
+    result = asyncio.run(workflow.run(store.claim()))
+    assert result["status"] == "complete"
+    assert result["constraints"]["conflicts"] == []
+
+
+def test_hard_conflict_still_asks(tmp_path):
+    store = Store(str(tmp_path / "hard.db"))
+    workflow = AgentWorkflow(store, ConflictModel("预算 800 元想住五星酒店"), FakeTools())
+    store.create_trip("去苏州玩一天，预算 800 元想住五星酒店")
+    result = asyncio.run(workflow.run(store.claim()))
+    assert result["status"] == "needs_clarification"
