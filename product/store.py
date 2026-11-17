@@ -1,10 +1,12 @@
 """小规模 Demo 的持久化任务与事件存储。"""
 
+import hashlib
 import json
 import os
+import re
 import sqlite3
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +20,10 @@ def _now() -> str:
 class Store:
     def __init__(self, path: str | None = None) -> None:
         self.path = Path(path or os.getenv("TRAVEL_DB_PATH", "product_data/agent.db"))
+        try:
+            self.idempotency_seconds = int(os.getenv("IDEMPOTENCY_WINDOW_SECONDS", "60"))
+        except ValueError:
+            self.idempotency_seconds = 60
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.initialize()
 
@@ -68,6 +74,8 @@ class Store:
             job_columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
             if "revision" not in job_columns:
                 db.execute("ALTER TABLE jobs ADD COLUMN revision TEXT")
+            if "dedupe_key" not in job_columns:
+                db.execute("ALTER TABLE jobs ADD COLUMN dedupe_key TEXT")
             # 进程意外退出后允许任务重跑；工作流必须是只读工具调用。
             db.execute("UPDATE jobs SET status='queued', updated_at=? WHERE status='running'", (_now(),))
 
@@ -81,20 +89,37 @@ class Store:
         self.event(job_id, "queued", {"message": "任务已加入队列"})
         return {"trip_id": trip_id, "job_id": job_id}
 
-    def revise(self, trip_id: str, instruction: str) -> dict[str, str] | None:
+    @staticmethod
+    def dedupe_key(trip_id: str, instruction: str) -> str:
+        """幂等键：同一行程 + 归一化后相同的指令；版本由查询条件约束。"""
+        normalized = re.sub(r"[\s，。！？、,.!?~～]+", "", instruction or "")
+        raw = f"{trip_id}:{normalized}"
+        return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+    def revise(self, trip_id: str, instruction: str) -> dict[str, Any] | None:
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT query,version FROM trips WHERE id=?", (trip_id,)).fetchone()
             if row is None:
                 return None
+            key = self.dedupe_key(trip_id, instruction)
+            threshold = (datetime.now(UTC) - timedelta(seconds=self.idempotency_seconds)).isoformat()
+            existing = db.execute(
+                "SELECT id,version FROM jobs WHERE dedupe_key=? AND status='completed' "
+                "AND version=? AND created_at>=? ORDER BY created_at DESC LIMIT 1",
+                (key, row["version"], threshold)).fetchone()
+            if existing is not None:
+                return {"trip_id": trip_id, "job_id": existing["id"], "version": existing["version"],
+                        "duplicate": True}
             version, job_id, now = row["version"] + 1, uuid.uuid4().hex, _now()
             query = row["query"] + "\n用户最新修改：" + instruction
             db.execute("UPDATE jobs SET status='superseded',updated_at=? WHERE trip_id=? AND status='queued'",
                        (now, trip_id))
             db.execute("UPDATE trips SET query=?,version=?,updated_at=? WHERE id=?",
                        (query, version, now, trip_id))
-            db.execute("INSERT INTO jobs(id,trip_id,version,status,created_at,updated_at,revision) VALUES(?,?,?,'queued',?,?,?)",
-                       (job_id, trip_id, version, now, now, instruction))
+            db.execute("INSERT INTO jobs(id,trip_id,version,status,created_at,updated_at,revision,dedupe_key) "
+                       "VALUES(?,?,?,'queued',?,?,?,?)",
+                       (job_id, trip_id, version, now, now, instruction, key))
         self.event(job_id, "queued", {"message": "修改已提交，正在更新方案"})
         return {"trip_id": trip_id, "job_id": job_id}
 
