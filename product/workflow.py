@@ -99,7 +99,7 @@ class AgentWorkflow:
             constraints["day_windows"] = windows
             days_count = len(prior_days)
             destinations = _as_list(constraints.get("destinations"), 4)
-            if budget_conflict(query, days_count):
+            if budget_conflict(query, days_count) or budget_conflict(revision_text, days_count):
                 stages.append(_span("intake", "stage", "failed", 0.0,
                                     {"revision": True, "target_days": targets, "days": days_count,
                                      "decision": "clarify"}, error_type="missed_budget"))

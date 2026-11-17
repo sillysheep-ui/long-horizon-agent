@@ -106,7 +106,8 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
     for record in records:
         failed = ",".join(name for name, ok in (record.get("checks") or {}).items() if ok is False) or "-"
         applied = record.get("revision_applied")
-        lines.append(f"| {record['id']} | {record.get('status') or record.get('error', '错误')} | "
+        label = record.get("status") or ("answer" if record.get("kind") == "answer" else record.get("error", "错误"))
+        lines.append(f"| {record['id']} | {label} | "
                      f"{applied} | {record.get('changed_days') or '-'} | {failed} | "
                      f"{record.get('first_elapsed', '-')}s | {record.get('elapsed', '-')}s |")
     lines += ["", "## 修改前后对照", ""]
