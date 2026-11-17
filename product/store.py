@@ -215,16 +215,23 @@ class Store:
         except json.JSONDecodeError:
             return None
 
-    def continue_conversation(self, conversation_id: str, content: str) -> dict[str, Any] | None:
-        """先判断意图：新行程、改行程、问行程、闲聊。"""
+    def continue_conversation(self, conversation_id: str, content: str,
+                              intent: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        """先判断意图：新行程、改行程、问行程、闲聊。intent 可由外层（含模型兜底）传入。"""
         latest = self.latest_trip(conversation_id)
         duplicate = self._duplicate_reply(conversation_id, content)
         if duplicate is not None:
             return duplicate
-        intent = classify_intent(content, has_trip=latest is not None)
+        intent = dict(intent) if intent else classify_intent(content, has_trip=latest is not None)
         prior = self.latest_result(conversation_id) if latest is not None else None
         if prior is not None and prior.get("status") == "needs_clarification" and intent["intent"] != "new_trip":
             intent = {"intent": "revise_trip", "reason": "上一轮在等用户补充信息", "target_days": []}
+        if intent["intent"] == "unclear":
+            message = self.append_message(conversation_id, "user", content)
+            reply = self.append_message(conversation_id, "assistant",
+                                        "你是想改行程，还是想了解行程里的安排？直接说一句就行。")
+            return {"conversation_id": conversation_id, "kind": "clarify_reply", "intent": intent,
+                    "message": message, "reply": reply}
         if latest is not None and intent["intent"] in ("ask", "chat"):
             message = self.append_message(conversation_id, "user", content)
             if intent["intent"] == "ask":

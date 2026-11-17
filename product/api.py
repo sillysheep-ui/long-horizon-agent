@@ -14,6 +14,8 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from product.intent import route_intent
+from product.model_gateway import ModelGateway
 from product.orchestrator import AgentWorkflow
 from product.store import Store
 
@@ -21,6 +23,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 store = Store()
 workflow = AgentWorkflow(store)
+gateway = ModelGateway()
 
 
 async def _worker() -> None:
@@ -84,10 +87,15 @@ def get_conversation(conversation_id: str) -> dict:
 
 
 @app.post("/api/conversations/{conversation_id}/messages")
-def post_message(conversation_id: str, request: MessageRequest) -> dict:
+async def post_message(conversation_id: str, request: MessageRequest) -> dict:
     if store.conversation(conversation_id) is None:
         raise HTTPException(status_code=404, detail="会话不存在")
-    result = store.continue_conversation(conversation_id, request.content.strip())
+    content = request.content.strip()
+    latest = store.latest_trip(conversation_id)
+    prior = store.latest_result(conversation_id) if latest else None
+    intent = await route_intent(gateway, content, has_trip=latest is not None,
+                                prior_status=(prior or {}).get("status"))
+    result = store.continue_conversation(conversation_id, content, intent=intent)
     if result is None:
         raise HTTPException(status_code=404, detail="行程不存在")
     return result

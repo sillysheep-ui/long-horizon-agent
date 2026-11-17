@@ -1,0 +1,362 @@
+[
+  {
+    "id": "hn-new-01",
+    "text": "帮我排个去拉萨的行程",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-02",
+    "text": "这次换个城市，去珠海",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-03",
+    "text": "重做一版，目的地是泉州",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-04",
+    "text": "想去景德镇玩两天",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-05",
+    "text": "重新计划一下，去扬州",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-06",
+    "text": "下周想去洛阳看牡丹，安排一下",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-07",
+    "text": "给我搞一份去北海的攻略",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-08",
+    "text": "再去一次，这次去绍兴",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-09",
+    "text": "能不能重新安排去晋中",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-new-10",
+    "text": "行程取消，改成去威海",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "hn-rev-01",
+    "text": "第 2 天换成室内活动",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-02",
+    "text": "第二天能不能加个公园",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-03",
+    "text": "把最后一天改成购物",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-04",
+    "text": "第一天别安排爬山",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-05",
+    "text": "第二天轻松点，不要排太满",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-06",
+    "text": "预算再压一压，控制在1500",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-07",
+    "text": "第二天晚上加点夜市",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-08",
+    "text": "第三天换个博物馆",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-09",
+    "text": "第二天不要博物馆",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-rev-10",
+    "text": "把行程整体加快一点",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "hn-ask-01",
+    "text": "第二天大概几点能回酒店",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-02",
+    "text": "门票要提前预约吗",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-03",
+    "text": "第三天远不远",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-04",
+    "text": "预算还剩多少",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-05",
+    "text": "第一天有午饭安排吗",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-06",
+    "text": "酒店在哪个区",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-07",
+    "text": "第二天要坐多久车",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-08",
+    "text": "总花费大概多少",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-09",
+    "text": "第三天适合带小孩吗",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-ask-10",
+    "text": "第一天几点集合",
+    "expect": "ask",
+    "has_trip": true,
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "hn-chat-01",
+    "text": "收到，谢谢",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-02",
+    "text": "好嘞",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-03",
+    "text": "emmm",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-04",
+    "text": "行吧",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-05",
+    "text": "听你的",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-06",
+    "text": "我先忙一会",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-07",
+    "text": "可以，挺好",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-08",
+    "text": "你说得对",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-09",
+    "text": "晚点再聊",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "hn-chat-10",
+    "text": "哈哈哈",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  }
+]
