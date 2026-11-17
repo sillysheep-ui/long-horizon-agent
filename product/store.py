@@ -69,13 +69,18 @@ class Store:
                     id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT NOT NULL UNIQUE,
                     value TEXT NOT NULL, confidence REAL NOT NULL DEFAULT 0.8,
                     importance INTEGER NOT NULL DEFAULT 5, source_message_id INTEGER,
-                    prev_value TEXT, expires_at TEXT,
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                    prev_value TEXT, expires_at TEXT, status TEXT NOT NULL DEFAULT 'confirmed',
+                    asked_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
                 );
             """)
             columns = {row["name"] for row in db.execute("PRAGMA table_info(trips)")}
             if "conversation_id" not in columns:
                 db.execute("ALTER TABLE trips ADD COLUMN conversation_id TEXT")
+            fact_columns = {row["name"] for row in db.execute("PRAGMA table_info(user_facts)")}
+            if "status" not in fact_columns:
+                db.execute("ALTER TABLE user_facts ADD COLUMN status TEXT NOT NULL DEFAULT 'confirmed'")
+            if "asked_at" not in fact_columns:
+                db.execute("ALTER TABLE user_facts ADD COLUMN asked_at TEXT")
             if "previous_json" not in columns:
                 db.execute("ALTER TABLE trips ADD COLUMN previous_json TEXT")
             job_columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
@@ -367,7 +372,9 @@ class Store:
             content = str(result.get("question") or "地点查询暂不可用，无法给出可信的具体行程。")
         else:
             content = str(result.get("summary") or "方案已完成。")
-        self.append_message(conversation_id, "assistant", content, job_id)
+        message = self.append_message(conversation_id, "assistant", content, job_id)
+        from product.profile import attach_pending
+        attach_pending(self, message["id"])
 
     # ---- 跨会话用户偏好 ----
 
@@ -400,10 +407,13 @@ class Store:
             row = db.execute("SELECT * FROM user_facts WHERE key=?", (key,)).fetchone()
         return dict(row) if row else None
 
-    def list_facts(self, include_expired: bool = False) -> list[dict[str, Any]]:
-        query = "SELECT * FROM user_facts"
+    def list_facts(self, include_expired: bool = False,
+                   status: str | None = None) -> list[dict[str, Any]]:
+        query = "SELECT * FROM user_facts WHERE 1=1"
         if not include_expired:
-            query += " WHERE expires_at IS NULL OR expires_at > '" + _now() + "'"
+            query += " AND (expires_at IS NULL OR expires_at > '" + _now() + "')"
+        if status:
+            query += " AND status='" + status + "'"
         query += " ORDER BY importance DESC, updated_at DESC"
         with self._connect() as db:
             rows = db.execute(query).fetchall()
@@ -413,16 +423,17 @@ class Store:
         now = _now()
         with self._connect() as db:
             db.execute("INSERT INTO user_facts(key,value,confidence,importance,source_message_id,"
-                       "expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                       "expires_at,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
                        (fact["key"], fact["value"], fact["confidence"], fact["importance"],
-                        fact.get("source_message_id"), fact.get("expires_at"), now, now))
+                        fact.get("source_message_id"), fact.get("expires_at"),
+                        fact.get("status") or "confirmed", now, now))
 
     def update_fact(self, fact: dict[str, Any], prev_value: str) -> None:
         with self._connect() as db:
             db.execute("UPDATE user_facts SET value=?, confidence=?, importance=?, source_message_id=?, "
-                       "prev_value=?, expires_at=?, updated_at=? WHERE key=?",
+                       "prev_value=?, expires_at=?, status=?, updated_at=? WHERE key=?",
                        (fact["value"], fact["confidence"], fact["importance"], fact.get("source_message_id"),
-                        prev_value, fact.get("expires_at"), _now(), fact["key"]))
+                        prev_value, fact.get("expires_at"), fact.get("status") or "confirmed", _now(), fact["key"]))
 
     def touch_fact(self, key: str, confidence: float) -> None:
         with self._connect() as db:
@@ -432,3 +443,27 @@ class Store:
     def delete_fact(self, key: str) -> None:
         with self._connect() as db:
             db.execute("DELETE FROM user_facts WHERE key=?", (key,))
+
+    def pending_fact(self, asked: bool | None = None) -> dict[str, Any] | None:
+        query = "SELECT * FROM user_facts WHERE status='pending'"
+        if asked is True:
+            query += " AND asked_at IS NOT NULL"
+        if asked is False:
+            query += " AND asked_at IS NULL"
+        query += " ORDER BY importance DESC, updated_at DESC LIMIT 1"
+        with self._connect() as db:
+            row = db.execute(query).fetchone()
+        return dict(row) if row else None
+
+    def confirm_fact(self, key: str) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE user_facts SET status='confirmed', confidence=MAX(confidence,0.9), "
+                       "updated_at=? WHERE key=?", (_now(), key))
+
+    def mark_fact_asked(self, key: str) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE user_facts SET asked_at=? WHERE key=?", (_now(), key))
+
+    def append_to_message(self, message_id: int, text: str) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE messages SET content = content || ? WHERE id=?", (text, int(message_id)))

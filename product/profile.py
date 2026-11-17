@@ -134,13 +134,17 @@ def normalize_fact(raw: dict[str, Any], messages: list[dict[str, Any]]) -> dict[
 
 
 def merge_fact(store: Any, fact: dict[str, Any]) -> str:
-    """ADD / UPDATE / NOOP：同 key 新值覆盖，旧值留底。"""
+    """ADD / UPDATE / NOOP：同 key 新值覆盖，旧值留底；低置信度先挂起等用户确认。"""
+    fact = dict(fact)
+    fact["status"] = "confirmed" if float(fact["confidence"]) >= 0.85 else "pending"
     existing = store.get_fact(fact["key"])
     if existing is None:
         store.add_fact(fact)
         return "added"
     if str(existing["value"]) == fact["value"]:
         store.touch_fact(fact["key"], fact["confidence"])
+        return "noop"
+    if existing.get("status") == "confirmed" and fact["status"] == "pending":
         return "noop"
     store.update_fact(fact, prev_value=str(existing["value"]))
     return "updated"
@@ -149,7 +153,7 @@ def merge_fact(store: Any, fact: dict[str, Any]) -> str:
 def select_facts(store: Any, budget_chars: int = _PROFILE_BUDGET_CHARS) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     used = 0
-    for fact in store.list_facts():
+    for fact in store.list_facts(status="confirmed"):
         line = profile_line(fact)
         if used + len(line) > budget_chars:
             break
@@ -223,3 +227,42 @@ def should_extract(last_message_at: str | None, now: datetime | None = None) -> 
     if last.tzinfo is None:
         last = last.replace(tzinfo=UTC)
     return (now - last) >= timedelta(seconds=_IDLE_SECONDS)
+
+
+_YES = re.compile(r"^(是|对|对的|是的|嗯|嗯嗯|没错|确认|可以|好|好的|记下|记住|没问题)")
+_NO = re.compile(r"^(不是|不对|没有|不|错|别记|不用|算了)")
+
+
+def pending_question(store: Any, asked: bool = False) -> dict[str, Any] | None:
+    return store.pending_fact(asked=asked)
+
+
+def attach_pending(store: Any, message_id: int) -> None:
+    """在回复末尾补一句确认，只问一次。"""
+    fact = pending_question(store)
+    if fact is None:
+        return
+    label = LABELS.get(fact["key"], fact["key"])
+    store.append_to_message(message_id, "\n\n顺便确认一下：您%s是「%s」，对吗？回复“是”或“不是”就行。"
+                            % (label, fact["value"]))
+    store.mark_fact_asked(fact["key"])
+
+
+def handle_confirmation(store: Any, conversation_id: str, content: str) -> dict[str, Any] | None:
+    """识别对上一条确认的“是/不是”。"""
+    fact = store.pending_fact(asked=True)
+    if fact is None:
+        return None
+    text = content.strip()
+    if _YES.match(text):
+        store.confirm_fact(fact["key"])
+        answer = "好的，记下了：%s是「%s」。" % (LABELS.get(fact["key"], fact["key"]), fact["value"])
+    elif _NO.match(text):
+        store.delete_fact(fact["key"])
+        answer = "好的，这条不记了。"
+    else:
+        return None
+    message = store.append_message(conversation_id, "user", content)
+    reply = store.append_message(conversation_id, "assistant", answer)
+    return {"conversation_id": conversation_id, "kind": "profile_ack",
+            "message": message, "reply": reply}

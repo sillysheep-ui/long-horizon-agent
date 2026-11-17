@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from product.intent import route_intent
 from product.model_gateway import ModelGateway
 from product.orchestrator import AgentWorkflow
-from product.profile import extract_profile, should_extract
+from product.profile import attach_pending, extract_profile, handle_confirmation, should_extract
 from product.store import Store
 
 load_dotenv()
@@ -102,6 +102,9 @@ async def post_message(conversation_id: str, request: MessageRequest) -> dict:
     if store.conversation(conversation_id) is None:
         raise HTTPException(status_code=404, detail="会话不存在")
     content = request.content.strip()
+    acked = handle_confirmation(store, conversation_id, content)
+    if acked is not None:
+        return acked
     last_seen = store.last_message_at(conversation_id)
     latest = store.latest_trip(conversation_id)
     prior = store.latest_result(conversation_id) if latest else None
@@ -110,6 +113,8 @@ async def post_message(conversation_id: str, request: MessageRequest) -> dict:
     result = store.continue_conversation(conversation_id, content, intent=intent)
     if result is None:
         raise HTTPException(status_code=404, detail="行程不存在")
+    if result.get("reply"):
+        attach_pending(store, result["reply"]["id"])
     if should_extract(last_seen):
         task = asyncio.create_task(_extract_profile_bg(conversation_id))
         _profile_tasks.add(task)

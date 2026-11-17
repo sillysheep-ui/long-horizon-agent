@@ -5,8 +5,10 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from product.profile import (
+    attach_pending,
     classify_scope,
     extract_profile,
+    handle_confirmation,
     merge_fact,
     normalize_fact,
     profile_block,
@@ -111,3 +113,63 @@ def test_should_extract_after_idle_window():
     assert should_extract((now - timedelta(minutes=31)).isoformat(), now) is True
     assert should_extract((now - timedelta(minutes=5)).isoformat(), now) is False
     assert should_extract(None, now) is False
+
+
+def _fact(key: str, value: str, confidence: float = 0.7) -> dict:
+    return {"key": key, "value": value, "confidence": confidence, "importance": 8,
+            "scope": "durable", "evidence": value, "source_message_id": 1}
+
+
+def test_high_confidence_fact_is_injected_directly(tmp_path):
+    store = Store(str(tmp_path / "high.db"))
+    assert merge_fact(store, _fact("food.avoid", "辣", 0.95)) == "added"
+    assert "辣" in profile_block(store)
+
+
+def test_pending_fact_is_not_injected(tmp_path):
+    store = Store(str(tmp_path / "pending.db"))
+    assert merge_fact(store, _fact("food.avoid", "辣", 0.7)) == "added"
+    assert profile_block(store) == ""
+    assert store.pending_fact(asked=False)["value"] == "辣"
+
+
+def test_attach_pending_asks_once(tmp_path):
+    store = Store(str(tmp_path / "ask.db"))
+    conversation = store.create_conversation()
+    merge_fact(store, _fact("food.avoid", "辣", 0.7))
+    first = store.append_message(conversation["conversation_id"], "assistant", "方案如下")
+    attach_pending(store, first["id"])
+    content = store.messages_after(conversation["conversation_id"])[0]["content"]
+    assert "确认" in content
+    second = store.append_message(conversation["conversation_id"], "assistant", "再一版")
+    attach_pending(store, second["id"])
+    assert "确认" not in store.messages_after(conversation["conversation_id"])[1]["content"]
+
+
+def test_handle_confirmation_yes_promotes_fact(tmp_path):
+    store = Store(str(tmp_path / "yes.db"))
+    conversation = store.create_conversation()
+    merge_fact(store, _fact("food.avoid", "辣", 0.7))
+    message = store.append_message(conversation["conversation_id"], "assistant", "方案如下")
+    attach_pending(store, message["id"])
+    result = handle_confirmation(store, conversation["conversation_id"], "是的")
+    assert result and result["kind"] == "profile_ack"
+    assert store.get_fact("food.avoid")["status"] == "confirmed"
+    assert "辣" in profile_block(store)
+
+
+def test_handle_confirmation_no_deletes_fact(tmp_path):
+    store = Store(str(tmp_path / "no.db"))
+    conversation = store.create_conversation()
+    merge_fact(store, _fact("food.avoid", "辣", 0.7))
+    message = store.append_message(conversation["conversation_id"], "assistant", "方案如下")
+    attach_pending(store, message["id"])
+    assert handle_confirmation(store, conversation["conversation_id"], "不是")["kind"] == "profile_ack"
+    assert store.get_fact("food.avoid") is None
+
+
+def test_handle_confirmation_ignores_unrelated_text(tmp_path):
+    store = Store(str(tmp_path / "other.db"))
+    conversation = store.create_conversation()
+    merge_fact(store, _fact("food.avoid", "辣", 0.7))
+    assert handle_confirmation(store, conversation["conversation_id"], "帮我改第二天") is None
