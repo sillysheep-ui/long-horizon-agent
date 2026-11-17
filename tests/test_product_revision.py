@@ -343,3 +343,9 @@ def test_budget_change_escalates_to_full_replan(tmp_path):
     assert result["constraints"]["budget"] == 2000
     queries = {item["id"]: item["query"] for item in result["evidence"]}
     assert "d1-p1" in queries and "d2-p1" in queries
+
+
+def test_update_constraints_detects_pace_change():
+    assert update_constraints({"pace": "normal"}, "整体放慢一点") == {"pace": "relaxed"}
+    assert update_constraints({"pace": "relaxed"}, "还是想紧凑些") == {"pace": "packed"}
+    assert update_constraints({"pace": "relaxed"}, "慢慢逛就好") == {}

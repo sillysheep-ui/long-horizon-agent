@@ -173,3 +173,15 @@ def test_handle_confirmation_ignores_unrelated_text(tmp_path):
     conversation = store.create_conversation()
     merge_fact(store, _fact("food.avoid", "辣", 0.7))
     assert handle_confirmation(store, conversation["conversation_id"], "帮我改第二天") is None
+
+
+def test_expired_pending_fact_is_dropped(tmp_path):
+    store = Store(str(tmp_path / "expire.db"))
+    merge_fact(store, {"key": "food.avoid", "value": "辣", "confidence": 0.7,
+                       "importance": 8, "scope": "durable", "evidence": "不吃辣",
+                       "source_message_id": 1})
+    assert store.pending_fact() is not None
+    with store._connect() as db:  # noqa: SLF001 - 测试里直接改时间戳
+        db.execute("UPDATE user_facts SET updated_at='2020-01-01T00:00:00+00:00'")
+    assert store.expire_pending_facts(24) == 1
+    assert store.pending_fact() is None

@@ -455,6 +455,15 @@ class Store:
             row = db.execute(query).fetchone()
         return dict(row) if row else None
 
+    def expire_pending_facts(self, hours: int = 24) -> int:
+        """清掉超过 hours 仍未确认的候选偏好。"""
+        cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
+        with self._connect() as db:
+            cursor = db.execute(
+                "DELETE FROM user_facts WHERE status='pending' AND COALESCE(asked_at, updated_at) < ?",
+                (cutoff,))
+            return cursor.rowcount
+
     def confirm_fact(self, key: str) -> None:
         with self._connect() as db:
             db.execute("UPDATE user_facts SET status='confirmed', confidence=MAX(confidence,0.9), "

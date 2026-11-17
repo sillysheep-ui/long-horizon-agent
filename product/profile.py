@@ -53,6 +53,7 @@ PROFILE_SYSTEM_PROMPT = (
 )
 
 _IDLE_SECONDS = 30 * 60
+PENDING_TTL_HOURS = 24
 _BATCH_SIZE = 20
 _PROFILE_BUDGET_CHARS = 800
 
@@ -234,6 +235,7 @@ _NO = re.compile(r"^(不是|不对|没有|不|错|别记|不用|算了)")
 
 
 def pending_question(store: Any, asked: bool = False) -> dict[str, Any] | None:
+    store.expire_pending_facts(PENDING_TTL_HOURS)
     return store.pending_fact(asked=asked)
 
 

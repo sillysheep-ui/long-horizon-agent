@@ -5,7 +5,7 @@ from typing import Any
 
 from product.geo import order_nearest, parse_coord, transit_minutes
 from product.names import clean_place_name, title_matches
-from product.pace import DEFAULT_DAY_HOURS, count_bounds, hours_from_text
+from product.pace import DEFAULT_DAY_HOURS, PACE_WORDS, count_bounds, detect_pace, hours_from_text
 
 
 def _as_list(value: Any, limit: int) -> list[str]:
@@ -291,6 +291,10 @@ def update_constraints(constraints: dict[str, Any], text: str) -> dict[str, Any]
             total = int(_amount(match.group(1)))
             if total >= 1 and total != current_days:
                 changes["days"] = total
+    if any(word in value for words in PACE_WORDS.values() for word in words):
+        pace = detect_pace(value)
+        if pace != constraints.get("pace"):
+            changes["pace"] = pace
     return changes
 
 
