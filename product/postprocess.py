@@ -248,6 +248,52 @@ def budget_conflict(query: str, days: int) -> bool:
     return amount / max(1, days) < 600
 
 
+BUDGET_UPDATE = re.compile(
+    r"预算[^。；;\n]{0,10}?([0-9]{3,6}|[零一二三四五六七八九十百千两]{2,8})\s*(?:元|块|以内|左右)?")
+ADD_DAYS = re.compile(r"(?:再|多|加)\s*([一二三四五六七八九两]|\d)\s*天")
+SET_DAYS = re.compile(r"(?:改成|换成|改为|变成|调整为)\s*([一二三四五六七八九十两]|\d)\s*天")
+
+
+def _amount(raw: str) -> float:
+    """把“2000”“两千”这类写法转成数字，失败返回 0。"""
+    value = str(raw or "").strip()
+    if not value:
+        return 0.0
+    if value[0] in "零一二三四五六七八九":
+        return float(chinese_number(value))
+    if value[0] == "两":
+        return float(chinese_number("二" + value[1:]))
+    try:
+        return float(value)
+    except ValueError:
+        return 0.0
+
+
+def update_constraints(constraints: dict[str, Any], text: str) -> dict[str, Any]:
+    """识别修改句里的整体条件变化（预算/天数），命中就应升级为整单重排。"""
+    changes: dict[str, Any] = {}
+    value = str(text or "")
+    match = BUDGET_UPDATE.search(value)
+    if match:
+        amount = _amount(match.group(1))
+        current = constraints.get("budget")
+        if amount >= 100 and amount != current:
+            changes["budget"] = int(amount)
+    current_days = constraints.get("days")
+    match = ADD_DAYS.search(value)
+    if match:
+        extra = int(_amount(match.group(1)))
+        if extra >= 1:
+            changes["days"] = (int(current_days) if current_days else 1) + extra
+    else:
+        match = SET_DAYS.search(value)
+        if match:
+            total = int(_amount(match.group(1)))
+            if total >= 1 and total != current_days:
+                changes["days"] = total
+    return changes
+
+
 def cities_fit_days(destinations: list[str], days: int) -> bool:
     """一天最多跨一个城市，城市数超过天数就认为约束矛盾。"""
     return len(destinations) <= max(1, int(days))

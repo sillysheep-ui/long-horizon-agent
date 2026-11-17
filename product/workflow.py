@@ -27,6 +27,7 @@ from product.postprocess import (
     day_hours,
     detect_day_windows,
     match_activity,
+    update_constraints,
 )
 from product.profile import profile_block
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
@@ -113,6 +114,16 @@ class AgentWorkflow:
             constraints = dict(prior["constraints"])
             constraints["day_windows"] = windows
             days_count = len(prior_days)
+            changes = update_constraints(constraints, revision_text)
+            if changes:
+                constraints.update(changes)
+                if "days" in changes:
+                    days_count = int(changes["days"])
+                    constraints["days"] = days_count
+                    windows = detect_day_windows(query, revision_text, days=days_count)
+                    constraints["day_windows"] = windows
+                targets = list(range(1, days_count + 1))
+                self._event(job, "intake", "检测到整体条件变化，改为整单重排", {"changes": changes})
             destinations = _as_list(constraints.get("destinations"), 4)
             if budget_conflict(query, days_count) or budget_conflict(revision_text, days_count):
                 stages.append(_span("intake", "stage", "failed", 0.0,

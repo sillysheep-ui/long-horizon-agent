@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 
 from product.orchestrator import AgentWorkflow, _finalize_days
 from product.planner import queries_for_day
+from product.postprocess import update_constraints
 from product.revision import (
     compact_days,
     day_of_evidence,
@@ -315,3 +316,30 @@ def test_finalize_keeps_untouched_days_verbatim():
     assert any(activity["title"] == "龙井村" and activity["start"] == "20:00"
                for activity in days[1]["activities"])
     assert len(days[1]["activities"]) == 2  # 目标日仍会补足到 2 个
+
+
+def test_update_constraints_detects_budget_change():
+    assert update_constraints({"budget": 1200}, "第二天换成博物馆，并把预算提到2000") == {"budget": 2000}
+    assert update_constraints({"budget": 1500}, "预算改成两千") == {"budget": 2000}
+    assert update_constraints({"budget": 1200}, "第二天换成博物馆") == {}
+
+
+def test_update_constraints_detects_days_change():
+    assert update_constraints({"days": 2}, "再加一天") == {"days": 3}
+    assert update_constraints({"days": 2}, "改成3天") == {"days": 3}
+    assert update_constraints({"days": 2}, "预算提到 2000，再加一天") == {"budget": 2000, "days": 3}
+
+
+def test_budget_change_escalates_to_full_replan(tmp_path):
+    store = Store(str(tmp_path / "escalate.db"))
+    workflow = AgentWorkflow(store, FakeModel(), FakeTools())
+    trip = store.create_trip("从上海去杭州玩两天")
+    job = store.claim()
+    store.finish(job, asyncio.run(workflow.run(job)))
+
+    store.revise(trip["trip_id"], "第二天换成博物馆，并把预算提到2000")
+    job = store.claim()
+    result = asyncio.run(workflow.run(job))
+    assert result["constraints"]["budget"] == 2000
+    queries = {item["id"]: item["query"] for item in result["evidence"]}
+    assert "d1-p1" in queries and "d2-p1" in queries
