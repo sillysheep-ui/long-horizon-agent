@@ -28,6 +28,7 @@ from product.postprocess import (
     detect_day_windows,
     match_activity,
 )
+from product.profile import profile_block
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
 from product.provenance import normalize_all
 from product.revision import (
@@ -131,7 +132,12 @@ class AgentWorkflow:
                     query, prior.get("question") or "", revision_text)
                 self._event(job, "intake", "结合上一轮追问继续理解需求")
             intake_started = time.monotonic()
-            intake = await self.model.complete("需求 Agent", INTAKE_SYSTEM_PROMPT, intake_query, max_tokens=500)
+            intake_system = INTAKE_SYSTEM_PROMPT
+            remembered = profile_block(self.store)
+            if remembered:
+                intake_system = INTAKE_SYSTEM_PROMPT + "\n\n" + remembered
+                self._event(job, "intake", "参考了已记住的长期偏好")
+            intake = await self.model.complete("需求 Agent", intake_system, intake_query, max_tokens=500)
             calls.append({k: intake[k] for k in ("role", "provider", "model")})
             constraints = parse_json(intake["content"])
             constraints["named_places"] = clean_named_places(

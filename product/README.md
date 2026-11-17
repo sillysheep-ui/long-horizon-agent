@@ -117,10 +117,18 @@ python3 -m evaluation.revision_eval --profile api_only
 | `product/postprocess.py` | 标题对证据、时间排布、每日收尾 |
 | `product/trace.py` | 执行轨迹 span 与派生指标 |
 | `product/memory.py` | 会话上文：预算内保留原文，超出后压缩早期消息 |
+| `product/profile.py` | 跨会话长期偏好：抽取、规则兜底、合并与注入 |
 | `product/orchestrator.py` | 兼容入口（只做转发） |
 | `product/coverage.py` / `product/revision.py` / `product/provenance.py` | 覆盖度、定向修改、来源标记 |
 
 `from product.orchestrator import AgentWorkflow` 仍然可用；新代码建议直接从 `product.workflow` 导入。
+
+## 用户偏好记忆
+
+- 只记**长期成立**的偏好（不吃辣、恐高、带老人出行习惯），本次行程相关的参数仍放 `constraints`。
+- 会话空闲 30 分钟后，下一次请求会在后台按 20 条一批抽取，水位存在 `conversations.profile_watermark`，失败不推进。
+- 抽取经过四道校验：白名单 key、evidence 必须是原话子串、scope 必须是 durable、置信度 ≥0.6；关键类（饮食禁忌、行动限制、同行人）另有规则兜底。
+- 注入时按 importance 排序、总长不超过 800 字，并注明“与本次明确要求冲突时以本次为准”。
 
 ## 验证
 

@@ -65,6 +65,13 @@ class Store:
                     kind TEXT NOT NULL, payload_json TEXT NOT NULL, created_at TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS events_job ON events(job_id, id);
+                CREATE TABLE IF NOT EXISTS user_facts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT NOT NULL UNIQUE,
+                    value TEXT NOT NULL, confidence REAL NOT NULL DEFAULT 0.8,
+                    importance INTEGER NOT NULL DEFAULT 5, source_message_id INTEGER,
+                    prev_value TEXT, expires_at TEXT,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                );
             """)
             columns = {row["name"] for row in db.execute("PRAGMA table_info(trips)")}
             if "conversation_id" not in columns:
@@ -81,6 +88,8 @@ class Store:
                 db.execute("ALTER TABLE conversations ADD COLUMN summary TEXT")
             if "summary_watermark" not in conversation_columns:
                 db.execute("ALTER TABLE conversations ADD COLUMN summary_watermark INTEGER NOT NULL DEFAULT 0")
+            if "profile_watermark" not in conversation_columns:
+                db.execute("ALTER TABLE conversations ADD COLUMN profile_watermark INTEGER NOT NULL DEFAULT 0")
             # 进程意外退出后允许任务重跑；工作流必须是只读工具调用。
             db.execute("UPDATE jobs SET status='queued', updated_at=? WHERE status='running'", (_now(),))
 
@@ -359,3 +368,67 @@ class Store:
         else:
             content = str(result.get("summary") or "方案已完成。")
         self.append_message(conversation_id, "assistant", content, job_id)
+
+    # ---- 跨会话用户偏好 ----
+
+    def messages_after(self, conversation_id: str, after_id: int = 0) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute("SELECT id,role,content,job_id,created_at FROM messages "
+                              "WHERE conversation_id=? AND id>? ORDER BY id",
+                              (conversation_id, max(0, int(after_id)))).fetchall()
+        return [dict(row) for row in rows]
+
+    def last_message_at(self, conversation_id: str) -> str | None:
+        with self._connect() as db:
+            row = db.execute("SELECT created_at FROM messages WHERE conversation_id=? "
+                             "ORDER BY id DESC LIMIT 1", (conversation_id,)).fetchone()
+        return row["created_at"] if row else None
+
+    def profile_watermark(self, conversation_id: str) -> int:
+        with self._connect() as db:
+            row = db.execute("SELECT profile_watermark FROM conversations WHERE id=?",
+                             (conversation_id,)).fetchone()
+        return int(row["profile_watermark"] or 0) if row else 0
+
+    def set_profile_watermark(self, conversation_id: str, watermark: int) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE conversations SET profile_watermark=?, updated_at=? WHERE id=?",
+                       (int(watermark), _now(), conversation_id))
+
+    def get_fact(self, key: str) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute("SELECT * FROM user_facts WHERE key=?", (key,)).fetchone()
+        return dict(row) if row else None
+
+    def list_facts(self, include_expired: bool = False) -> list[dict[str, Any]]:
+        query = "SELECT * FROM user_facts"
+        if not include_expired:
+            query += " WHERE expires_at IS NULL OR expires_at > '" + _now() + "'"
+        query += " ORDER BY importance DESC, updated_at DESC"
+        with self._connect() as db:
+            rows = db.execute(query).fetchall()
+        return [dict(row) for row in rows]
+
+    def add_fact(self, fact: dict[str, Any]) -> None:
+        now = _now()
+        with self._connect() as db:
+            db.execute("INSERT INTO user_facts(key,value,confidence,importance,source_message_id,"
+                       "expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                       (fact["key"], fact["value"], fact["confidence"], fact["importance"],
+                        fact.get("source_message_id"), fact.get("expires_at"), now, now))
+
+    def update_fact(self, fact: dict[str, Any], prev_value: str) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE user_facts SET value=?, confidence=?, importance=?, source_message_id=?, "
+                       "prev_value=?, expires_at=?, updated_at=? WHERE key=?",
+                       (fact["value"], fact["confidence"], fact["importance"], fact.get("source_message_id"),
+                        prev_value, fact.get("expires_at"), _now(), fact["key"]))
+
+    def touch_fact(self, key: str, confidence: float) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE user_facts SET confidence=MAX(confidence,?), updated_at=? WHERE key=?",
+                       (confidence, _now(), key))
+
+    def delete_fact(self, key: str) -> None:
+        with self._connect() as db:
+            db.execute("DELETE FROM user_facts WHERE key=?", (key,))

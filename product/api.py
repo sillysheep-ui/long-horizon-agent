@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from product.intent import route_intent
 from product.model_gateway import ModelGateway
 from product.orchestrator import AgentWorkflow
+from product.profile import extract_profile, should_extract
 from product.store import Store
 
 load_dotenv()
@@ -24,6 +25,16 @@ logger = logging.getLogger(__name__)
 store = Store()
 workflow = AgentWorkflow(store)
 gateway = ModelGateway()
+_profile_tasks: set[asyncio.Task] = set()
+
+
+async def _extract_profile_bg(conversation_id: str) -> None:
+    try:
+        stats = await extract_profile(gateway, store, conversation_id)
+        if stats.get("facts"):
+            logger.info("已记住 %s 条偏好: %s", stats["facts"], conversation_id)
+    except Exception:
+        logger.exception("用户偏好抽取失败: %s", conversation_id)
 
 
 async def _worker() -> None:
@@ -91,6 +102,7 @@ async def post_message(conversation_id: str, request: MessageRequest) -> dict:
     if store.conversation(conversation_id) is None:
         raise HTTPException(status_code=404, detail="会话不存在")
     content = request.content.strip()
+    last_seen = store.last_message_at(conversation_id)
     latest = store.latest_trip(conversation_id)
     prior = store.latest_result(conversation_id) if latest else None
     intent = await route_intent(gateway, content, has_trip=latest is not None,
@@ -98,6 +110,10 @@ async def post_message(conversation_id: str, request: MessageRequest) -> dict:
     result = store.continue_conversation(conversation_id, content, intent=intent)
     if result is None:
         raise HTTPException(status_code=404, detail="行程不存在")
+    if should_extract(last_seen):
+        task = asyncio.create_task(_extract_profile_bg(conversation_id))
+        _profile_tasks.add(task)
+        task.add_done_callback(_profile_tasks.discard)
     return result
 
 
