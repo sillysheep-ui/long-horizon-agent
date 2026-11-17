@@ -63,6 +63,8 @@ class Store:
             columns = {row["name"] for row in db.execute("PRAGMA table_info(trips)")}
             if "conversation_id" not in columns:
                 db.execute("ALTER TABLE trips ADD COLUMN conversation_id TEXT")
+            if "previous_json" not in columns:
+                db.execute("ALTER TABLE trips ADD COLUMN previous_json TEXT")
             job_columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
             if "revision" not in job_columns:
                 db.execute("ALTER TABLE jobs ADD COLUMN revision TEXT")
@@ -116,7 +118,8 @@ class Store:
             db.execute("UPDATE jobs SET status=?,error=?,updated_at=? WHERE id=?",
                        (status, error, _now(), job["id"]))
             if result is not None:
-                db.execute("UPDATE trips SET result_json=?,updated_at=? WHERE id=? AND version=?",
+                db.execute("UPDATE trips SET previous_json=result_json,result_json=?,updated_at=? "
+                           "WHERE id=? AND version=?",
                            (json.dumps(result, ensure_ascii=False), _now(), job["trip_id"], job["version"]))
         self.event(job["id"], status, {"message": error or "方案已完成"})
 
@@ -204,6 +207,20 @@ class Store:
         return {"conversation_id": conversation_id, "kind": kind, "duplicate": True,
                 "job_id": row["job_id"], "trip_id": row["trip_id"], "version": row["version"]}
 
+
+    def undo_last(self, conversation_id: str) -> dict[str, Any] | None:
+        """退回上一版：把上一版内容作为新版本恢复，版本号继续递增。"""
+        latest = self.latest_trip(conversation_id)
+        if latest is None:
+            return None
+        with self._connect() as db:
+            row = db.execute("SELECT previous_json FROM trips WHERE id=?", (latest["id"],)).fetchone()
+            if row is None or not row["previous_json"]:
+                return None
+            db.execute("UPDATE trips SET version=version+1,result_json=?,previous_json=NULL,updated_at=? "
+                       "WHERE id=?", (row["previous_json"], _now(), latest["id"]))
+        return {"trip_id": latest["id"], "version": latest["version"] + 1}
+
     def latest_result(self, conversation_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
             row = db.execute("SELECT result_json FROM trips WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1",
@@ -226,6 +243,20 @@ class Store:
         prior = self.latest_result(conversation_id) if latest is not None else None
         if prior is not None and prior.get("status") == "needs_clarification" and intent["intent"] != "new_trip":
             intent = {"intent": "revise_trip", "reason": "上一轮在等用户补充信息", "target_days": []}
+        action = intent.get("action") or "modify"
+        if action in ("cancel", "undo"):
+            message = self.append_message(conversation_id, "user", content)
+            if latest is None:
+                answer, kind = "现在还没有行程，直接告诉我想去哪、玩几天就行。", "chat_reply"
+            elif action == "undo":
+                undone = self.undo_last(conversation_id)
+                answer = "已恢复到上一版行程。" if undone else "已经是第一版行程了，没有更早的版本可退回。"
+                kind = "undo" if undone else "answer"
+            else:
+                answer, kind = "好的，先不安排了。需要时把新的想法告诉我就行。", "cancelled"
+            reply = self.append_message(conversation_id, "assistant", answer)
+            return {"conversation_id": conversation_id, "kind": kind, "intent": intent,
+                    "message": message, "reply": reply}
         if intent["intent"] == "unclear":
             message = self.append_message(conversation_id, "user", content)
             reply = self.append_message(conversation_id, "assistant",

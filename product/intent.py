@@ -28,6 +28,14 @@ ASK_PATTERNS = (
     r"怎么走", r"为什么", r"哪(里|个|天)", r"是不是", r"有没有", r"推荐", r"介绍", r"是什么",
 )
 
+CANCEL_PATTERNS = (
+    r"^算了", r"不去了", r"不想去了", r"先不去", r"取消(这次|行程|安排)", r"退掉", r"不用了",
+)
+
+UNDO_PATTERNS = (
+    r"退回上一版", r"恢复上一版", r"回到上一版", r"撤销", r"回退", r"上一个版本", r"上一版",
+)
+
 CHAT_PATTERNS = (
     r"^(你好|您好|在吗|你在吗|谢谢|好的|好|收到|辛苦了|哈哈+|嗯+|随便|都行|看着办|可以|不错|厉害|牛)\W*$",
 )
@@ -43,23 +51,37 @@ def classify_intent(content: str, has_trip: bool) -> dict[str, Any]:
     """返回 {intent, reason, target_days}；没有历史行程时一律视为新行程。"""
     text = (content or "").strip()
     if not has_trip:
-        return {"intent": "new_trip", "reason": "会话里还没有行程", "target_days": []}
+        return {"intent": "new_trip", "reason": "会话里还没有行程", "target_days": [],
+                "scope": "global", "action": "modify"}
     if not text:
-        return {"intent": "chat", "reason": "空消息", "target_days": []}
+        return {"intent": "chat", "reason": "空消息", "target_days": [], "scope": "global", "action": "modify"}
     days = parse_target_days(text, total_days=30) or []
+    if _matches(UNDO_PATTERNS, text):
+        return {"intent": "revise_trip", "reason": "要退回上一版", "target_days": [],
+                "scope": "global", "action": "undo"}
+    if _matches(CANCEL_PATTERNS, text):
+        return {"intent": "revise_trip", "reason": "要取消行程", "target_days": [],
+                "scope": "global", "action": "cancel"}
     if _matches(CHAT_PATTERNS, text):
-        return {"intent": "chat", "reason": "寒暄或应和", "target_days": []}
+        return {"intent": "chat", "reason": "寒暄或应和", "target_days": [],
+                "scope": "global", "action": "modify"}
     if re.search(r"(换成去|改成去|改为去|目的地换成)", text):
-        return {"intent": "new_trip", "reason": "换了一个目的地", "target_days": []}
+        return {"intent": "new_trip", "reason": "换了一个目的地", "target_days": [],
+                "scope": "global", "action": "modify"}
     if _matches(NEW_TRIP_PATTERNS, text) and not _matches(MODIFY_VERBS, text):
-        return {"intent": "new_trip", "reason": "出现换目的地/重新规划的说法", "target_days": []}
+        return {"intent": "new_trip", "reason": "出现换目的地/重新规划的说法", "target_days": [],
+                "scope": "global", "action": "modify"}
     if _matches(ASK_PATTERNS, text) and not _matches(MODIFY_VERBS, text):
-        return {"intent": "ask", "reason": "在问行程本身的情况", "target_days": days}
+        return {"intent": "ask", "reason": "在问行程本身的情况", "target_days": days,
+                "scope": "targeted" if days else "global", "action": "modify"}
     if days and _matches(MODIFY_VERBS, text):
-        return {"intent": "revise_trip", "reason": "点名了要改的日期", "target_days": days}
+        return {"intent": "revise_trip", "reason": "点名了要改的日期", "target_days": days,
+                "scope": "targeted", "action": "modify"}
     if _matches(REVISE_PATTERNS, text):
-        return {"intent": "revise_trip", "reason": "出现调整行程的说法", "target_days": days}
-    return {"intent": "chat", "reason": "既不像改行程也不像提问", "target_days": []}
+        return {"intent": "revise_trip", "reason": "出现调整行程的说法", "target_days": days,
+                "scope": "targeted" if days else "global", "action": "modify"}
+    return {"intent": "chat", "reason": "既不像改行程也不像提问", "target_days": [],
+            "scope": "global", "action": "modify"}
 
 
 def describe_trip(result: dict[str, Any] | None, target_days: list[int] | None = None) -> str:
@@ -91,7 +113,10 @@ INTENT_SYSTEM_PROMPT = """你是旅行规划助手的意图分类器。用户已
 - chat：寒暄、感谢、与行程无关的话
 - unclear：信息不足，无法判断
 
-只输出 JSON：{"intent": "...", "confidence": 0.0-1.0, "target_days": [1,2], "reason": "一句话"}
+只输出 JSON：{"intent": "...", "action": "modify|cancel|undo", "confidence": 0.0-1.0,
+"target_days": [1,2], "reason": "一句话"}
+- action=cancel：用户要取消/不去了；action=undo：用户要退回上一版；其余 modify。
+- 需要改行程时，scope 由 target_days 决定：点了具体日期就是 targeted，否则 global。
 target_days 只放用户明确点到的日期，没有就给空数组。"""
 
 
@@ -115,7 +140,11 @@ async def classify_with_model(model: Any, content: str, has_trip: bool,
         except (TypeError, ValueError):
             confidence = 0.0
         days = [int(day) for day in data.get("target_days") or [] if str(day).isdigit()]
+        action = str(data.get("action") or "modify").strip()
+        if action not in ("modify", "cancel", "undo"):
+            action = "modify"
         return {"intent": intent, "confidence": round(confidence, 2), "target_days": days,
+                "scope": "targeted" if days else "global", "action": action,
                 "reason": "模型判断", "source": "model"}
     except Exception:  # noqa: BLE001 - 分类失败不能阻断会话
         fallback = classify_intent(content, has_trip)
