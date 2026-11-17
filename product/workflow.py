@@ -50,6 +50,7 @@ from product.trace import (
     _time_order_ok,
     _tool_spans,
 )
+from product.transit import add_transfers
 
 
 class AgentWorkflow:
@@ -382,6 +383,7 @@ class AgentWorkflow:
         else:
             cleaned_days = _finalize_days(cleaned_days, good, days, windows=windows, pace=pace,
                                           requested=constraints.get("requested_count"))
+        cleaned_days = add_transfers(cleaned_days)
         final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
         fabricated = _fabricated_costs(cleaned_days, evidence)
         dropped = max(0, raw_count - grounded_count)

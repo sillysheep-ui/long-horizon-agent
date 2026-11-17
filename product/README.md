@@ -118,6 +118,7 @@ python3 -m evaluation.revision_eval --profile api_only
 | `product/trace.py` | 执行轨迹 span 与派生指标 |
 | `product/memory.py` | 会话上文：预算内保留原文，超出后压缩早期消息 |
 | `product/profile.py` | 跨会话长期偏好：抽取、规则兜底、合并与注入 |
+| `product/transit.py` | 跨天衔接：估算前一晚到次日首站的时间并顺延 |
 | `product/orchestrator.py` | 兼容入口（只做转发） |
 | `product/coverage.py` / `product/revision.py` / `product/provenance.py` | 覆盖度、定向修改、来源标记 |
 
