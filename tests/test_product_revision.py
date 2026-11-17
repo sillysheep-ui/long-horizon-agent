@@ -242,6 +242,35 @@ def test_workflow_falls_back_when_no_day_named(tmp_path):
     assert result["status"] == "complete"
 
 
+def test_revision_payload_includes_history_and_target_current(tmp_path):
+    store = Store(str(tmp_path / "history.db"))
+    tools = FakeTools()
+    model = FakeModel()
+    workflow = AgentWorkflow(store, model, tools)
+    conversation = store.create_conversation("杭州周末")
+    cid = conversation["conversation_id"]
+
+    store.continue_conversation(cid, "从上海去杭州玩两天")
+    first_job = store.claim()
+    store.finish(first_job, asyncio.run(workflow.run(first_job)))
+    store.record_reply(first_job["id"], store.latest_result(cid))
+
+    store.continue_conversation(cid, "第二天换成安静的地方")
+    second_job = store.claim()
+    asyncio.run(workflow.run(second_job))
+
+    payload = model.answer_payloads[-1]
+    history = payload["history"]
+    # 上文用于理解指代：有用户原话和上一轮回复，但不含本轮这句话。
+    assert [item["role"] for item in history] == ["user", "assistant"]
+    assert "杭州" in history[0]["content"]
+    assert all("第二天换成安静的地方" not in item["content"] for item in history)
+    # 目标日当前安排：模型要知道第 2 天原来排了什么。
+    current = payload["target_days_current"]
+    assert [day["day"] for day in current] == [2]
+    assert current[0]["activities"]
+
+
 if __name__ == "__main__":
     unittest.main()
 

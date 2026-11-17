@@ -320,6 +320,17 @@ class Store:
                              "WHERE j.id=?", (job_id,)).fetchone()
         return row["conversation_id"] if row else None
 
+    def recent_messages(self, conversation_id: str, limit: int = 4,
+                        exclude_job: str | None = None) -> list[dict[str, Any]]:
+        """取会话里最近几条消息，用于给模型补对话上文（排除当前这条）。"""
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT role,content,job_id FROM messages WHERE conversation_id=? "
+                "ORDER BY id DESC LIMIT ?", (conversation_id, max(1, limit) + 1)).fetchall()
+        messages = [{"role": row["role"], "content": row["content"]}
+                    for row in reversed(rows) if not (exclude_job and row["job_id"] == exclude_job)]
+        return messages[-max(1, limit):]
+
     def record_reply(self, job_id: str, result: dict[str, Any] | None, error: str | None = None) -> None:
         conversation_id = self.conversation_of_job(job_id)
         if not conversation_id:

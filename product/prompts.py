@@ -54,6 +54,8 @@ ANSWER_SYSTEM_PROMPT = (
 TARGETED_ANSWER_SUFFIX = (
     " 本次只修改%s：只输出这些天的 days 条目，其他天不要输出。"
     " keep_days 是已经定稿、本次不动的日期：不要重复其中的地点，新安排要与它们的节奏和交通衔接。"
+    " target_days_current 是这些天当前的安排：先理解用户具体想改哪一点，用户满意的部分保留。"
+    " history 是最近几轮对话，用来理解“刚才那个”“再换一个”这类指代。"
 )
 
 
