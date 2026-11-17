@@ -76,6 +76,11 @@ class Store:
                 db.execute("ALTER TABLE jobs ADD COLUMN revision TEXT")
             if "dedupe_key" not in job_columns:
                 db.execute("ALTER TABLE jobs ADD COLUMN dedupe_key TEXT")
+            conversation_columns = {row["name"] for row in db.execute("PRAGMA table_info(conversations)")}
+            if "summary" not in conversation_columns:
+                db.execute("ALTER TABLE conversations ADD COLUMN summary TEXT")
+            if "summary_watermark" not in conversation_columns:
+                db.execute("ALTER TABLE conversations ADD COLUMN summary_watermark INTEGER NOT NULL DEFAULT 0")
             # 进程意外退出后允许任务重跑；工作流必须是只读工具调用。
             db.execute("UPDATE jobs SET status='queued', updated_at=? WHERE status='running'", (_now(),))
 
@@ -183,6 +188,25 @@ class Store:
             db.execute("INSERT INTO conversations(id,title,engine,created_at,updated_at) VALUES(?,?,?,?,?)",
                        (conversation_id, title[:60] or "新对话", engine, now, now))
         return {"conversation_id": conversation_id, "title": title[:60] or "新对话"}
+
+    def conversation_messages(self, conversation_id: str, limit: int = 200) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute("SELECT id,role,content,job_id FROM messages WHERE conversation_id=? "
+                              "ORDER BY id LIMIT ?", (conversation_id, max(1, limit))).fetchall()
+        return [dict(row) for row in rows]
+
+    def conversation_summary(self, conversation_id: str) -> dict[str, Any]:
+        with self._connect() as db:
+            row = db.execute("SELECT summary,summary_watermark FROM conversations WHERE id=?",
+                             (conversation_id,)).fetchone()
+        if row is None:
+            return {"summary": None, "watermark": 0}
+        return {"summary": row["summary"], "watermark": int(row["summary_watermark"] or 0)}
+
+    def set_conversation_summary(self, conversation_id: str, summary: str, watermark: int) -> None:
+        with self._connect() as db:
+            db.execute("UPDATE conversations SET summary=?,summary_watermark=?,updated_at=? WHERE id=?",
+                       (summary, int(watermark), _now(), conversation_id))
 
     def conversation(self, conversation_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
@@ -319,17 +343,6 @@ class Store:
             row = db.execute("SELECT t.conversation_id FROM jobs j JOIN trips t ON j.trip_id=t.id "
                              "WHERE j.id=?", (job_id,)).fetchone()
         return row["conversation_id"] if row else None
-
-    def recent_messages(self, conversation_id: str, limit: int = 4,
-                        exclude_job: str | None = None) -> list[dict[str, Any]]:
-        """取会话里最近几条消息，用于给模型补对话上文（排除当前这条）。"""
-        with self._connect() as db:
-            rows = db.execute(
-                "SELECT role,content,job_id FROM messages WHERE conversation_id=? "
-                "ORDER BY id DESC LIMIT ?", (conversation_id, max(1, limit) + 1)).fetchall()
-        messages = [{"role": row["role"], "content": row["content"]}
-                    for row in reversed(rows) if not (exclude_job and row["job_id"] == exclude_job)]
-        return messages[-max(1, limit):]
 
     def record_reply(self, job_id: str, result: dict[str, Any] | None, error: str | None = None) -> None:
         conversation_id = self.conversation_of_job(job_id)

@@ -6,6 +6,7 @@ from typing import Any
 
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
+from product.memory import build_history
 from product.model_gateway import ModelGateway, parse_json
 from product.pace import count_bounds, detect_pace, requested_count
 from product.planner import (
@@ -61,19 +62,17 @@ class AgentWorkflow:
                extra: dict[str, Any] | None = None) -> None:
         self.store.event(job["id"], "progress", {"stage": stage, "message": message, **(extra or {})})
 
-    def _recent_history(self, job: dict[str, Any], current_text: str, limit: int = 4) -> list[dict[str, str]]:
-        """取最近几条对话，帮助模型理解“刚才那个/再换一个”之类的指代。"""
+    async def _conversation_context(self, job: dict[str, Any], current_text: str,
+                                    calls: list[dict[str, Any]]) -> tuple[list[dict[str, str]], str | None]:
+        """取对话上文：预算内给全部原文，超出后给最近几条 + 早期摘要。"""
         conversation_id = self.store.conversation_of_job(job["id"])
-        if not conversation_id or not hasattr(self.store, "recent_messages"):
-            return []
-        messages = self.store.recent_messages(conversation_id, limit=limit, exclude_job=job["id"])
-        history: list[dict[str, str]] = []
-        for message in messages:
-            content = " ".join(str(message.get("content") or "").split())
-            if not content or content == current_text.strip():
-                continue
-            history.append({"role": message.get("role"), "content": content[:160]})
-        return history[-limit:]
+        if not conversation_id:
+            return [], None
+        context = await build_history(self.model, self.store, conversation_id,
+                                     exclude_job=job["id"], calls=calls)
+        current = current_text.strip()
+        messages = [message for message in context["messages"] if message["content"] != current]
+        return messages[-8:], context.get("summary")
 
     async def run(self, job: dict[str, Any]) -> dict[str, Any]:
         started = time.monotonic()
@@ -312,7 +311,10 @@ class AgentWorkflow:
                 answer_payload["target_days_current"] = compact_days(
                     [day for day in prior_days if int(day.get("day") or 0) in targets]
                 )
-                answer_payload["history"] = self._recent_history(job, revision_text)
+                history, summary = await self._conversation_context(job, revision_text, calls)
+                answer_payload["history"] = history
+                if summary:
+                    answer_payload["conversation_summary"] = summary
             answer_response = await self.model.complete("回答 Agent", answer_system,
                 json.dumps(answer_payload, ensure_ascii=False), max_tokens=3000)
             calls.append({k: answer_response[k] for k in ("role", "provider", "model")})

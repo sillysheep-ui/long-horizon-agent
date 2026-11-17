@@ -116,6 +116,7 @@ python3 -m evaluation.revision_eval --profile api_only
 | `product/tool_adapters.py` | 高德 POI（`tools/poi.py`）、网页搜索（`tools/web.py`） |
 | `product/postprocess.py` | 标题对证据、时间排布、每日收尾 |
 | `product/trace.py` | 执行轨迹 span 与派生指标 |
+| `product/memory.py` | 会话上文：预算内保留原文，超出后压缩早期消息 |
 | `product/orchestrator.py` | 兼容入口（只做转发） |
 | `product/coverage.py` / `product/revision.py` / `product/provenance.py` | 覆盖度、定向修改、来源标记 |
 
