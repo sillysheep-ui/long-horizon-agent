@@ -155,3 +155,7 @@ api_only 唯一没过的硬检查是 `hangzhou-2d` 的 `title_matches_evidence`�
 2. 价格、班次、营业时间仍没有权威数据源（高德 key 无效），`no_fabricated_cost` 只能查“有没有来源”，不能查“来源对不对”。
 3. 裁判对“追问”类用例不适用，已跳过打分。
 4. 训练侧的任务协议（`<tool_call>`/`<answer>`）与产品 JSON 协议不同，两套 harness 的比较要另建用例。
+
+## 完整规划
+
+数据集规模、可信度保障、运行矩阵与三个月路线见 `docs/EVAL_PLAN.md`。

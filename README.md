@@ -299,6 +299,7 @@ flowchart TD
 
 - 启动方式、会话接口与模型路由：`product/README.md`
 - 行程质量评测（152 条固定场景 + 结构检查 + 裁判打分）：`docs/PRODUCT_EVAL.md`
+- 完整评测规划（数据集、指标、可信度、节奏与门禁）：`docs/EVAL_PLAN.md`
 - Docker 部署：`docs/DEPLOY.md`（`docker compose up -d --build`）
 
 ```bash
