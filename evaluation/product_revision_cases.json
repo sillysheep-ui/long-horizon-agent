@@ -281,14 +281,17 @@
     ]
   },
   {
-    "id": "rev-chengdu-three-cities",
-    "query": "上海去成都玩两天",
-    "revision": "这两天还想去重庆和西安",
-    "target_days": [],
+    "id": "rev-chengdu-day2-luxury",
+    "query": "从上海去成都玩两天，预算1200",
+    "revision": "第二天住五星级酒店，总预算只有600",
+    "target_days": [
+      2
+    ],
     "expect": "clarify",
     "difficulty": "hard",
     "tags": [
-      "city-conflict"
+      "budget",
+      "day2"
     ]
   },
   {

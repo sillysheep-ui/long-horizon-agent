@@ -99,6 +99,13 @@ class AgentWorkflow:
             constraints["day_windows"] = windows
             days_count = len(prior_days)
             destinations = _as_list(constraints.get("destinations"), 4)
+            if budget_conflict(query, days_count):
+                stages.append(_span("intake", "stage", "failed", 0.0,
+                                    {"revision": True, "target_days": targets, "days": days_count,
+                                     "decision": "clarify"}, error_type="missed_budget"))
+                return finish("ok", status="needs_clarification",
+                              question="预算和住宿标准对不上，想先调整哪一项？",
+                              constraints=constraints, model_calls=calls, days=[], evidence=[])
             self._event(job, "intake", "沿用原需求，只重排%s" % describe_targets(targets))
             stages.append(_span("intake", "stage", "ok", 0.0,
                                 {"revision": True, "target_days": targets, "days": days_count,

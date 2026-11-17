@@ -1,5 +1,6 @@
 """同一接口连接本地 MLX 服务和外部兼容 API。"""
 
+import asyncio
 import json
 import os
 import re
@@ -47,28 +48,50 @@ class ModelGateway:
             if not base or not model or (name != "local" and not key):
                 continue
             try:
-                async with httpx.AsyncClient(timeout=httpx.Timeout(
-                        self.timeout_seconds, connect=min(5.0, self.timeout_seconds))) as client:
-                    body = {"model": model, "messages": [{"role": "system", "content": system},
-                            {"role": "user", "content": user}], "temperature": 0,
-                            "max_tokens": max_tokens}
-                    if name == "deepseek":
-                        body["reasoning_effort"] = "none"
-                        body["response_format"] = {"type": "json_object"}
-                    response = await client.post(base.rstrip("/") + "/chat/completions",
-                        headers={"Authorization": "Bearer " + key},
-                        json=body)
-                    response.raise_for_status()
-                    choice = response.json()["choices"][0]
-                    content = choice["message"]["content"]
-                    if choice.get("finish_reason") == "length":
-                        raise ValueError("模型输出超出长度限制")
-                    if not content or not content.strip():
-                        raise ValueError("模型返回空内容")
-                    return {"content": content, "provider": name, "model": model, "role": role}
+                return await self._call_with_retry(name, base, model, key, role, system, user, max_tokens)
             except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
                 failures.append(name + ": " + type(exc).__name__)
         raise ModelUnavailable("模型服务均不可用；请启动本地 MLX 或配置外部 API。" + ", ".join(failures))
+
+    async def _call_with_retry(self, name: str, base: str, model: str, key: str, role: str,
+                               system: str, user: str, max_tokens: int) -> dict[str, str]:
+        """429/5xx/读超时重试两次；模型输出问题（空内容、超长）不重试。"""
+        last: Exception | None = None
+        for attempt in range(3):
+            try:
+                return await self._call_once(name, base, model, key, role, system, user, max_tokens)
+            except httpx.HTTPStatusError as exc:
+                last = exc
+                if exc.response.status_code not in (429, 500, 502, 503, 504) or attempt == 2:
+                    raise
+            except (httpx.ReadError, httpx.ConnectError, httpx.ReadTimeout) as exc:
+                last = exc
+                if attempt == 2:
+                    raise
+            await asyncio.sleep(2.0 * (attempt + 1))
+        raise last if last else RuntimeError("unreachable")
+
+    async def _call_once(self, name: str, base: str, model: str, key: str, role: str,
+                         system: str, user: str, max_tokens: int) -> dict[str, str]:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(
+                self.timeout_seconds, connect=min(5.0, self.timeout_seconds))) as client:
+            body = {"model": model, "messages": [{"role": "system", "content": system},
+                    {"role": "user", "content": user}], "temperature": 0,
+                    "max_tokens": max_tokens}
+            if name == "deepseek":
+                body["reasoning_effort"] = "none"
+                body["response_format"] = {"type": "json_object"}
+            response = await client.post(base.rstrip("/") + "/chat/completions",
+                headers={"Authorization": "Bearer " + key},
+                json=body)
+            response.raise_for_status()
+            choice = response.json()["choices"][0]
+            content = choice["message"]["content"]
+            if choice.get("finish_reason") == "length":
+                raise ValueError("模型输出超出长度限制")
+            if not content or not content.strip():
+                raise ValueError("模型返回空内容")
+            return {"content": content, "provider": name, "model": model, "role": role}
 
 
 def parse_json(text: str) -> dict[str, Any]:
