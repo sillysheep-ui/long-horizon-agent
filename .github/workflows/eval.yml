@@ -1,0 +1,43 @@
+name: Eval smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      OPENAI_BASE_URL: https://api.deepseek.com
+      JUDGE_MODEL_ID: deepseek-v4-flash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip when no key
+        if: env.HAS_KEY == ''
+        run: echo "未配置 DEEPSEEK_API_KEY，跳过评测 smoke；接入方式见 docs/EVAL_PLAN.md。"
+      - uses: actions/setup-python@v5
+        if: env.HAS_KEY != ''
+        with:
+          python-version: "3.12"
+      - name: Install eval dependencies
+        if: env.HAS_KEY != ''
+        run: python -m pip install fastapi httpx python-dotenv openai
+      - name: Run dev smoke (12 cases)
+        if: env.HAS_KEY != ''
+        run: |
+          python -m evaluation.product_eval \
+            --profile api_only --split dev --limit 12 --seed 7 \
+            --judge-model deepseek-v4-flash \
+            --db /tmp/eval-smoke.db --out results/ci-eval \
+            --min-score 0.80
+      - name: Upload report
+        if: always() && env.HAS_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: results/ci-eval
+          if-no-files-found: ignore

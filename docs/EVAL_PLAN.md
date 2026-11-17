@@ -133,6 +133,8 @@ score = 0.6 × 硬检查通过率 + 0.4 × rubric 得分 − 0.2 × 编造惩罚
 ## 8. 上线门禁
 
 - CI：`pytest` 全绿、`ruff` 全绿、smoke 12 条全过。
+- 评测 smoke：`.github/workflows/eval.yml` 在每次 push / PR 上跑 dev 12 条，综合分低于 0.80 直接失败；报告作为 artifact 上传。
+- 启用方式：仓库 Settings → Secrets and variables → Actions 添加 `DEEPSEEK_API_KEY`；未配置时该 job 自动跳过，不阻塞合并。
 - 发布：test 110 综合分不低于基线 2pp、无可交付率下降、无新增编造；holdout 报告随版本归档。
 - 对外：必须写清模型档位、seed、裁判模型、样本量与区间。
 

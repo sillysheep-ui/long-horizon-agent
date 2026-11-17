@@ -171,6 +171,7 @@ async def main() -> None:
     parser.add_argument("--judge2-model", default="", help="第二裁判模型，用于估计裁判一致性")
     parser.add_argument("--judge-model", default="", help="覆盖 JUDGE_MODEL_ID")
     parser.add_argument("--seed", type=int, default=0, help="随机种子，写入报告便于复现")
+    parser.add_argument("--min-score", type=float, default=None, help="综合分低于该值时退出码 1")
     args = parser.parse_args()
     random.seed(args.seed)
 
@@ -217,6 +218,9 @@ async def main() -> None:
     write_report(target, args.profile, summary, records, args.split, health)
     print(json.dumps(summary, ensure_ascii=False))
     print(f"报告：{target/'report.md'}")
+    if args.min_score is not None and float(summary["score_mean"]) < args.min_score:
+        print(f"综合分 {summary['score_mean']} 低于阈值 {args.min_score}")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

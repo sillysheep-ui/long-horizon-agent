@@ -50,6 +50,14 @@ jobs:
             tests/test_stage_checks.py \
             tests/test_codex_task.py \
             tests/test_text_utils.py \
+            tests/test_product_geo.py \
+            tests/test_product_intent.py \
+            tests/test_product_intent_model.py \
+            tests/test_product_intent_scope.py \
+            tests/test_product_memory.py \
+            tests/test_product_profile.py \
+            tests/test_product_revision_idempotency.py \
+            tests/test_product_transit.py \
             tests/test_product_pace.py \
             tests/test_product_schedule.py \
             tests/test_examples.py \
