@@ -156,7 +156,8 @@ class Store:
             job["previous"] = json.loads(job.pop("result_json") or "null")
             return job
 
-    def finish(self, job: dict[str, Any], result: dict[str, Any] | None, error: str | None = None) -> None:
+    def finish(self, job: dict[str, Any], result: dict[str, Any] | None, error: str | None = None,
+               error_code: str | None = None, retryable: bool = False) -> None:
         status = "failed" if error else "completed"
         with self._connect() as db:
             db.execute("UPDATE jobs SET status=?,error=?,updated_at=? WHERE id=?",
@@ -165,7 +166,18 @@ class Store:
                 db.execute("UPDATE trips SET previous_json=result_json,result_json=?,updated_at=? "
                            "WHERE id=? AND version=?",
                            (json.dumps(result, ensure_ascii=False), _now(), job["trip_id"], job["version"]))
-        self.event(job["id"], status, {"message": error or "方案已完成"})
+        payload: dict[str, Any] = {"message": error or "方案已完成"}
+        if error:
+            payload.update({"code": error_code or "internal", "retryable": retryable})
+        self.event(job["id"], status, payload)
+
+    def requeue_stale(self, seconds: int = 900) -> int:
+        """执行超过 seconds 秒仍在 running 的任务，放回队列避免永远卡住。"""
+        cutoff = (datetime.now(UTC) - timedelta(seconds=seconds)).isoformat(timespec="seconds")
+        with self._connect() as db:
+            cur = db.execute("UPDATE jobs SET status='queued', updated_at=? "
+                             "WHERE status='running' AND updated_at<?", (_now(), cutoff))
+            return int(cur.rowcount or 0)
 
     def event(self, job_id: str, kind: str, payload: dict[str, Any]) -> None:
         with self._connect() as db:
@@ -304,9 +316,26 @@ class Store:
             return duplicate
         intent = dict(intent) if intent else classify_intent(content, has_trip=latest is not None)
         prior = self.latest_result(conversation_id) if latest is not None else None
+        action = intent.get("action") or "modify"
+        last_status = None
+        if latest is not None:
+            jobs = (self.trip(latest["id"]) or {}).get("jobs") or []
+            last_status = jobs[0]["status"] if jobs else None
+        retry_failed = (latest is not None and prior is None and last_status == "failed"
+                        and action not in ("cancel", "undo"))
+        if retry_failed:
+            fresh = classify_intent(content, has_trip=False)
+            if fresh["intent"] in ("ask", "chat"):
+                message = self.append_message(conversation_id, "user", content)
+                answer = ("还没有可以回答的行程，先告诉我想去哪、玩几天吧。"
+                          if fresh["intent"] == "ask"
+                          else "上一个行程没跑成功，直接再说一次想去哪、玩几天就行。")
+                reply = self.append_message(conversation_id, "assistant", answer)
+                return {"conversation_id": conversation_id, "kind": "answer", "intent": fresh,
+                        "message": message, "reply": reply}
+            intent = fresh
         if prior is not None and prior.get("status") == "needs_clarification" and intent["intent"] != "new_trip":
             intent = {"intent": "revise_trip", "reason": "上一轮在等用户补充信息", "target_days": []}
-        action = intent.get("action") or "modify"
         if action in ("cancel", "undo"):
             message = self.append_message(conversation_id, "user", content)
             if latest is None:
@@ -347,7 +376,7 @@ class Store:
             reply = self.append_message(conversation_id, "assistant", answer)
             return {"conversation_id": conversation_id, "kind": "answer", "intent": intent,
                     "message": message, "reply": reply}
-        if latest is None or intent["intent"] == "new_trip":
+        if latest is None or (intent["intent"] == "new_trip" and not retry_failed):
             created = self.create_trip(content, conversation_id=conversation_id)
             kind = "trip"
         else:
@@ -372,7 +401,10 @@ class Store:
         if not conversation_id:
             return
         if error:
-            content = "执行失败：" + error
+            friendly_starts = ("连不上模型服务", "模型服务暂时不可用", "这次规划超时", "这次内容太长",
+                               "这次行程没排明白", "这次的需求我没理解清楚", "服务出了点问题",
+                               "模型服务响应太慢", "模型服务有点忙")
+            content = error if error.startswith(friendly_starts) else "执行失败：" + error
         elif not result:
             content = "没有拿到结果，请重试。"
         elif result.get("status") == "needs_clarification":

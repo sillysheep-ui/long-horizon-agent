@@ -3,17 +3,21 @@
 import asyncio
 import json
 import logging
+import os
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from product.errors import friendly_error
 from product.intent import route_intent
 from product.model_gateway import ModelGateway
 from product.orchestrator import AgentWorkflow
@@ -37,21 +41,44 @@ async def _extract_profile_bg(conversation_id: str) -> None:
         logger.exception("用户偏好抽取失败: %s", conversation_id)
 
 
+JOB_TIMEOUT_SECONDS = float(os.getenv("JOB_TIMEOUT_SECONDS", "300"))
+
+
+async def _execute_job(job: dict) -> None:
+    """执行单个任务；任何异常都转成用户能看懂的话，绝不让 worker 退出。"""
+    try:
+        result = await asyncio.wait_for(workflow.run(job), timeout=JOB_TIMEOUT_SECONDS)
+        await asyncio.to_thread(store.finish, job, result)
+        await asyncio.to_thread(store.record_reply, job["id"], result)
+    except Exception as exc:
+        info = friendly_error(exc)
+        logger.exception("任务执行失败: %s (%s)", job["id"], info["code"])
+        try:
+            await asyncio.to_thread(store.finish, job, None, str(info["message"]),
+                                    str(info["code"]), bool(info["retryable"]))
+            await asyncio.to_thread(store.record_reply, job["id"], None, str(info["message"]))
+        except Exception:
+            logger.exception("记录失败状态也失败了: %s", job["id"])
+
+
 async def _worker() -> None:
+    last_sweep = 0.0
     while True:
+        now = time.monotonic()
+        if now - last_sweep > 60:
+            last_sweep = now
+            try:
+                stale = await asyncio.to_thread(store.requeue_stale, 900)
+                if stale:
+                    logger.warning("把 %s 个超时任务放回队列", stale)
+            except Exception:
+                logger.exception("清理僵死任务失败")
         job = await asyncio.to_thread(store.claim)
         if job is None:
             await asyncio.sleep(0.5)
             continue
         store.event(job["id"], "running", {"message": "开始执行"})
-        try:
-            result = await workflow.run(job)
-            await asyncio.to_thread(store.finish, job, result)
-            await asyncio.to_thread(store.record_reply, job["id"], result)
-        except Exception as exc:
-            logger.exception("任务执行失败: %s", job["id"])
-            await asyncio.to_thread(store.finish, job, None, str(exc)[:300])
-            await asyncio.to_thread(store.record_reply, job["id"], None, str(exc)[:300])
+        await _execute_job(job)
 
 
 @asynccontextmanager
@@ -68,6 +95,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="旅行规划 Agent", lifespan=lifespan)
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    logger.info("请求格式不对: %s", exc.errors()[:2])
+    return JSONResponse(status_code=422, content={"detail": "请求格式不对，请检查输入后再试。"})
+
+
+@app.exception_handler(Exception)
+async def _unhandled_handler(_request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("接口未处理异常: %s", exc)
+    return JSONResponse(status_code=500, content={"detail": "服务出了点问题，请稍后重试。"})
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["GET", "POST"], allow_headers=["*"], allow_credentials=False)
 

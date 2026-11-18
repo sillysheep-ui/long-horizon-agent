@@ -11,6 +11,9 @@ a{color:#2d6e51;text-decoration:underline;text-underline-offset:2px}
 .bubble.user{align-self:flex-end;background:#214c3e;color:#fff;border-bottom-right-radius:4px}
 .bubble.assistant{align-self:flex-start;background:#f4f7f2;color:#38503f;border:1px solid #e8eee5;border-bottom-left-radius:4px}
 .bubble.typing{display:flex;align-items:center;gap:7px;color:#7d9280}
+.bubble.failed{background:#fdf4f2;border-color:#f2d9d3;color:#8a4a3d}
+.retry-btn{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:4px 10px;border:1px solid #e0b8ae;border-radius:999px;background:#fff;color:#a4553f;font-size:12px;cursor:pointer}
+.retry-btn:disabled{opacity:.5;cursor:not-allowed}
 .chat-composer{display:flex;gap:9px;border-top:1px solid #edf0eb;padding-top:14px}
 .chat-composer input{flex:1;border:1px solid #e0e9df;border-radius:8px;padding:11px 13px;outline:0;font-size:12px}
 .chat-composer button{border:0;border-radius:8px;background:#214c3e;color:#fff;width:42px;display:grid;place-items:center}

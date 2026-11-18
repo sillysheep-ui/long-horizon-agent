@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Check, ChevronRight, Clock3, Compass, Database, LoaderCircle, MapPin, Plus, Send, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Check, ChevronRight, Clock3, Compass, Database, LoaderCircle, MapPin, Plus, RotateCcw, Send, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { createConversation, getConversation, getEvents, getTrip, sendMessage } from './api'
 import type { Conversation, Evidence, JobEvent, Trip } from './types'
 
@@ -7,6 +7,7 @@ const STORAGE_KEY = 'travel-agent-conversations'
 const examples = ['从上海出发，周末去杭州玩两天，喜欢自然风光和咖啡馆，预算 1500 元', '北京出发去苏州 3 天，想看园林和古镇，行程不要太赶', '带父母去成都玩 4 天，偏好美食和轻松的景点']
 const stageNames: Record<string, string> = { intake: '理解需求', planning: '拆解行程', research: '查询地点', verification: '核对证据', answer: '生成方案' }
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const ERROR_PREFIXES = ['连不上模型服务', '模型服务暂时不可用', '这次规划超时', '这次内容太长', '这次行程没排明白', '这次的需求我没理解清楚', '服务出了点问题']
 
 type SavedConversation = { id: string; title: string }
 
@@ -77,13 +78,17 @@ function App() {
   async function submit() {
     const text = input.trim()
     if (text.length < 2 || busy) return
+    setInput('')
+    await sendText(text)
+  }
+
+  async function sendText(text: string) {
     const rid = ++requestId.current
     setBusy(true)
     setError('')
     try {
       const cid = conversation?.id ?? (await createConversation()).conversation_id
       const created = await sendMessage(cid, text)
-      setInput('')
       let conv = await getConversation(cid)
       if (rid !== requestId.current) return
       setConversation(conv)
@@ -143,7 +148,14 @@ function App() {
 
         {conversation && <section className="chat">
           <div className="chat-log">
-            {conversation.messages.map(message => <div key={message.id} className={`bubble ${message.role}`}>{message.content}</div>)}
+            {conversation.messages.map((message, index) => {
+              const failed = message.role === 'assistant' && ERROR_PREFIXES.some(prefix => message.content.startsWith(prefix))
+              const previous = failed ? conversation.messages.slice(0, index).reverse().find(item => item.role === 'user') : undefined
+              return <div key={message.id} className={`bubble ${message.role}${failed ? ' failed' : ''}`}>
+                {message.content}
+                {failed && previous && <button className="retry-btn" disabled={busy} onClick={() => void sendText(previous.content)}><RotateCcw size={13}/> 重试</button>}
+              </div>
+            })}
             {busy && <div className="bubble assistant typing"><LoaderCircle className="spin" size={14}/> {lastStage ? stageNames[lastStage] || lastStage : '正在规划'}…</div>}
             <div ref={chatEnd}/>
           </div>
