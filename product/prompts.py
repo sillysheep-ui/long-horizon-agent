@@ -8,6 +8,7 @@ INTAKE_SYSTEM_PROMPT = (
     "你负责提取旅行需求。只输出 JSON 对象，字段：departure_city 字符串、destinations 字符串数组、"
     "days 1-7 整数、day_span 字符串（half 或 full）、budget 字符串、named_places 字符串数组、preferences 字符串数组、"
     "missing_required 字符串数组、conflicts 字符串数组。"
+    "用户可能用英文或中英混写，也要正常提取（城市保留原文写法，如 Hangzhou）。"
     "未给出的值用空字符串或空数组；绝不猜测城市。用户已在某地出差/停留、或只说了城市名加天数，该城市也算 destinations。"
     "destinations 只放能订票到达的城市或地区（如 杭州、苏州、千岛湖）；"
     "named_places 只放用户原话里点名的具体地点（西湖、灵隐寺、迪士尼），必须逐字照抄，没点名就给空数组；"

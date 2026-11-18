@@ -338,6 +338,15 @@ class Store:
                            (content[:30], _now(), conversation_id))
             return {"conversation_id": conversation_id, "kind": "answer", "intent": intent,
                     "message": message, "reply": reply}
+        if latest is None and intent["intent"] in ("ask", "chat"):
+            message = self.append_message(conversation_id, "user", content)
+            if intent["intent"] == "ask":
+                answer = "还没有可以回答的行程，先告诉我想去哪、玩几天吧。"
+            else:
+                answer = "你好，我是行程规划助手。告诉我想去哪、玩几天，我来帮你排。"
+            reply = self.append_message(conversation_id, "assistant", answer)
+            return {"conversation_id": conversation_id, "kind": "answer", "intent": intent,
+                    "message": message, "reply": reply}
         if latest is None or intent["intent"] == "new_trip":
             created = self.create_trip(content, conversation_id=conversation_id)
             kind = "trip"

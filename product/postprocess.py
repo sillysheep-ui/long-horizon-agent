@@ -248,6 +248,27 @@ def budget_conflict(query: str, days: int) -> bool:
     return amount / max(1, days) < 600
 
 
+LATIN_CITY = re.compile(r"\b(?:in|to|at)\s+([A-Z][A-Za-z]{2,})")
+LATIN_DAYS = re.compile(r"\b(\d+)\s*day", re.IGNORECASE)
+LATIN_BUDGET = re.compile(r"\bbudget\s*[:：]?\s*(\d{3,6})", re.IGNORECASE)
+
+
+def latin_hints(text: str) -> dict[str, Any]:
+    """英文请求的兜底：从 “3 days in Hangzhou, budget 1000” 里补出关键字段。"""
+    value = str(text or "")
+    hints: dict[str, Any] = {}
+    match = LATIN_CITY.search(value)
+    if match:
+        hints["destinations"] = [match.group(1)]
+    match = LATIN_DAYS.search(value)
+    if match:
+        hints["days"] = int(match.group(1))
+    match = LATIN_BUDGET.search(value)
+    if match:
+        hints["budget"] = match.group(1)
+    return hints
+
+
 BUDGET_UPDATE = re.compile(
     r"预算[^。；;\n]{0,10}?([0-9]{3,6}|[零一二三四五六七八九十百千两]{2,8})\s*(?:元|块|以内|左右)?")
 ADD_DAYS = re.compile(r"(?:再|多|加)\s*([一二三四五六七八九两]|\d)\s*天")

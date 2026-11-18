@@ -6,6 +6,7 @@ from typing import Any
 
 from inference.tool_dag import ToolDAGScheduler
 from product.coverage import assess_days, build_repair_plan
+from product.destinations import unknown_destinations
 from product.memory import build_history
 from product.model_gateway import ModelGateway, parse_json
 from product.pace import count_bounds, detect_pace, requested_count
@@ -26,6 +27,7 @@ from product.postprocess import (
     clean_named_places,
     day_hours,
     detect_day_windows,
+    latin_hints,
     match_activity,
     update_constraints,
 )
@@ -152,10 +154,26 @@ class AgentWorkflow:
             intake = await self.model.complete("需求 Agent", intake_system, intake_query, max_tokens=500)
             calls.append({k: intake[k] for k in ("role", "provider", "model")})
             constraints = parse_json(intake["content"])
+            hints = latin_hints(intake_query)
+            if not _as_list(constraints.get("destinations"), 4) and hints.get("destinations"):
+                constraints["destinations"] = hints["destinations"]
+            if not constraints.get("days") and hints.get("days"):
+                constraints["days"] = hints["days"]
+            if not constraints.get("budget") and hints.get("budget"):
+                constraints["budget"] = hints["budget"]
             constraints["named_places"] = clean_named_places(
                 constraints.get("named_places"), intake_query)
             destinations = _as_list(constraints.get("destinations"), 4)
-            declared = _declares_duration(intake_query)
+            declared = _declares_duration(intake_query) or bool(hints.get("days"))
+            unknown = unknown_destinations(destinations) if destinations else []
+            if destinations and len(unknown) == len(destinations):
+                stages.append(_span("intake", "stage", "failed",
+                                    (time.monotonic() - intake_started) * 1000,
+                                    {"cities": destinations, "unknown": unknown,
+                                     "decision": "clarify"}, error_type="wrong_city"))
+                return finish("ok", status="needs_clarification",
+                              question="没查到「%s」这个地方，是想去别的城市吗？告诉我城市名，或者它在哪个省。" % unknown[0],
+                              constraints=constraints, model_calls=calls, days=[], evidence=[])
             intake_attributes = {"days": constraints.get("days"), "cities": destinations,
                                  "days_declared": declared}
             if not destinations:

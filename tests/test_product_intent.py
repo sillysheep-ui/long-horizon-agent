@@ -61,3 +61,10 @@ class IdempotencyTests(unittest.TestCase):
         with store._connect() as db:
             count = db.execute("SELECT COUNT(*) AS n FROM jobs").fetchone()["n"]
         self.assertEqual(count, 1)
+
+
+def test_greeting_without_trip_is_chat():
+    assert classify_intent("你好", has_trip=False)["intent"] == "chat"
+    assert classify_intent("谢谢", has_trip=False)["intent"] == "chat"
+    assert classify_intent("门票多少钱", has_trip=False)["intent"] == "ask"
+    assert classify_intent("杭州", has_trip=False)["intent"] == "new_trip"

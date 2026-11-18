@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from product.orchestrator import AgentWorkflow, _finalize_days
 from product.planner import queries_for_day
-from product.postprocess import update_constraints
+from product.postprocess import latin_hints, update_constraints
 from product.revision import (
     compact_days,
     day_of_evidence,
@@ -349,3 +349,9 @@ def test_update_constraints_detects_pace_change():
     assert update_constraints({"pace": "normal"}, "整体放慢一点") == {"pace": "relaxed"}
     assert update_constraints({"pace": "relaxed"}, "还是想紧凑些") == {"pace": "packed"}
     assert update_constraints({"pace": "relaxed"}, "慢慢逛就好") == {}
+
+
+def test_latin_hints_extracts_english_fields():
+    assert latin_hints("3 days in Hangzhou with kids, budget 1000") == {
+        "destinations": ["Hangzhou"], "days": 3, "budget": "1000"}
+    assert latin_hints("去杭州玩两天") == {}

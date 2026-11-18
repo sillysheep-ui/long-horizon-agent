@@ -47,14 +47,24 @@ def _matches(patterns: tuple[str, ...], text: str) -> bool:
     return any(re.search(pattern, text) for pattern in patterns)
 
 
+QUESTION_PATTERN = re.compile(
+    r"(吗|呢|多久|多远|远不远|近不近|怎么去|怎么走|多少钱|贵不贵|累不累|值得|好玩吗|几点|开门|关门|营业)")
+
+
 def classify_intent(content: str, has_trip: bool) -> dict[str, Any]:
     """返回 {intent, reason, target_days}；没有历史行程时一律视为新行程。"""
     text = (content or "").strip()
-    if not has_trip:
-        return {"intent": "new_trip", "reason": "会话里还没有行程", "target_days": [],
-                "scope": "global", "action": "modify"}
     if not text:
         return {"intent": "chat", "reason": "空消息", "target_days": [], "scope": "global", "action": "modify"}
+    if _matches(CHAT_PATTERNS, text):
+        return {"intent": "chat", "reason": "寒暄或应和", "target_days": [],
+                "scope": "global", "action": "modify"}
+    if not has_trip:
+        if _matches(ASK_PATTERNS, text) and not _matches(MODIFY_VERBS, text):
+            return {"intent": "ask", "reason": "在问行程本身的情况", "target_days": [],
+                    "scope": "global", "action": "modify"}
+        return {"intent": "new_trip", "reason": "会话里还没有行程", "target_days": [],
+                "scope": "global", "action": "modify"}
     days = parse_target_days(text, total_days=30) or []
     if _matches(UNDO_PATTERNS, text):
         return {"intent": "revise_trip", "reason": "要退回上一版", "target_days": [],
@@ -73,6 +83,10 @@ def classify_intent(content: str, has_trip: bool) -> dict[str, Any]:
                 "scope": "global", "action": "modify"}
     if _matches(ASK_PATTERNS, text) and not _matches(MODIFY_VERBS, text):
         return {"intent": "ask", "reason": "在问行程本身的情况", "target_days": days,
+                "scope": "targeted" if days else "global", "action": "modify"}
+    if QUESTION_PATTERN.search(text) and not _matches(MODIFY_VERBS, text) \
+            and not re.search(r"(换成|改成|改为|加|去掉|删|取消|撤销)", text):
+        return {"intent": "ask", "reason": "在问行程细节", "target_days": days,
                 "scope": "targeted" if days else "global", "action": "modify"}
     if days and _matches(MODIFY_VERBS, text):
         return {"intent": "revise_trip", "reason": "点名了要改的日期", "target_days": days,
