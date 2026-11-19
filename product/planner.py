@@ -17,7 +17,9 @@ PLANNER_SYSTEM_PROMPT = (
     "3) 同一天尽量覆盖不同类型，同一地点只查一次；4) 地点必须位于对应城市；"
     "5) 不要编造价格、班次或经纬度；6) constraints.named_places 里的地点必须出现在某天的 poi_queries 里，优先安排在前几天；"
     "7) constraints.requested_count 为 N 时，每天至少准备 N+1 个 poi_queries 作为备选；"
-    "半天（day_windows 小于 7 小时）且没有点名数量时，每天最多 2 个 poi_queries。"
+    "半天（day_windows 小于 7 小时）且没有点名数量时，每天最多 2 个 poi_queries；"
+    "8) constraints.anchor 为 food 时，每天至少一个 poi_query 写成具体餐馆、小吃街或美食街（如“奎元馆”“河坊街小吃”），"
+    "景点查询围绕这些餐馆展开；为 stay 时至少一个查询写住宿区域或酒店（如“西湖边民宿区”“灵隐附近酒店”），活动围绕它安排。"
     "若出现 revision 字段，只重写 revision.days 这些天的 poi_queries 以体现修改意见；其他天原样照抄 previous_plan。"
 )
 

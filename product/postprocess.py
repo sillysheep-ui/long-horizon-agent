@@ -210,6 +210,43 @@ def detect_day_windows(*texts: Any, days: int = 1) -> list[dict[str, Any]]:
     return windows
 
 
+_MEAL_TYPES = ("breakfast", "lunch", "dinner", "snack")
+
+
+def clean_meals(meals: Any, evidence: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """校验餐饮槽位：名字必须落在证据里，时间合法，最多三条。"""
+    result = []
+    for meal in meals[:3] if isinstance(meals, list) else []:
+        if not isinstance(meal, dict):
+            continue
+        evidence_id = str(meal.get("evidence_id") or "").strip()
+        source = (evidence or {}).get(evidence_id) or {}
+        names = [str(item.get("name") or "") for item in source.get("items", []) if item.get("name")]
+        if not evidence_id or not names:
+            continue
+        title = str(meal.get("title") or "").strip()[:40]
+        if title and not title_matches(title, names):
+            title = ""
+        title = title or clean_place_name(names[0])
+        if not title:
+            continue
+        start = str(meal.get("start") or "").strip()
+        if not _TIME_PATTERN.match(start):
+            start = "12:30"
+        kind = str(meal.get("type") or "meal").strip().lower()
+        result.append({"type": kind if kind in _MEAL_TYPES else "meal",
+                       "title": title, "start": start, "evidence_id": evidence_id})
+    return result
+
+
+def clean_lodging(area: Any) -> str:
+    """住宿区域只保留一个短名；没有就返回空字符串。"""
+    text = str(area or "").strip()
+    if not text or text in ("未核实", "无", "None"):
+        return ""
+    return text[:40]
+
+
 def clean_named_places(values: Any, text: str, limit: int = 6) -> list[str]:
     """只保留用户原话里逐字出现的地点名，模型编的删掉。"""
     if not isinstance(values, list):
@@ -373,8 +410,13 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                         break
                 if len(activities) >= floor:
                     break
-        result.append({"day": planned["day"], "city": day.get("city") or planned.get("city"),
-                       "activities": _schedule_day(activities, hours)[:high]})
+        entry = {"day": planned["day"], "city": day.get("city") or planned.get("city"),
+                 "activities": _schedule_day(activities, hours)[:high]}
+        if day.get("meals"):
+            entry["meals"] = day["meals"]
+        if day.get("lodging_area"):
+            entry["lodging_area"] = day["lodging_area"]
+        result.append(entry)
     result.extend(kept)
     result.sort(key=lambda item: int(item.get("day") or 0))
     return result

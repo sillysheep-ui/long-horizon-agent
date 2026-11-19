@@ -10,7 +10,7 @@
 
 ## 第一层：确定性检查（不花模型调用）
 
-`evaluation/product_checks.py` 对每条行程做 16 项检查，全部来自结构化字段。其中 `density`、`day_load`、`activity_length`、`free_time` 按两层信息判断：① 每天可用时长 `constraints.day_windows`（半天约 6 小时、大半天约 8 小时、全天约 10 小时；用户点名某天则覆盖那天）；② 用户节奏（`product/pace.py` 的 relaxed/normal/packed，从 query 关键词识别）。节奏只管“每件事干多久”：relaxed 每个活动 2–3.5 小时、packed 1–1.5 小时，活动数量由可用时长与活动时长共同决定（半天窗口最多 2 个）：
+`evaluation/product_checks.py` 对每条行程做 16 项检查（行程带 `meals` 时再加 1 项 `meal_grounded`），全部来自结构化字段。其中 `density`、`day_load`、`activity_length`、`free_time` 按两层信息判断：① 每天可用时长 `constraints.day_windows`（半天约 6 小时、大半天约 8 小时、全天约 10 小时；用户点名某天则覆盖那天）；② 用户节奏（`product/pace.py` 的 relaxed/normal/packed，从 query 关键词识别）。节奏只管“每件事干多久”：relaxed 每个活动 2–3.5 小时、packed 1–1.5 小时，活动数量由可用时长与活动时长共同决定（半天窗口最多 2 个）：
 
 | 检查 | 含义 |
 |---|---|
@@ -30,6 +30,7 @@
 | `city_coverage` | 每天的城市都在用户要求的城市里（`杭州` 与 `杭州市` 等价） |
 | `title_matches_evidence` | 活动标题能在对应证据的地点名里找到 |
 | `no_fabricated_cost` | 活动里出现的数字（票价等）必须能在证据原文里找到 |
+| `meal_grounded` | 餐饮槽位的名字能对上 ok 证据的地点名（仅行程带 `meals` 时检查） |
 
 这些检查便宜、稳定、可回归，适合放进 CI；`no_fabricated_cost` 是纯程序化的“编造探测器”，也是 RL 奖励里最不该被 hack 的一项。
 
@@ -56,7 +57,7 @@ score = 0.6 × 硬检查通过率 + 0.4 × rubric − 0.2 × 是否编造   （�
 
 一条结果同时满足以下三条才算**可交付**：
 
-1. 16 项确定性检查全部通过；
+1. 16 项确定性检查全部通过（有餐饮槽位时再加 `meal_grounded`）；
 2. rubric ≥ 0.7（10 条里至少对 7 条）；
 3. 没有编造数字。
 

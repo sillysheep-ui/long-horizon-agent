@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from inference.tool_dag import ToolDAGScheduler
+from product.anchor import detect_anchor
 from product.coverage import assess_days, build_repair_plan
 from product.destinations import unknown_destinations
 from product.memory import build_history
@@ -24,6 +25,8 @@ from product.postprocess import (
     _finalize_days,
     budget_conflict,
     cities_fit_days,
+    clean_lodging,
+    clean_meals,
     clean_named_places,
     day_hours,
     detect_day_windows,
@@ -115,6 +118,9 @@ class AgentWorkflow:
         if targets:
             constraints = dict(prior["constraints"])
             constraints["day_windows"] = windows
+            revised_anchor = detect_anchor(revision_text)
+            if revised_anchor["reason"] != "default":
+                constraints["anchor"] = revised_anchor["anchor"]
             days_count = len(prior_days)
             changes = update_constraints(constraints, revision_text)
             if changes:
@@ -191,6 +197,11 @@ class AgentWorkflow:
             constraints["day_windows"] = windows
             constraints["requested_count"] = requested_count(intake_query, revision_text)
             constraints["pace"] = detect_pace(intake_query, revision_text)
+            anchor = detect_anchor(intake_query, revision_text)
+            constraints["anchor"] = anchor["anchor"]
+            if anchor["anchor"] != "sight":
+                self._event(job, "intake", "行程锚定：%s" % (
+                    "饮食优先" if anchor["anchor"] == "food" else "住宿优先"))
             conflicts = _as_list(constraints.get("conflicts"), 3)
             if not declared:
                 stages.append(_span("intake", "stage", "failed",
@@ -363,6 +374,7 @@ class AgentWorkflow:
                         for e in good for item in e.get("items", [])
                         if item.get("name") and item.get("coordinates")}
         cleaned_days = []
+        evidence_by_id = {e["id"]: e for e in evidence}
         seen_titles = set()
         raw_count = 0
         grounded_count = 0
@@ -381,10 +393,18 @@ class AgentWorkflow:
                 matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1],
                                            "coordinates": valid_coords.get((matched[0], matched[1]))})
             hours_for_day = day_hours(windows, day.get("day"))
-            cleaned_days.append({"day": day.get("day"), "city": day.get("city"),
-                                 "activities": _clean_activities(
-                                     matched_activities, limit=count_bounds(hours_for_day, pace, constraints.get("requested_count"))[1],
-                                     evidence={e["id"]: e for e in evidence})})
+            entry = {"day": day.get("day"), "city": day.get("city"),
+                     "activities": _clean_activities(
+                         matched_activities,
+                         limit=count_bounds(hours_for_day, pace, constraints.get("requested_count"))[1],
+                         evidence=evidence_by_id)}
+            meals = clean_meals(day.get("meals"), evidence_by_id)
+            if meals:
+                entry["meals"] = meals
+            lodging = clean_lodging(day.get("lodging_area"))
+            if lodging:
+                entry["lodging_area"] = lodging
+            cleaned_days.append(entry)
         if not any(d["activities"] for d in cleaned_days):
             answer_failed = True
             cleaned_days = []

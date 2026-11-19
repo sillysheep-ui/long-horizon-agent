@@ -49,6 +49,8 @@ def looks_like_place(name: str, keyword: str, city: str) -> bool:
     text = str(name or "")
     if any(token in text for token in ("的", "我", "被", "了", "～", "!")):
         return False
+    if text[:1].isdigit():  # “1日游”“2天1夜”这类是行程标题，不是地点名
+        return False
     if len(text) <= 8:
         return True
     if keyword and keyword in text and len(text) <= len(keyword) + 8:

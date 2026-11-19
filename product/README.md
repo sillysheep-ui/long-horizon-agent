@@ -124,6 +124,18 @@ python3 -m evaluation.revision_eval --profile api_only
 
 `from product.orchestrator import AgentWorkflow` 仍然可用；新代码建议直接从 `product.workflow` 导入。
 
+## 行程锚定
+
+`constraints.anchor` 决定先定哪一类，其余两类围着它适配：
+
+- `sight`（默认）：景点优先；
+- `food`：饮食优先，planner 会安排餐馆/小吃查询，回答里每天至少一顿来自证据；
+- `stay`：住宿优先，planner 会安排住宿区域查询。
+
+识别在 `product/anchor.py`（关键词 + 否定词纠偏），只在用户明确说“以吃为主/泡酒店”这类话时切换，默认行为不变。
+行程里可带 `meals`（午/晚，名字必须来自证据）与 `lodging_area`（区域名，没有依据写“未核实”）两个可选槽位；
+评测里对应 `meal_grounded` 检查。
+
 ## 用户偏好记忆
 
 - 只记**长期成立**的偏好（不吃辣、恐高、带老人出行习惯），本次行程相关的参数仍放 `constraints`。
