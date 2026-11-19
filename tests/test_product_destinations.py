@@ -7,6 +7,8 @@ def test_known_destination_accepts_common_forms():
     assert known_destination("杭州")
     assert known_destination("杭州市")
     assert known_destination("千岛湖")
+    assert known_destination("南昌")
+    assert known_destination("Hefei")
     assert known_destination("Hangzhou")
     assert known_destination("西安")
     assert known_destination("Xian")
