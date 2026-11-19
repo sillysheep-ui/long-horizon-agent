@@ -22,3 +22,5 @@ a{color:#2d6e51;text-decoration:underline;text-underline-offset:2px}
 .coverage.warn{background:#fff4e6;color:#a9742f}
 .activity-meta { margin: 2px 0 6px; font-size: 12px; color: #2f6b4f; letter-spacing: .2px; }
 .activity-transport { display: block; margin: 0 0 6px; font-size: 12px; color: #7a6a55; }
+
+.day-extra{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem;font-size:.85rem;color:#5b6472}
