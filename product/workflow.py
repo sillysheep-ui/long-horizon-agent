@@ -38,6 +38,7 @@ from product.postprocess import (
 from product.profile import profile_block
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
 from product.provenance import normalize_all
+from product.repair import pick_meals, repair_meal_times
 from product.revision import (
     compact_days,
     days_to_revision_plan,
@@ -433,6 +434,13 @@ class AgentWorkflow:
         else:
             cleaned_days = _finalize_days(cleaned_days, good, days, windows=windows, pace=pace,
                                           requested=constraints.get("requested_count"))
+        if constraints.get("anchor") in ("food", "stay"):
+            for day in cleaned_days:
+                picked = pick_meals(day, evidence)
+                if picked:
+                    day["meals"] = picked
+        for day in cleaned_days:
+            repair_meal_times(day)
         cleaned_days = add_transfers(cleaned_days)
         final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
         fabricated = _fabricated_costs(cleaned_days, evidence)
