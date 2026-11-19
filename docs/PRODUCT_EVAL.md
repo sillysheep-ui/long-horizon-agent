@@ -31,8 +31,12 @@
 | `title_matches_evidence` | 活动标题能在对应证据的地点名里找到 |
 | `no_fabricated_cost` | 活动里出现的数字（票价等）必须能在证据原文里找到 |
 | `meal_grounded` | 餐饮槽位的名字能对上 ok 证据的地点名（仅行程带 `meals` 时检查） |
+| `anchor_satisfied` | 用例声明 `anchor=food` 时每天至少一顿餐、`anchor=stay` 时每天有住宿区域（仅锚定用例检查） |
 
 这些检查便宜、稳定、可回归，适合放进 CI；`no_fabricated_cost` 是纯程序化的“编造探测器”，也是 RL 奖励里最不该被 hack 的一项。
+
+锚定专项用例在 `evaluation/anchor_cases.json`（10 条：美食 4 / 住宿 3 / 默认 3），
+用 `python3 -m evaluation.product_eval --cases evaluation/anchor_cases.json` 单独跑。
 
 ## 第二层：rubric 裁判（一次模型调用/条）
 

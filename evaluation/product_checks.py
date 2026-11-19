@@ -234,6 +234,11 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
     wanted = [str(place).strip() for place in case.get("named_places") or [] if str(place).strip()]
     if wanted:
         checks["named_places_covered"] = _named_places_covered(wanted, titles)
+    anchor = str(case.get("anchor") or "")
+    if anchor == "food":
+        checks["anchor_satisfied"] = bool(days) and all(day.get("meals") for day in days)
+    elif anchor == "stay":
+        checks["anchor_satisfied"] = bool(days) and all(day.get("lodging_area") for day in days)
     meals = [meal for day in days for meal in (day.get("meals") or [])]
     if meals:
         checks["meal_grounded"] = all(

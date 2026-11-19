@@ -73,6 +73,16 @@ LATIN_ALIASES = {
     "foshan": "佛山", "hongkong": "香港", "macau": "澳门", "taipei": "台北",
 }
 
+# 常见景区/度假地：行政级别可能只是镇或村，单独收一批。
+SCENIC = {
+    "莫干山", "安吉", "宏村", "西塘", "乌镇", "周庄", "同里", "南浔", "婺源", "阳朔",
+    "香格里拉", "九寨沟", "稻城亚丁", "喀纳斯", "长白山", "雪乡", "泸沽湖", "青海湖",
+    "茶卡盐湖", "额济纳", "神农架", "张家界", "凤凰", "西江千户苗寨", "丹巴",
+    "四姑娘山", "雨崩", "武功山", "阿尔山", "腾冲", "涠洲岛", "东山岛",
+}
+SCENIC_SUFFIXES = ("山", "湖", "古镇", "村", "岛", "湾", "沟", "峡谷", "草原", "沙漠", "温泉")
+DESTINATIONS |= SCENIC
+
 _EXTRA = tuple(DESTINATIONS) + tuple(LATIN_ALIASES.keys())
 
 
@@ -94,6 +104,8 @@ def known_destination(name: str, known: Iterable[str] | None = None) -> bool:
     for item in pool:
         if base == _base(item):
             return True
+    if any(suffix in base for suffix in SCENIC_SUFFIXES):
+        return True
     return base in LATIN_ALIASES
 
 

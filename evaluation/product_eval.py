@@ -172,11 +172,13 @@ async def main() -> None:
     parser.add_argument("--judge-model", default="", help="覆盖 JUDGE_MODEL_ID")
     parser.add_argument("--seed", type=int, default=0, help="随机种子，写入报告便于复现")
     parser.add_argument("--min-score", type=float, default=None, help="综合分低于该值时退出码 1")
+    parser.add_argument("--cases", default="", help="用例文件，默认 evaluation/product_cases.json")
     args = parser.parse_args()
     random.seed(args.seed)
 
     os.environ["MODEL_PROFILE"] = args.profile
-    cases = [c for c in json.loads(CASES_PATH.read_text())
+    cases_path = Path(args.cases) if args.cases else CASES_PATH
+    cases = [c for c in json.loads(cases_path.read_text())
              if args.split == "all" or c.get("split") == args.split]
     if args.limit:
         cases = cases[:args.limit]
