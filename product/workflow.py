@@ -7,6 +7,7 @@ from typing import Any
 from inference.tool_dag import ToolDAGScheduler
 from product.anchor import detect_anchor
 from product.coverage import assess_days, build_repair_plan
+from product.crosscheck import cross_checks
 from product.destinations import unknown_destinations
 from product.memory import build_history
 from product.model_gateway import ModelGateway, parse_json
@@ -454,7 +455,16 @@ class AgentWorkflow:
                 if old_titles and old_titles == new_titles:
                     unchanged += 1
             revision_applied = unchanged < len(targets)
+        cross = cross_checks(cleaned_days, constraints)
+        cross_notes = {
+            "meal_near": "有一餐离当天活动超过 1.5 公里，建议就近调整。",
+            "meal_time": "用餐时间和当天活动有重叠，建议错开。",
+            "budget_fits": "按行程里写明的票价与人均合计，已接近或超过预算，建议核对。",
+        }
         notes = _as_list(answer.get("notes"), 8)
+        for name, ok in cross.items():
+            if not ok and name in cross_notes:
+                notes.append(cross_notes[name])
         if revision_applied is False:
             notes.insert(0, "本次修改没有找到新的可追溯地点，暂时保留了原安排；可以换个说法再试。")
         if answer_failed:
@@ -469,4 +479,4 @@ class AgentWorkflow:
                       summary=str(answer.get("summary") or "已根据可追溯地点来源整理行程。"),
                       days=cleaned_days, notes=notes, constraints=constraints,
                       plan=plan, evidence=evidence, model_calls=calls, verification=verification,
-                      revision_applied=revision_applied)
+                      cross_checks=cross, revision_applied=revision_applied)

@@ -234,8 +234,13 @@ def clean_meals(meals: Any, evidence: dict[str, dict[str, Any]] | None = None) -
         if not _TIME_PATTERN.match(start):
             start = "12:30"
         kind = str(meal.get("type") or "meal").strip().lower()
-        result.append({"type": kind if kind in _MEAL_TYPES else "meal",
-                       "title": title, "start": start, "evidence_id": evidence_id})
+        entry = {"type": kind if kind in _MEAL_TYPES else "meal",
+                 "title": title, "start": start, "evidence_id": evidence_id}
+        coordinates = next((item.get("coordinates") for item in source.get("items", [])
+                            if title_matches(title, [str(item.get("name") or "")])), None)
+        if coordinates:
+            entry["coordinates"] = coordinates
+        result.append(entry)
     return result
 
 
