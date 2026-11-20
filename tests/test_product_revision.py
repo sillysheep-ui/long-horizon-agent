@@ -71,6 +71,8 @@ class FakeModel:
                 {"day": 1, "city": "杭州", "poi_queries": ["西湖"]},
                 {"day": 2, "city": "杭州", "poi_queries": [second]},
             ]}, ensure_ascii=False)
+        elif role == "行程评审":
+            content = json.dumps({"score": 8, "verdict": "accept", "issues": []}, ensure_ascii=False)
         else:
             payload = json.loads(user)
             self.answer_payloads.append(payload)

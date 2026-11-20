@@ -8,6 +8,7 @@ from typing import Any
 from inference.tool_dag import ToolDAGScheduler
 from product.anchor import detect_anchor
 from product.coverage import assess_days, build_repair_plan
+from product.critic import review_async as review_itinerary
 from product.crosscheck import cross_checks
 from product.destinations import unknown_destinations
 from product.memory import build_history
@@ -426,7 +427,12 @@ class AgentWorkflow:
         except (ValueError, RuntimeError):
             answer_failed = True
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
-        violations = check_day_plan(answer.get("days"), constraints)["violations"]
+        critique = {"score": None, "verdict": "skipped", "issues": [], "source": "skipped"}
+        if not answer_failed:
+            critique = await review_itinerary(self.model, answer.get("days"), constraints, calls)
+        hard = check_day_plan(answer.get("days"), constraints)["violations"]
+        violations = hard + [{"day": item["day"], "kind": item["kind"], "detail": item["detail"]}
+                             for item in critique["issues"]]
         plan_repair = {"attempted": False, "before": len(violations), "after": len(violations)}
         if violations and answer_payload:
             self._event(job, "answer", "模型排期有 %d 处硬伤，让它自己重排一次" % len(violations))
@@ -448,7 +454,7 @@ class AgentWorkflow:
                     plan_repair["applied"] = True
             except (ValueError, RuntimeError):
                 plan_repair.update({"attempted": True, "error": True})
-        plan_ok = not violations
+        plan_ok = not check_day_plan(answer.get("days"), constraints)["violations"]
         valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
         valid_coords = {(e["id"], item["name"]): item.get("coordinates")
                         for e in good for item in e.get("items", [])
@@ -530,7 +536,7 @@ class AgentWorkflow:
                             {"raw": raw_count, "grounded": grounded_count, "dropped": dropped,
                              "filled": filled, "final": final_count,
                              "fabricated_cost": fabricated, "time_order_ok": order_ok,
-                             "plan_ok": plan_ok, "plan_repair": plan_repair},
+                             "plan_ok": plan_ok, "plan_repair": plan_repair, "critique": critique},
                             error_type="density_miss" if dropped else None))
         revision_applied: bool | None = None
         if targets:
@@ -571,6 +577,8 @@ class AgentWorkflow:
             if revision_check["unmet"]:
                 notes.insert(0, "这次修改没有完全满足「%s」，可以再具体说一句想换成什么。"
                                 % "、".join(revision_check["unmet"]))
+        if critique["issues"] and not plan_repair.get("applied"):
+            notes.insert(0, "评审提醒：%s" % critique["issues"][0]["detail"])
         notes = notes[:8]
         root_status = "degraded" if any(span["status"] in ("degraded", "warn", "failed") for span in stages) else "ok"
         return finish(root_status,

@@ -34,6 +34,8 @@ class RepairModel:
                        "budget": "800", "preferences": [], "missing_required": [], "conflicts": []}
         elif role == "规划 Agent":
             content = {"days": [{"day": 1, "city": "杭州", "poi_queries": ["西湖", "灵隐寺"]}]}
+        elif role == "行程评审":
+            content = {"score": 8, "verdict": "accept", "issues": []}
         else:
             self.answer_calls += 1
             payload = json.loads(user)
