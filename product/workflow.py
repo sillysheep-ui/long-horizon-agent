@@ -41,11 +41,13 @@ from product.provenance import normalize_all
 from product.repair import pick_meals, repair_meal_times
 from product.revcheck import check_requirements
 from product.revision import (
+    apply_move,
     compact_days,
     days_to_revision_plan,
     describe_targets,
     merge_days,
     out_of_range_days,
+    parse_move,
     parse_target_days,
     split_by_targets,
 )
@@ -105,6 +107,34 @@ class AgentWorkflow:
             return {**result, "trace": trace,
                     "elapsed_seconds": round(time.monotonic() - started, 2)}
 
+        move = (parse_move(revision_text, len(prior_days))
+                if revision_text and prior_days and prior.get("constraints") else None)
+        if move:
+            applied = apply_move(prior_days, move["from"], move["to"],
+                                 (prior.get("constraints") or {}).get("day_windows"))
+            if applied:
+                moved_days = add_transfers(applied["days"])
+                titles = "、".join(str(title) for title in applied["titles"][:3] if title)
+                note = "已把第%d天的 %d 个安排挪到第%d天%s" % (
+                    move["from"], applied["kept"], move["to"],
+                    ("：" + titles) if titles else "")
+                if applied["dropped"]:
+                    note += "；另有 %d 个因当天时间不足未排入" % applied["dropped"]
+                note += "；其余天保持不变。第%d天暂无安排。" % move["from"]
+                target_day = next((day for day in moved_days
+                                   if int(day.get("day") or 0) == move["to"]), {})
+                if len(target_day.get("activities") or []) >= 5:
+                    note += "第%d天现有 %d 个活动，建议再精简。" % (
+                        move["to"], len(target_day["activities"]))
+                self._event(job, "intake", note)
+                stages.append(_span("intake", "stage", "ok", 0.0,
+                                    {"revision": True, "move": move, "decision": "move"}))
+                prior_notes = _as_list(prior.get("notes"), 8)
+                return finish("ok", status="complete", summary=str(prior.get("summary") or ""),
+                              days=moved_days, notes=[note, *prior_notes][:8],
+                              constraints=prior.get("constraints"), plan=prior.get("plan"),
+                              evidence=prior.get("evidence"), model_calls=calls,
+                              revision_applied=True)
         if revision_text and prior_days and prior.get("constraints") and not targets:
             too_far = out_of_range_days(revision_text, len(prior_days))
             if too_far:

@@ -9,7 +9,9 @@ import re
 from typing import Any
 
 from inference.tool_dag import ToolDAGError, ToolPlan
+from product.pace import DEFAULT_DAY_HOURS
 from product.planner import MAX_NODES, MAX_QUERIES_PER_DAY, NODE_TIMEOUT_SECONDS
+from product.postprocess import _schedule_day, day_hours
 
 _CHINESE_DIGITS = {
     "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
@@ -172,3 +174,55 @@ def compact_days(days: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def describe_targets(targets: list[int]) -> str:
     return "、".join("第%d天" % day for day in targets)
+
+
+_MOVE_PATTERN = re.compile(r"(?:挪|顺延|移|改|调)(?:到|至|往)?第([一二三四五六七八九十\d]+)天")
+_NOT_DONE_WORDS = ("没去成", "没来得及", "来不及", "没逛成", "没看成", "取消")
+
+
+def parse_move(text: str, total_days: int) -> dict[str, int] | None:
+    """识别“把第 2 天的安排挪到第 3 天”这类跨天顺延。"""
+    if not text or total_days < 1:
+        return None
+    match = _MOVE_PATTERN.search(text)
+    if not match:
+        return None
+    target = _day_number(match.group(1))
+    if not 1 <= target <= total_days:
+        return None
+    before = [day for day in mentioned_days(text[:match.start()]) if day != target]
+    if before:
+        source = before[-1]
+    elif any(word in text for word in _NOT_DONE_WORDS) and target > 1:
+        source = target - 1
+    else:
+        return None
+    if source < 1 or source >= target:
+        return None
+    return {"from": source, "to": target}
+
+
+def apply_move(days: list[dict[str, Any]], source: int, target: int,
+               windows: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
+    """把 source 天的活动整体挪到 target 天，并重排两天的开始时间。"""
+    result = [dict(day) for day in days]
+    for day in result:
+        day["activities"] = [dict(item) for item in day.get("activities") or []]
+    src = next((day for day in result if int(day.get("day") or 0) == source), None)
+    dst = next((day for day in result if int(day.get("day") or 0) == target), None)
+    if src is None or dst is None:
+        return None
+    moved = src["activities"]
+    if not moved:
+        return None
+    src["activities"] = []
+    dst["activities"] = dst["activities"] + moved
+    for day in (src, dst):
+        number = int(day.get("day") or 0)
+        hours = day_hours(windows, number) if windows else DEFAULT_DAY_HOURS
+        day["activities"] = _schedule_day(day.get("activities") or [], hours)
+    kept_titles = [item.get("title") for item in dst["activities"]]
+    kept = [item for item in moved if item.get("title") in kept_titles]
+    return {"days": result, "moved": len(moved), "kept": len(kept),
+            "titles": [item.get("title") for item in kept],
+            "dropped": max(0, len(moved) - len(kept))}

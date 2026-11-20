@@ -9,6 +9,8 @@ from product.orchestrator import AgentWorkflow, _finalize_days
 from product.planner import queries_for_day
 from product.postprocess import latin_hints, update_constraints
 from product.revision import (
+    apply_move,
+    parse_move,
     compact_days,
     day_of_evidence,
     days_to_revision_plan,
@@ -362,3 +364,20 @@ def test_update_constraints_detects_city_change():
     assert update_constraints({"destinations": ["杭州"]}, "换成去西安") == {"destinations": ["西安"]}
     assert update_constraints({"destinations": ["杭州"]}, "第二天换成博物馆") == {}
     assert update_constraints({"destinations": ["杭州"]}, "第二天换到第二天") == {}
+
+
+def test_parse_move_detects_day_shift():
+    assert parse_move("把第二天的博物馆挪到第三天", 3) == {"from": 2, "to": 3}
+    assert parse_move("第二天没去成，挪到第三天", 3) == {"from": 2, "to": 3}
+    assert parse_move("挪到第五天", 3) is None
+    assert parse_move("第二天换到博物馆", 3) is None
+
+
+def test_apply_move_moves_all_activities():
+    days = [{"day": 1, "activities": [{"title": "A", "start": "09:00", "duration": "2 小时"}]},
+            {"day": 2, "activities": [{"title": "B", "start": "14:00", "duration": "2 小时"}]}]
+    out = apply_move(days, 1, 2)
+    assert out is not None
+    assert out["kept"] == 1 and out["days"][0]["activities"] == []
+    assert [item["title"] for item in out["days"][1]["activities"]] == ["A", "B"]
+    assert days[0]["activities"][0]["title"] == "A"  # 不修改入参
