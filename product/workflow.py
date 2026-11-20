@@ -125,6 +125,10 @@ class AgentWorkflow:
                 constraints["anchor"] = revised_anchor["anchor"]
             days_count = len(prior_days)
             changes = update_constraints(constraints, revision_text)
+            if changes.get("destinations") and targets:
+                merged = list(dict.fromkeys([*_as_list(constraints.get("destinations"), 4),
+                                             *changes["destinations"]]))
+                changes["destinations"] = merged
             if changes:
                 constraints.update(changes)
                 if "days" in changes:

@@ -3,6 +3,7 @@
 import re
 from typing import Any
 
+from product.destinations import known_destination
 from product.geo import order_nearest, parse_coord, transit_minutes
 from product.names import clean_place_name, title_matches
 from product.pace import DEFAULT_DAY_HOURS, PACE_WORDS, count_bounds, detect_pace, hours_from_text
@@ -332,8 +333,12 @@ def _amount(raw: str) -> float:
         return 0.0
 
 
+CITY_CHANGE = re.compile(
+    r"(?:换到|改到|改成去|换成去|换去|改去|目的地(?:改成|换成)|城市(?:改成|换成))\s*([\u4e00-\u9fff]{2,6})")
+
+
 def update_constraints(constraints: dict[str, Any], text: str) -> dict[str, Any]:
-    """识别修改句里的整体条件变化（预算/天数），命中就应升级为整单重排。"""
+    """识别修改句里的整体条件变化（预算/天数/节奏/目的地），命中就应升级为整单重排。"""
     changes: dict[str, Any] = {}
     value = str(text or "")
     match = BUDGET_UPDATE.search(value)
@@ -358,6 +363,11 @@ def update_constraints(constraints: dict[str, Any], text: str) -> dict[str, Any]
         pace = detect_pace(value)
         if pace != constraints.get("pace"):
             changes["pace"] = pace
+    match = CITY_CHANGE.search(value)
+    if match:
+        city = re.sub(r"(市|地区|自治州|盟|县|区)$", "", match.group(1))
+        if known_destination(city) and city != (constraints.get("destinations") or [None])[0]:
+            changes["destinations"] = [city]
     return changes
 
 

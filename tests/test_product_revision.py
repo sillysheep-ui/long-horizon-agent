@@ -355,3 +355,10 @@ def test_latin_hints_extracts_english_fields():
     assert latin_hints("3 days in Hangzhou with kids, budget 1000") == {
         "destinations": ["Hangzhou"], "days": 3, "budget": "1000"}
     assert latin_hints("去杭州玩两天") == {}
+
+
+def test_update_constraints_detects_city_change():
+    assert update_constraints({"destinations": ["杭州"]}, "第二天换到苏州") == {"destinations": ["苏州"]}
+    assert update_constraints({"destinations": ["杭州"]}, "换成去西安") == {"destinations": ["西安"]}
+    assert update_constraints({"destinations": ["杭州"]}, "第二天换成博物馆") == {}
+    assert update_constraints({"destinations": ["杭州"]}, "第二天换到第二天") == {}
