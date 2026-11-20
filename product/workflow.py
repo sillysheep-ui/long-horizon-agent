@@ -435,7 +435,11 @@ class AgentWorkflow:
         violations = hard + [{"day": item["day"], "kind": item["kind"], "detail": item["detail"]}
                              for item in critique["issues"]]
         plan_repair = {"attempted": False, "before": len(violations), "after": len(violations)}
-        if violations and answer_payload:
+        semantic = [issue for issue in critique["issues"]]
+        critique_score = critique.get("score")
+        should_repair = bool(hard) or (
+            bool(semantic) and (critique_score is None or critique_score < 6.5))
+        if should_repair and answer_payload:
             self._event(job, "answer", "模型排期有 %d 处硬伤，让它自己重排一次" % len(violations))
             try:
                 previous = compact_days([day for day in answer.get("days") or []

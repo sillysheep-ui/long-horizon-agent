@@ -142,3 +142,43 @@ def test_free_ratio_uses_day_window_in_minutes():
         {"start": "13:30", "duration": "1.5 小时"},
     ]
     assert _free_ratio(activities, 10) == 0.6
+
+
+def test_opening_hours_flags_closed_activity():
+    evidence = {"items": [{"name": "灵隐寺", "opentime": "06:30", "endtime": "17:45"}]}
+    result = {
+        "status": "complete",
+        "evidence": [{"id": "d1-p1", **evidence}],
+        "constraints": {"days": 1},
+        "days": [{"day": 1, "city": "杭州", "activities": [
+            {"title": "灵隐寺", "start": "17:00", "duration": "2 小时", "evidence_id": "d1-p1"}]}],
+        "plan": {"days": [{"day": 1, "city": "杭州"}]},
+    }
+    checks = check_result({"query": "杭州一天", "days": 1, "cities": ["杭州"]}, result)
+    assert checks["opening_hours"] is False
+
+
+def test_opening_hours_passes_inside_window():
+    result = {
+        "status": "complete",
+        "evidence": [{"id": "d1-p1", "items": [{"name": "灵隐寺", "opentime": "06:30", "endtime": "17:45"}]}],
+        "constraints": {"days": 1},
+        "days": [{"day": 1, "city": "杭州", "activities": [
+            {"title": "灵隐寺", "start": "09:00", "duration": "2 小时", "evidence_id": "d1-p1"}]}],
+        "plan": {"days": [{"day": 1, "city": "杭州"}]},
+    }
+    checks = check_result({"query": "杭州一天", "days": 1, "cities": ["杭州"]}, result)
+    assert checks["opening_hours"] is True
+
+
+def test_opening_hours_skipped_without_times():
+    result = {
+        "status": "complete",
+        "evidence": [{"id": "d1-p1", "items": [{"name": "灵隐寺"}]}],
+        "constraints": {"days": 1},
+        "days": [{"day": 1, "city": "杭州", "activities": [
+            {"title": "灵隐寺", "start": "09:00", "duration": "2 小时", "evidence_id": "d1-p1"}]}],
+        "plan": {"days": [{"day": 1, "city": "杭州"}]},
+    }
+    checks = check_result({"query": "杭州一天", "days": 1, "cities": ["杭州"]}, result)
+    assert "opening_hours" not in checks

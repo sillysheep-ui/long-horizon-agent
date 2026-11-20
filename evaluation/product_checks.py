@@ -104,6 +104,32 @@ def _duration_minutes(value: Any) -> int:
     return int(match.group(1)) if match else 0
 
 
+def _match_item(evidence: dict[str, Any], title: Any) -> dict[str, Any] | None:
+    """按活动标题找到对应的证据条目（用与标题匹配相同的宽松规则）。"""
+    items = [item for item in (evidence.get("items") or []) if isinstance(item, dict)] if isinstance(evidence, dict) else []
+    wanted = str(title or "")
+    for item in items:  # 先精确匹配，避免“成都博物馆”落到“成都大熊猫博物馆”上
+        name = str(item.get("name") or "")
+        if name and (name == wanted or wanted in name or name in wanted):
+            return item
+    for item in items:
+        name = str(item.get("name") or "")
+        if name and _title_matches(wanted, [name]):
+            return item
+    return None
+
+
+def _opening_ok(activity: dict[str, Any], item: dict[str, Any]) -> bool | None:
+    """活动是否落在证据给出的营业时间内；没有时间信息时返回 None。"""
+    open_minutes = _start_minutes(item.get("opentime"))
+    close_minutes = _start_minutes(item.get("endtime"))
+    start = _start_minutes(activity.get("start"))
+    if open_minutes < 0 or close_minutes < 0 or start < 0:
+        return None
+    duration = _duration_minutes(activity.get("duration")) or 90
+    return open_minutes <= start and start + duration <= close_minutes
+
+
 def _schedule_ok(days: list[dict[str, Any]]) -> bool:
     """每天的开始时间递增，且前一项结束不晚于后一项开始。"""
     for day in days:
@@ -188,6 +214,19 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         city_coverage = bool(days) and all(
             str(d.get("city") or "").strip().rstrip("市") in expected_cities for d in days)
 
+    opening_hours = True
+    hours_checked = 0
+    for activity in activities:
+        item = _match_item(evidence.get(activity.get("evidence_id")) or {}, activity.get("title"))
+        if not item:
+            continue
+        verdict = _opening_ok(activity, item)
+        if verdict is None:
+            continue
+        hours_checked += 1
+        if not verdict:
+            opening_hours = False
+
     title_matches_evidence = True
     for activity in activities:
         names = _item_names(evidence.get(activity.get("evidence_id")) or {})
@@ -238,6 +277,8 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         "title_matches_evidence": title_matches_evidence,
         "no_fabricated_cost": no_fabricated_cost,
     }
+    if hours_checked:
+        checks["opening_hours"] = opening_hours
     wanted = [str(place).strip() for place in case.get("named_places") or [] if str(place).strip()]
     if wanted:
         checks["named_places_covered"] = _named_places_covered(wanted, titles)
