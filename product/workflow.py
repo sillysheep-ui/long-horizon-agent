@@ -39,6 +39,7 @@ from product.profile import profile_block
 from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
 from product.provenance import normalize_all
 from product.repair import pick_meals, repair_meal_times
+from product.revcheck import check_requirements
 from product.revision import (
     compact_days,
     days_to_revision_plan,
@@ -495,6 +496,16 @@ class AgentWorkflow:
         for item in verification["days"]:
             if item["uncovered"]:
                 notes.append("第%d天没有获取到可追溯来源，当天安排仅作参考。" % item["day"])
+        revision_check = None
+        requirements = _as_list(constraints.get("revision_requirements"), 4)
+        if targets and requirements:
+            target_day_numbers = {int(day) for day in targets}
+            target_days_data = [d for d in cleaned_days
+                                if int(d.get("day") or 0) in target_day_numbers]
+            revision_check = check_requirements(requirements, target_days_data)
+            if revision_check["unmet"]:
+                notes.insert(0, "这次修改没有完全满足「%s」，可以再具体说一句想换成什么。"
+                                % "、".join(revision_check["unmet"]))
         notes = notes[:8]
         root_status = "degraded" if any(span["status"] in ("degraded", "warn", "failed") for span in stages) else "ok"
         return finish(root_status,
@@ -502,4 +513,5 @@ class AgentWorkflow:
                       summary=str(answer.get("summary") or "已根据可追溯地点来源整理行程。"),
                       days=cleaned_days, notes=notes, constraints=constraints,
                       plan=plan, evidence=evidence, model_calls=calls, verification=verification,
-                      cross_checks=cross, revision_applied=revision_applied)
+                      cross_checks=cross, revision_applied=revision_applied,
+                      revision_check=revision_check)
