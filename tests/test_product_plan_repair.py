@@ -48,7 +48,7 @@ class RepairModel:
                 "activities": [{"title": name, "display_title": name, "start": start,
                                 "duration": "2 小时", "description": "走一段", "transport": "地铁",
                                 "cost": "未核实", "evidence_id": item["id"]}
-                               for name, start, item in zip(names, starts, payload["evidence"])],
+                               for name, start, item in zip(names, starts, payload["evidence"], strict=False)],
             }]}
         return {"role": role, "provider": "fake", "model": "fake", "content": json.dumps(content, ensure_ascii=False)}
 
