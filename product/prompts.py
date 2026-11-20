@@ -81,3 +81,10 @@ def build_answer_system(pace: str, targets: list[int] | None = None,
     if targets:
         text += TARGETED_ANSWER_SUFFIX % describe_targets(targets)
     return text
+
+
+ANSWER_REPAIR_SUFFIX = (
+    "\n\n上一次输出的 days 有以下硬伤：%s。请只输出修正后的完整 JSON（同样的 schema）："
+    "每天 2–4 个活动、开始时间递增且不重叠、活动总时长不超过当天可用时间；"
+    "不要新增 evidence 之外的地点，也不要把已经合理的天改掉。"
+)

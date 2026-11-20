@@ -13,6 +13,7 @@ from product.destinations import unknown_destinations
 from product.memory import build_history
 from product.model_gateway import ModelGateway, call_info, parse_json
 from product.pace import count_bounds, detect_pace, requested_count
+from product.plancheck import check_day_plan
 from product.planner import (
     PLANNER_SYSTEM_PROMPT,
     build_planner_prompt,
@@ -37,7 +38,7 @@ from product.postprocess import (
     update_constraints,
 )
 from product.profile import profile_block
-from product.prompts import INTAKE_SYSTEM_PROMPT, build_answer_system
+from product.prompts import ANSWER_REPAIR_SUFFIX, INTAKE_SYSTEM_PROMPT, build_answer_system
 from product.provenance import normalize_all
 from product.repair import pick_meals, repair_meal_times
 from product.revcheck import check_requirements
@@ -397,6 +398,7 @@ class AgentWorkflow:
         self._event(job, "answer", "正在根据已核实地点组织行程")
         answer_started = time.monotonic()
         answer = {}
+        answer_payload: dict[str, Any] = {}
         answer_failed = False
         pace = constraints.get("pace") or detect_pace(query, revision_text)
         answer_system = build_answer_system(
@@ -424,6 +426,29 @@ class AgentWorkflow:
         except (ValueError, RuntimeError):
             answer_failed = True
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
+        violations = check_day_plan(answer.get("days"), constraints)["violations"]
+        plan_repair = {"attempted": False, "before": len(violations), "after": len(violations)}
+        if violations and answer_payload:
+            self._event(job, "answer", "模型排期有 %d 处硬伤，让它自己重排一次" % len(violations))
+            try:
+                previous = compact_days([day for day in answer.get("days") or []
+                                         if isinstance(day, dict)])
+                fix_payload = {**answer_payload, "previous_days": previous, "issues": violations}
+                fix_system = answer_system + ANSWER_REPAIR_SUFFIX % json.dumps(
+                    violations, ensure_ascii=False)
+                fix_response = await self.model.complete("回答 Agent", fix_system,
+                    json.dumps(fix_payload, ensure_ascii=False), max_tokens=3000)
+                calls.append(call_info(fix_response))
+                candidate = parse_json(fix_response["content"])
+                after = check_day_plan(candidate.get("days"), constraints)["violations"]
+                plan_repair.update({"attempted": True, "after": len(after)})
+                if len(after) <= len(violations):
+                    answer = candidate
+                    violations = after
+                    plan_repair["applied"] = True
+            except (ValueError, RuntimeError):
+                plan_repair.update({"attempted": True, "error": True})
+        plan_ok = not violations
         valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
         valid_coords = {(e["id"], item["name"]): item.get("coordinates")
                         for e in good for item in e.get("items", [])
@@ -483,10 +508,11 @@ class AgentWorkflow:
                 good,
                 [day for day in days if int(day.get("day") or 0) in target_set],
                 keep_days=kept_days, windows=windows, pace=pace,
-                requested=constraints.get("requested_count"))
+                requested=constraints.get("requested_count"), keep_order=plan_ok)
         else:
             cleaned_days = _finalize_days(cleaned_days, good, days, windows=windows, pace=pace,
-                                          requested=constraints.get("requested_count"))
+                                          requested=constraints.get("requested_count"),
+                                          keep_order=plan_ok)
         if constraints.get("anchor") in ("food", "stay"):
             for day in cleaned_days:
                 picked = pick_meals(day, evidence)
@@ -503,7 +529,8 @@ class AgentWorkflow:
                             (time.monotonic() - answer_started) * 1000,
                             {"raw": raw_count, "grounded": grounded_count, "dropped": dropped,
                              "filled": filled, "final": final_count,
-                             "fabricated_cost": fabricated, "time_order_ok": order_ok},
+                             "fabricated_cost": fabricated, "time_order_ok": order_ok,
+                             "plan_ok": plan_ok, "plan_repair": plan_repair},
                             error_type="density_miss" if dropped else None))
         revision_applied: bool | None = None
         if targets:

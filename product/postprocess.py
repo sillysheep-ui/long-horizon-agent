@@ -72,11 +72,15 @@ def _hhmm(minutes: int) -> str:
     return "%02d:%02d" % (minutes // 60, minutes % 60)
 
 
-def _schedule_day(activities: list[dict[str, Any]], hours: float) -> list[dict[str, Any]]:
-    """按距离重排并插入交通时间；没有坐标时退回只修重叠。"""
+def _schedule_day(activities: list[dict[str, Any]], hours: float,
+                  keep_order: bool = False) -> list[dict[str, Any]]:
+    """插入交通时间并裁掉超时活动；keep_order=True 时保留模型给的顺序。"""
+    if not activities:
+        return []
     if not any(parse_coord(activity) for activity in activities):
         return _fit_schedule(activities)
-    ordered = order_nearest(activities)
+    ordered = (sorted(activities, key=lambda item: _minutes_of(item.get("start")))
+               if keep_order else order_nearest(activities))
     start_minutes = _minutes_of(ordered[0].get("start") or DEFAULT_STARTS[0])
     started_at = start_minutes
     cursor = start_minutes
@@ -382,7 +386,8 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                    keep_days: list[dict[str, Any]] | None = None,
                    windows: list[dict[str, Any]] | None = None,
                    pace: str = "normal",
-                   requested: int | None = None) -> list[dict[str, Any]]:
+                   requested: int | None = None,
+                   keep_order: bool = False) -> list[dict[str, Any]]:
     """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。
 
     keep_days 是本次不动、原样保留的日期；只对 plan_days 里的日期做整理。
@@ -427,7 +432,7 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                 if len(activities) >= floor:
                     break
         entry = {"day": planned["day"], "city": day.get("city") or planned.get("city"),
-                 "activities": _schedule_day(activities, hours)[:high]}
+                 "activities": _schedule_day(activities, hours, keep_order=keep_order)[:high]}
         if day.get("meals"):
             entry["meals"] = day["meals"]
         if day.get("lodging_area"):
