@@ -1,6 +1,12 @@
 import unittest
 
-from evaluation.product_checks import check_result, combined_score, hard_pass_rate, summarize
+from evaluation.product_checks import (
+    _free_ratio,
+    check_result,
+    combined_score,
+    hard_pass_rate,
+    summarize,
+)
 
 
 def make_day(day, activities, city="杭州"):
@@ -128,3 +134,11 @@ class SummarizeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_free_ratio_uses_day_window_in_minutes():
+    activities = [
+        {"start": "11:00", "duration": "2.5 小时"},
+        {"start": "13:30", "duration": "1.5 小时"},
+    ]
+    assert _free_ratio(activities, 10) == 0.6

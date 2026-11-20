@@ -132,7 +132,7 @@ def _free_ratio(activities: list[dict[str, Any]], hours: float | None = None) ->
               for a in ordered)
     span = max(end - start, 1)
     busy = sum(_duration_minutes(a.get("duration")) or 90 for a in ordered)
-    window = max(float(hours or DEFAULT_DAY_HOURS), span, 1.0)
+    window = max(float(hours or DEFAULT_DAY_HOURS) * 60.0, span, 1.0)
     return round(max(0.0, 1 - busy / window), 2)
 
 
