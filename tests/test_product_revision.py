@@ -10,13 +10,13 @@ from product.planner import queries_for_day
 from product.postprocess import latin_hints, update_constraints
 from product.revision import (
     apply_move,
-    parse_move,
     compact_days,
     day_of_evidence,
     days_to_revision_plan,
     describe_targets,
     merge_days,
     out_of_range_days,
+    parse_move,
     parse_target_days,
     split_by_targets,
 )
