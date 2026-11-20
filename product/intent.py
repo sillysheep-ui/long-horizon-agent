@@ -50,6 +50,9 @@ def _matches(patterns: tuple[str, ...], text: str) -> bool:
 QUESTION_PATTERN = re.compile(
     r"(吗|呢|多久|多远|远不远|近不近|怎么去|怎么走|多少钱|贵不贵|累不累|值得|好玩吗|几点|开门|关门|营业)")
 
+FEASIBILITY_PATTERN = re.compile(
+    r"(太赶|赶不赶|会不会赶|来不及|时间够|够不够|太紧|会不会太紧|强度|轻松吗|会不会累|赶得及)")
+
 
 def classify_intent(content: str, has_trip: bool) -> dict[str, Any]:
     """返回 {intent, reason, target_days}；没有历史行程时一律视为新行程。"""
@@ -84,7 +87,8 @@ def classify_intent(content: str, has_trip: bool) -> dict[str, Any]:
     if _matches(ASK_PATTERNS, text) and not _matches(MODIFY_VERBS, text):
         return {"intent": "ask", "reason": "在问行程本身的情况", "target_days": days,
                 "scope": "targeted" if days else "global", "action": "modify"}
-    if QUESTION_PATTERN.search(text) and not _matches(MODIFY_VERBS, text) \
+    if (QUESTION_PATTERN.search(text) or FEASIBILITY_PATTERN.search(text)) \
+            and not _matches(MODIFY_VERBS, text) \
             and not re.search(r"(换成|改成|改为|加|去掉|删|取消|撤销)", text):
         return {"intent": "ask", "reason": "在问行程细节", "target_days": days,
                 "scope": "targeted" if days else "global", "action": "modify"}
@@ -98,7 +102,52 @@ def classify_intent(content: str, has_trip: bool) -> dict[str, Any]:
             "scope": "global", "action": "modify"}
 
 
-def describe_trip(result: dict[str, Any] | None, target_days: list[int] | None = None) -> str:
+def _day_minutes(activities: list[dict[str, Any]]) -> tuple[int, int]:
+    """返回（活动总分钟、交通总分钟）。"""
+    total = transit = 0
+    for item in activities:
+        duration = str(item.get("duration") or "")
+        match = re.search(r"([\d.]+)\s*(?:小时|h)", duration)
+        if match:
+            total += int(float(match.group(1)) * 60)
+        else:
+            match = re.search(r"(\d+)\s*分钟", duration)
+            if match:
+                total += int(match.group(1))
+        transport = str(item.get("transport") or "")
+        match = re.search(r"(\d+)\s*分钟", transport)
+        if match:
+            transit += int(match.group(1))
+    return total, transit
+
+
+def _feasibility_answer(day: dict[str, Any], hours: float) -> str:
+    """按当天活动量给一句确定性判断。"""
+    activities = day.get("activities") or []
+    number = int(day.get("day") or 0)
+    if not activities:
+        return f"第{number}天目前没有安排，不会赶。"
+    total, transit = _day_minutes(activities)
+    starts = sorted(str(item.get("start") or "09:00") for item in activities)
+    ratio = total / (hours * 60) if hours else 0
+    if ratio <= 0.45:
+        level = "比较宽松"
+    elif ratio <= 0.72:
+        level = "节奏正常"
+    else:
+        level = "偏紧"
+    transit_text = f"，路上约 {transit} 分钟" if transit else ""
+    lines = [f"第{number}天现在 {len(activities)} 个活动，{starts[0]} 开始，活动约 "
+             f"{total / 60:.1f} 小时{transit_text}；按当天 {hours:g} 小时可用时间算，{level}。"]
+    if level == "偏紧":
+        lines.append("想松一点可以去掉一个点，或者把其中一个挪到别天。")
+    elif len(activities) >= 5:
+        lines.append("数量偏多，虽然时间排得下，实际会有点赶，建议减到 4 个以内。")
+    return "".join(lines)
+
+
+def describe_trip(result: dict[str, Any] | None, target_days: list[int] | None = None,
+                  question: str | None = None) -> str:
     """用已有行程拼一段确定性回答，不调用模型。"""
     if not result:
         return "还没有可以回答的行程。先告诉我从哪出发、玩几天、喜欢什么吧。"
@@ -107,6 +156,13 @@ def describe_trip(result: dict[str, Any] | None, target_days: list[int] | None =
         question = result.get("question") or result.get("summary") or "还缺一些关键信息，能再补充一下吗？"
         return str(question)
     wanted = set(target_days or [])
+    if question and FEASIBILITY_PATTERN.search(question):
+        hours_map = {int(item.get("day") or 0): float(item.get("hours") or 10)
+                     for item in (result.get("constraints") or {}).get("day_windows") or []
+                     if item.get("day")}
+        picked = [day for day in days if not wanted or int(day.get("day") or 0) in wanted]
+        return "\n".join(_feasibility_answer(day, hours_map.get(int(day.get("day") or 0), 10))
+                          for day in picked)
     lines = []
     for day in days:
         number = int(day.get("day") or 0)

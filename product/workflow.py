@@ -1,6 +1,7 @@
 """产品工作流：需求 → 计划 → 并行查询 → 核验 → 回答 → 收尾。"""
 
 import json
+import re
 import time
 from typing import Any
 
@@ -156,6 +157,7 @@ class AgentWorkflow:
             if revised_anchor["reason"] != "default":
                 constraints["anchor"] = revised_anchor["anchor"]
             days_count = len(prior_days)
+            requirement_days = list(targets)
             changes = update_constraints(constraints, revision_text)
             parsed_revision = await parse_revision(self.model, revision_text, len(prior_days),
                                                    constraints, calls)
@@ -167,9 +169,12 @@ class AgentWorkflow:
                     value = list(dict.fromkeys([*_as_list(constraints.get("destinations"), 4), *value]))
                 changes.setdefault(key, value)
             if changes.get("destinations") and targets:
-                merged = list(dict.fromkeys([*_as_list(constraints.get("destinations"), 4),
-                                             *changes["destinations"]]))
-                changes["destinations"] = merged
+                replace_city = re.search(
+                    r"(换成|改成|改为|目的地(?:改成|换成)|城市(?:改成|换成))", revision_text)
+                if not replace_city:
+                    merged = list(dict.fromkeys([*_as_list(constraints.get("destinations"), 4),
+                                                 *changes["destinations"]]))
+                    changes["destinations"] = merged
             if changes:
                 constraints.update(changes)
                 if "days" in changes:
@@ -178,6 +183,7 @@ class AgentWorkflow:
                     windows = detect_day_windows(query, revision_text, days=days_count)
                     constraints["day_windows"] = windows
                 targets = list(range(1, days_count + 1))
+                constraints["revision_requirement_days"] = requirement_days
                 self._event(job, "intake", "检测到整体条件变化，改为整单重排", {"changes": changes})
             destinations = _as_list(constraints.get("destinations"), 4)
             if budget_conflict(query, days_count) or budget_conflict(revision_text, days_count):
@@ -393,8 +399,9 @@ class AgentWorkflow:
         answer = {}
         answer_failed = False
         pace = constraints.get("pace") or detect_pace(query, revision_text)
-        answer_system = build_answer_system(pace, targets,
-                                            (constraints.get("revision_requirements") or None))
+        answer_system = build_answer_system(
+            pace, targets, (constraints.get("revision_requirements") or None),
+            (constraints.get("revision_requirement_days") or None))
         try:
             answer_payload = {"query": query, "constraints": constraints, "plan": plan, "evidence": good}
             if targets:
@@ -529,7 +536,8 @@ class AgentWorkflow:
         revision_check = None
         requirements = _as_list(constraints.get("revision_requirements"), 4)
         if targets and requirements:
-            target_day_numbers = {int(day) for day in targets}
+            target_day_numbers = {int(day) for day in
+                                  (constraints.get("revision_requirement_days") or targets)}
             target_days_data = [d for d in cleaned_days
                                 if int(d.get("day") or 0) in target_day_numbers]
             revision_check = check_requirements(requirements, target_days_data)

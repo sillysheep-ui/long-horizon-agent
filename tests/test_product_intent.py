@@ -68,3 +68,14 @@ def test_greeting_without_trip_is_chat():
     assert classify_intent("谢谢", has_trip=False)["intent"] == "chat"
     assert classify_intent("门票多少钱", has_trip=False)["intent"] == "ask"
     assert classify_intent("杭州", has_trip=False)["intent"] == "new_trip"
+
+
+def test_describe_trip_answers_feasibility_question():
+    result = {"days": [{"day": 3, "activities": [
+        {"title": "A", "start": "09:30", "duration": "3 小时", "transport": "打车约 15 分钟"},
+        {"title": "B", "start": "13:30", "duration": "3 小时", "transport": ""},
+    ]}], "constraints": {"day_windows": [{"day": 3, "hours": 10}]}}
+    text = describe_trip(result, [3], "第三天会不会太赶")
+    assert "第3天" in text and "节奏正常" in text
+    text = describe_trip(result, [3], "第三天时间够吗")
+    assert "第3天" in text

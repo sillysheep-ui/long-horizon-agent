@@ -358,7 +358,8 @@ class Store:
         if latest is not None and intent["intent"] in ("ask", "chat"):
             message = self.append_message(conversation_id, "user", content)
             if intent["intent"] == "ask":
-                answer = describe_trip(self.latest_result(conversation_id), intent["target_days"])
+                answer = describe_trip(self.latest_result(conversation_id), intent["target_days"],
+                                                content)
             else:
                 answer = "我先按现有行程理解。想改哪一天，或者想重新规划去哪里，直接说就行。"
             reply = self.append_message(conversation_id, "assistant", answer)

@@ -334,7 +334,8 @@ def _amount(raw: str) -> float:
 
 
 CITY_CHANGE = re.compile(
-    r"(?:换到|改到|改成去|换成去|换去|改去|目的地(?:改成|换成)|城市(?:改成|换成))\s*([\u4e00-\u9fff]{2,6})")
+    r"(?:换到|改到|改成去|换成去|换去|改去|换成|改成|改为|"
+    r"目的地(?:改成|换成)|城市(?:改成|换成))\s*([\u4e00-\u9fff]{2,6})")
 
 
 def update_constraints(constraints: dict[str, Any], text: str) -> dict[str, Any]:

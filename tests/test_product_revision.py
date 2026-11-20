@@ -381,3 +381,11 @@ def test_apply_move_moves_all_activities():
     assert out["kept"] == 1 and out["days"][0]["activities"] == []
     assert [item["title"] for item in out["days"][1]["activities"]] == ["A", "B"]
     assert days[0]["activities"][0]["title"] == "A"  # 不修改入参
+
+
+def test_update_constraints_handles_multiple_intents():
+    changes = update_constraints({"budget": 1200, "destinations": ["杭州"]},
+                                 "换成苏州，第二天换成博物馆，预算提到2000")
+    assert changes == {"budget": 2000, "destinations": ["苏州"]}
+    # “换成博物馆”不能被当成换城市
+    assert update_constraints({"budget": 1200}, "第二天换成博物馆") == {}

@@ -67,12 +67,17 @@ TARGETED_ANSWER_SUFFIX = (
 
 
 def build_answer_system(pace: str, targets: list[int] | None = None,
-                        requirements: list[str] | None = None) -> str:
+                        requirements: list[str] | None = None,
+                        requirement_days: list[int] | None = None) -> str:
     """组装回答提示词：节奏规则注入第 3 条，定向修改时追加只输出目标日的要求。"""
     text = ANSWER_SYSTEM_PROMPT % (PACE_RULES[pace],)
     if requirements:
-        text += ("\n\n本次修改的额外要求：%s。优先满足这些要求；"
-                 "证据不足时写“未核实”，不要为了满足要求编造地点。" % "、".join(requirements))
+        scope = ""
+        if requirement_days:
+            scope = "（适用范围：%s）" % "、".join("第%d天" % day for day in requirement_days)
+        text += ("\n\n本次修改的额外要求%s：%s。优先满足这些要求；"
+                 "证据不足时写“未核实”，不要为了满足要求编造地点。"
+                 % (scope, "、".join(requirements)))
     if targets:
         text += TARGETED_ANSWER_SUFFIX % describe_targets(targets)
     return text
