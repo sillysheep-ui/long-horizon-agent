@@ -40,6 +40,11 @@ def _tokens(text: str) -> list[str]:
     return [item for item in re.split(r"[\s,，、/]+", text or "") if item]
 
 
+def _bigrams(text: str) -> list[str]:
+    """中文没有空格，用 2-gram 近似“部分匹配”（如“大熊猫基地”命中“大熊猫繁育研究基地”）。"""
+    return [text[index:index + 2] for index in range(len(text) - 1)]
+
+
 def _score(row: dict, keyword: str) -> int:
     name = str(row.get("name") or "")
     if not name or not keyword:
@@ -51,6 +56,10 @@ def _score(row: dict, keyword: str) -> int:
     elif any(keyword in str(row.get(key) or "") for key in ("cuisine", "recommendedfood",
                                                             "type", "featurehoteltype")):
         score = 4
+    elif any(word in name for word in _bigrams(keyword)):
+        grams = _bigrams(keyword)
+        coverage = sum(1 for word in grams if word in name) / max(1, len(grams))
+        score = 3 + int(4 * coverage)
     else:
         return 0
     if len(name) <= 12:
