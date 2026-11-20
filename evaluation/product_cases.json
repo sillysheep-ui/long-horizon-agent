@@ -1,2401 +1,2402 @@
 [
- {
-  "id": "hangzhou-2d",
-  "split": "dev",
-  "difficulty": "easy",
-  "query": "从上海出发，周末去杭州玩两天，喜欢自然风光和咖啡馆，预算 1500 元",
-  "days": 2,
-  "cities": [
-   "杭州"
-  ],
-  "tags": [
-   "短途",
-   "偏好明确"
-  ]
- },
- {
-  "id": "chengdu-3d",
-  "split": "dev",
-  "difficulty": "easy",
-  "query": "国庆去成都玩三天，想吃地道美食也想看大熊猫，预算 3000 元",
-  "days": 3,
-  "cities": [
-   "成都"
-  ],
-  "tags": [
-   "美食",
-   "亲子"
-  ]
- },
- {
-  "id": "xian-1d",
-  "split": "dev",
-  "difficulty": "easy",
-  "query": "出差顺路在西安待一天，想看历史遗迹，预算 800 元",
-  "days": 1,
-  "cities": [
-   "西安"
-  ],
-  "tags": [
-   "单日",
-   "历史"
-  ]
- },
- {
-  "id": "suzhou-2d",
-  "split": "dev",
-  "difficulty": "medium",
-  "query": "从上海去苏州过周末，带老人和孩子，想看园林，节奏慢一点，预算 2000 元",
-  "days": 2,
-  "cities": [
-   "苏州"
-  ],
-  "tags": [
-   "家庭",
-   "慢节奏"
-  ]
- },
- {
-  "id": "eastchina-3d",
-  "split": "dev",
-  "difficulty": "hard",
-  "query": "从南京出发，三天里想去上海和杭州，最后从杭州回南京",
-  "days": 3,
-  "cities": [
-   "上海",
-   "杭州"
-  ],
-  "tags": [
-   "多城市",
-   "跨城交通"
-  ]
- },
- {
-  "id": "ambiguous",
-  "split": "dev",
-  "difficulty": "easy",
-  "query": "周末想出去玩两天，你有什么建议吗",
-  "expect": "needs_clarification",
-  "tags": [
-   "信息不全"
-  ]
- },
- {
-  "id": "budget-tight",
-  "split": "dev",
-  "difficulty": "medium",
-  "query": "学生党，北京玩三天，预算 1000 元，想省钱又有意思",
-  "days": 3,
-  "cities": [
-   "北京"
-  ],
-  "tags": [
-   "低预算"
-  ]
- },
- {
-  "id": "xiamen-rain",
-  "split": "dev",
-  "difficulty": "medium",
-  "query": "去厦门玩两天，听说可能下雨，想要室内备选方案，预算 1800 元",
-  "days": 2,
-  "cities": [
-   "厦门"
-  ],
-  "tags": [
-   "天气",
-   "备选方案"
-  ]
- },
- {
-  "id": "qingdao-2d",
-  "split": "dev",
-  "difficulty": "easy",
-  "query": "从济南去青岛过周末，想看海、喝啤酒，预算 2000 元",
-  "days": 2,
-  "cities": [
-   "青岛"
-  ],
-  "tags": [
-   "海边",
-   "短途"
-  ]
- },
- {
-  "id": "changsha-2d",
-  "split": "dev",
-  "difficulty": "easy",
-  "query": "长沙两天，主要是吃辣和逛夜生活，预算 1500 元",
-  "days": 2,
-  "cities": [
-   "长沙"
-  ],
-  "tags": [
-   "美食",
-   "夜生活"
-  ]
- },
- {
-  "id": "nanjing-1d",
-  "split": "dev",
-  "difficulty": "easy",
-  "query": "在南京出差，只有一天空闲，想看历史景点，预算 600 元",
-  "days": 1,
-  "cities": [
-   "南京"
-  ],
-  "tags": [
-   "单日",
-   "历史"
-  ]
- },
- {
-  "id": "chongqing-3d",
-  "split": "dev",
-  "difficulty": "medium",
-  "query": "去重庆玩三天，想吃火锅、看夜景，预算 2500 元",
-  "days": 3,
-  "cities": [
-   "重庆"
-  ],
-  "tags": [
-   "美食",
-   "夜景"
-  ]
- },
- {
-  "id": "kunming-4d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "十月去昆明玩四天，喜欢自然风光和花市，预算 4000 元",
-  "days": 4,
-  "cities": [
-   "昆明"
-  ],
-  "tags": [
-   "长线",
-   "自然"
-  ]
- },
- {
-  "id": "dali-3d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "去大理待三天，想环洱海、住安静的地方，节奏慢一点，预算 3000 元",
-  "days": 3,
-  "cities": [
-   "大理"
-  ],
-  "tags": [
-   "慢节奏",
-   "自然"
-  ]
- },
- {
-  "id": "huangshan-2d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "周末去黄山爬山两天，体力不错，想看日出，预算 1500 元",
-  "days": 2,
-  "cities": [
-   "黄山"
-  ],
-  "tags": [
-   "徒步",
-   "自然"
-  ]
- },
- {
-  "id": "luoyang-2d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "去洛阳玩两天，主要想看龙门石窟这类历史遗迹，预算 1200 元",
-  "days": 2,
-  "cities": [
-   "洛阳"
-  ],
-  "tags": [
-   "历史"
-  ]
- },
- {
-  "id": "hangzhou-parents-3d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "带父母去杭州玩三天，不想走太累，预算 3000 元",
-  "days": 3,
-  "cities": [
-   "杭州"
-  ],
-  "tags": [
-   "家庭",
-   "慢节奏"
-  ]
- },
- {
-  "id": "shanghai-kids-2d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "带孩子去上海玩两天，想去迪士尼，预算 4000 元",
-  "days": 2,
-  "cities": [
-   "上海"
-  ],
-  "tags": [
-   "亲子"
-  ]
- },
- {
-  "id": "beijing-student-4d",
-  "split": "test",
-  "difficulty": "hard",
-  "query": "大学生穷游北京四天，想多看博物馆和胡同，预算 2000 元",
-  "days": 4,
-  "cities": [
-   "北京"
-  ],
-  "tags": [
-   "低预算",
-   "博物馆"
-  ]
- },
- {
-  "id": "guangzhou-2d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "广州两天，想吃早茶、带孩子逛公园，预算 2500 元",
-  "days": 2,
-  "cities": [
-   "广州"
-  ],
-  "tags": [
-   "美食",
-   "亲子"
-  ]
- },
- {
-  "id": "shenzhen-1d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "深圳出差一天，想看看科技园区和城市天际线，预算 800 元",
-  "days": 1,
-  "cities": [
-   "深圳"
-  ],
-  "tags": [
-   "单日",
-   "城市"
-  ]
- },
- {
-  "id": "xiamen-3d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "厦门三天，想逛海岛和老街，万一下雨要有备选，预算 3000 元",
-  "days": 3,
-  "cities": [
-   "厦门"
-  ],
-  "tags": [
-   "天气",
-   "备选方案"
-  ]
- },
- {
-  "id": "qingdao-3d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "青岛玩三天，主要吃海鲜、看海，预算 2500 元",
-  "days": 3,
-  "cities": [
-   "青岛"
-  ],
-  "tags": [
-   "海边",
-   "美食"
-  ]
- },
- {
-  "id": "dalian-2d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "去大连过周末，预算只有 1200 元，想看海和吃平价海鲜",
-  "days": 2,
-  "cities": [
-   "大连"
-  ],
-  "tags": [
-   "低预算",
-   "海边"
-  ]
- },
- {
-  "id": "suzhou-1d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "在苏州停留一天，喜欢园林和拍照，预算 800 元",
-  "days": 1,
-  "cities": [
-   "苏州"
-  ],
-  "tags": [
-   "单日",
-   "摄影"
-  ]
- },
- {
-  "id": "wuxi-2d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "无锡两天，想去太湖和灵山，预算 1500 元",
-  "days": 2,
-  "cities": [
-   "无锡"
-  ],
-  "tags": [
-   "自然"
-  ]
- },
- {
-  "id": "ningbo-2d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "宁波两天，想吃海鲜、逛古镇，预算 1800 元",
-  "days": 2,
-  "cities": [
-   "宁波"
-  ],
-  "tags": [
-   "美食",
-   "古镇"
-  ]
- },
- {
-  "id": "shaoxing-2d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "绍兴两天，想喝黄酒、看人文故居，预算 1200 元",
-  "days": 2,
-  "cities": [
-   "绍兴"
-  ],
-  "tags": [
-   "人文"
-  ]
- },
- {
-  "id": "yangzhou-2d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "扬州过周末，主要想喝早茶、逛园林，预算 1500 元",
-  "days": 2,
-  "cities": [
-   "扬州"
-  ],
-  "tags": [
-   "美食",
-   "园林"
-  ]
- },
- {
-  "id": "zhengzhou-2d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "郑州两天，想去少林寺看看，预算 1200 元",
-  "days": 2,
-  "cities": [
-   "郑州"
-  ],
-  "tags": [
-   "历史"
-  ]
- },
- {
-  "id": "kaifeng-1d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "开封一天，想逛夜市和古迹，预算 600 元",
-  "days": 1,
-  "cities": [
-   "开封"
-  ],
-  "tags": [
-   "单日",
-   "美食"
-  ]
- },
- {
-  "id": "tianjin-1d",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "天津一天，想听相声、吃小吃，预算 500 元",
-  "days": 1,
-  "cities": [
-   "天津"
-  ],
-  "tags": [
-   "单日",
-   "美食"
-  ]
- },
- {
-  "id": "chengdu-chongqing-4d",
-  "split": "test",
-  "difficulty": "hard",
-  "query": "成都和重庆一共四天，最后从重庆回去，预算 3000 元",
-  "days": 4,
-  "cities": [
-   "成都",
-   "重庆"
-  ],
-  "tags": [
-   "多城市",
-   "跨城交通"
-  ]
- },
- {
-  "id": "sanya-5d",
-  "split": "test",
-  "difficulty": "medium",
-  "query": "带孩子去三亚玩五天，想住海边、节奏慢，预算 8000 元",
-  "days": 5,
-  "cities": [
-   "三亚"
-  ],
-  "tags": [
-   "亲子",
-   "长线"
-  ]
- },
- {
-  "id": "no-destination",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "下个月找个周末出去玩两天，你看着安排",
-  "expect": "needs_clarification",
-  "tags": [
-   "信息不全"
-  ]
- },
- {
-  "id": "contradictory",
-  "split": "test",
-  "difficulty": "hard",
-  "query": "三天里想去北京、上海、成都、广州、西安，帮我安排",
-  "expect": "needs_clarification",
-  "tags": [
-   "矛盾约束"
-  ]
- },
- {
-  "id": "harbin-3d",
-  "split": "holdout",
-  "difficulty": "medium",
-  "query": "冬天去哈尔滨三天，想看冰雪、吃东北菜，预算 5000 元",
-  "days": 3,
-  "cities": [
-   "哈尔滨"
-  ],
-  "tags": [
-   "季节",
-   "长线"
-  ]
- },
- {
-  "id": "guilin-3d",
-  "split": "holdout",
-  "difficulty": "medium",
-  "query": "桂林三天，想看山水、带孩子坐船，预算 4000 元",
-  "days": 3,
-  "cities": [
-   "桂林"
-  ],
-  "tags": [
-   "自然",
-   "亲子"
-  ]
- },
- {
-  "id": "zhangjiajie-3d",
-  "split": "holdout",
-  "difficulty": "hard",
-  "query": "张家界三天，主要是徒步看山，体力好，预算 3000 元",
-  "days": 3,
-  "cities": [
-   "张家界"
-  ],
-  "tags": [
-   "徒步",
-   "自然"
-  ]
- },
- {
-  "id": "quanzhou-2d",
-  "split": "holdout",
-  "difficulty": "easy",
-  "query": "泉州两天，想逛古城、吃本地小吃，预算 1500 元",
-  "days": 2,
-  "cities": [
-   "泉州"
-  ],
-  "tags": [
-   "人文",
-   "美食"
-  ]
- },
- {
-  "id": "dunhuang-3d",
-  "split": "holdout",
-  "difficulty": "medium",
-  "query": "敦煌三天，想拍戈壁和莫高窟，预算 4000 元",
-  "days": 3,
-  "cities": [
-   "敦煌"
-  ],
-  "tags": [
-   "摄影",
-   "自然"
-  ]
- },
- {
-  "id": "nanchang-2d",
-  "split": "holdout",
-  "difficulty": "easy",
-  "query": "南昌过周末，想看滕王阁、吃瓦罐汤，预算 1200 元",
-  "days": 2,
-  "cities": [
-   "南昌"
-  ],
-  "tags": [
-   "人文",
-   "美食"
-  ]
- },
- {
-  "id": "kunming-dali-5d",
-  "split": "holdout",
-  "difficulty": "hard",
-  "query": "昆明和大理一共五天，最后从大理飞回，预算 6000 元",
-  "days": 5,
-  "cities": [
-   "昆明",
-   "大理"
-  ],
-  "tags": [
-   "多城市",
-   "长线"
-  ]
- },
- {
-  "id": "shenzhen-2d",
-  "split": "holdout",
-  "difficulty": "easy",
-  "query": "深圳两天，想看海和逛创意园，预算 2000 元",
-  "days": 2,
-  "cities": [
-   "深圳"
-  ],
-  "tags": [
-   "城市",
-   "海边"
-  ]
- },
- {
-  "id": "beijing-2d-solo-museum",
-  "query": "从天津出发去北京玩两天，一个人想逛博物馆和胡同，预算控制在1000以内",
-  "days": 2,
-  "cities": [
-   "北京"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "独自",
-   "博物馆",
-   "预算紧"
-  ],
-  "split": "test"
- },
- {
-  "id": "xiamen-3d-couple-photo",
-  "query": "从广州出发去厦门玩三天，情侣出行想拍照和海岛，预算2000到4000",
-  "days": 3,
-  "cities": [
-   "厦门"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "摄影",
-   "海岛"
-  ],
-  "split": "test"
- },
- {
-  "id": "chengdu-4d-food-family",
-  "query": "从武汉出发带3岁孩子去成都玩四天，想吃美食又不想太累，预算适中",
-  "days": 4,
-  "cities": [
-   "成都"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带娃",
-   "美食",
-   "节奏慢"
-  ],
-  "split": "test"
- },
- {
-  "id": "chongqing-2d-elder-night",
-  "query": "从西安出发陪老人去重庆玩两天，想看夜景但走路别太多，预算3000左右",
-  "days": 2,
-  "cities": [
-   "重庆"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带老人",
-   "夜生活",
-   "节奏慢"
-  ],
-  "split": "test"
- },
- {
-  "id": "xian-3d-history-family",
-  "query": "从郑州出发一家人去西安玩三天，想看历史遗迹，孩子6岁，预算4000",
-  "days": 3,
-  "cities": [
-   "西安"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "亲子",
-   "历史",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "nanjing-2d-rain-museum",
-  "query": "从合肥出发去南京过两天，怕下雨想要室内备选，喜欢博物馆，预算2000",
-  "days": 2,
-  "cities": [
-   "南京"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "雨天备选",
-   "博物馆",
-   "周末"
-  ],
-  "split": "test"
- },
- {
-  "id": "suzhou-1d-halfday-garden",
-  "query": "从上海出发到苏州只有半天时间，想看园林拍拍照，预算800以内",
-  "days": 1,
-  "cities": [
-   "苏州"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "只有半天",
-   "园林",
-   "摄影"
-  ],
-  "split": "test"
- },
- {
-  "id": "hangzhou-3d-friends-tea",
-  "query": "从福州出发四个朋友去杭州玩三天，想喝茶逛西湖，预算人均3000",
-  "days": 3,
-  "cities": [
-   "杭州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "朋友4人",
-   "自然",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "shanghai-2d-team-building",
-  "query": "从北京出发公司团建去上海两天，想有夜生活和团队活动，预算6000以上",
-  "days": 2,
-  "cities": [
-   "上海"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "团建",
-   "夜生活",
-   "预算宽"
-  ],
-  "split": "test"
- },
- {
-  "id": "guangzhou-3d-food-kids",
-  "query": "从深圳出发带孩子去广州玩三天，主要吃早茶逛公园，预算3000左右",
-  "days": 3,
-  "cities": [
-   "广州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "亲子",
-   "美食",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "shenzhen-2d-creative-sea",
-  "query": "从东莞出发去深圳玩两天，想看海和创意园，情侣出行，预算2500",
-  "days": 2,
-  "cities": [
-   "深圳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "海岛",
-   "摄影"
-  ],
-  "split": "test"
- },
- {
-  "id": "wuhan-3d-food-couple",
-  "query": "从长沙出发情侣去武汉玩三天，想吃小吃看江景，预算2000到4000",
-  "days": 3,
-  "cities": [
-   "武汉"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "美食",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "changsha-2d-night-food",
-  "query": "从南昌出发去长沙过周末两天，主要是夜生活和吃辣，预算1500以内",
-  "days": 2,
-  "cities": [
-   "长沙"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "夜生活",
-   "美食",
-   "周末"
-  ],
-  "split": "test"
- },
- {
-  "id": "kunming-5d-nature-elder",
-  "query": "从贵阳出发带老人去昆明玩五天，喜欢自然和花市，节奏慢，预算5000",
-  "days": 5,
-  "cities": [
-   "昆明"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带老人",
-   "自然",
-   "赏花"
-  ],
-  "split": "test"
- },
- {
-  "id": "dali-3d-slow-couple",
-  "query": "从成都出发情侣去大理玩三天，想环湖住安静民宿，节奏慢，预算4000",
-  "days": 3,
-  "cities": [
-   "大理"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "自然",
-   "节奏慢"
-  ],
-  "split": "test"
- },
- {
-  "id": "lijiang-4d-photo-guesthouse",
-  "query": "从重庆出发去丽江玩四天，喜欢摄影和古镇，想住有特色的客栈，预算5000",
-  "days": 4,
-  "cities": [
-   "丽江"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "摄影",
-   "古镇",
-   "预算宽"
-  ],
-  "split": "test"
- },
- {
-  "id": "guilin-4d-family-boat",
-  "query": "从广州出发带孩子去桂林玩四天，想看山水坐船，预算4000左右",
-  "days": 4,
-  "cities": [
-   "桂林"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "亲子",
-   "自然",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "harbin-3d-winter-ice",
-  "query": "从沈阳出发冬天去哈尔滨玩三天，想看冰雪吃东北菜，预算5000",
-  "days": 3,
-  "cities": [
-   "哈尔滨"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "冬季",
-   "冰雪",
-   "美食"
-  ],
-  "split": "test"
- },
- {
-  "id": "dalian-2d-cheap-sea",
-  "query": "从长春出发去大连过周末两天，想看海和吃平价海鲜，预算1200以内",
-  "days": 2,
-  "cities": [
-   "大连"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "海岛",
-   "美食",
-   "预算紧"
-  ],
-  "split": "test"
- },
- {
-  "id": "tianjin-1d-cross-city",
-  "query": "从北京坐高铁去天津玩一天，想听相声吃小吃，再回北京，预算600",
-  "days": 1,
-  "cities": [
-   "天津"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "跨城交通",
-   "美食",
-   "一日游"
-  ],
-  "split": "test"
- },
- {
-  "id": "zhengzhou-2d-shaolin",
-  "query": "从洛阳出发去郑州玩两天，想去少林寺看看，预算1500以内",
-  "days": 2,
-  "cities": [
-   "郑州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "历史",
-   "周末",
-   "预算紧"
-  ],
-  "split": "test"
- },
- {
-  "id": "luoyang-3d-peony-history",
-  "query": "从郑州出发去洛阳玩三天，想看牡丹和龙门石窟，预算2500",
-  "days": 3,
-  "cities": [
-   "洛阳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "赏花",
-   "历史",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "jinan-2d-spring-couple",
-  "query": "从青岛出发情侣去济南过周末两天，想看泉水和老城，预算1800",
-  "days": 2,
-  "cities": [
-   "济南"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "自然",
-   "周末"
-  ],
-  "split": "test"
- },
- {
-  "id": "fuzhou-2d-food-oldtown",
-  "query": "从厦门出发去福州玩两天，想吃本地小吃逛老城，预算1500",
-  "days": 2,
-  "cities": [
-   "福州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "美食",
-   "古镇",
-   "预算紧"
-  ],
-  "split": "test"
- },
- {
-  "id": "quanzhou-2d-culture-snack",
-  "query": "从福州出发去泉州过两天，想逛古城吃小吃拍照，预算2000左右",
-  "days": 2,
-  "cities": [
-   "泉州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "古镇",
-   "美食",
-   "摄影"
-  ],
-  "split": "test"
- },
- {
-  "id": "zhuhai-3d-family-sea",
-  "query": "从广州出发带孩子去珠海玩三天，想看海和长隆，预算4000",
-  "days": 3,
-  "cities": [
-   "珠海"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "亲子",
-   "海岛",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "guiyang-2d-nature-food",
-  "query": "从重庆出发去贵阳过周末两天，想看自然风景吃酸汤，预算1800",
-  "days": 2,
-  "cities": [
-   "贵阳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "自然",
-   "美食",
-   "周末"
-  ],
-  "split": "test"
- },
- {
-  "id": "lhasa-5d-photo-elder",
-  "query": "从西宁出发带老人去拉萨玩五天，想拍照看布达拉宫，节奏慢，预算6000",
-  "days": 5,
-  "cities": [
-   "拉萨"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "带老人",
-   "摄影",
-   "节奏慢"
-  ],
-  "split": "test"
- },
- {
-  "id": "xining-3d-nature-solo",
-  "query": "从兰州出发一个人去西宁玩三天，喜欢自然和徒步，预算2000以内",
-  "days": 3,
-  "cities": [
-   "西宁"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "独自",
-   "自然",
-   "徒步"
-  ],
-  "split": "test"
- },
- {
-  "id": "yinchuan-3d-history-photo",
-  "query": "从西安出发去银川玩三天，想拍沙漠和西夏古迹，预算3000左右",
-  "days": 3,
-  "cities": [
-   "银川"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "摄影",
-   "历史",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "hohhot-2d-grassland-couple",
-  "query": "从北京出发情侣去呼和浩特玩两天，想看草原吃羊肉，预算2500",
-  "days": 2,
-  "cities": [
-   "呼和浩特"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "情侣",
-   "自然",
-   "美食"
-  ],
-  "split": "test"
- },
- {
-  "id": "urumqi-6d-nature-friends",
-  "query": "从西安出发四个朋友去乌鲁木齐玩六天，想看自然风光，预算人均6000以上",
-  "days": 6,
-  "cities": [
-   "乌鲁木齐"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "朋友4人",
-   "自然",
-   "预算宽"
-  ],
-  "split": "test"
- },
- {
-  "id": "nanning-3d-food-kids",
-  "query": "从广州出发带孩子去南宁玩三天，想吃米粉逛公园，预算2500",
-  "days": 3,
-  "cities": [
-   "南宁"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "亲子",
-   "美食",
-   "预算中"
-  ],
-  "split": "test"
- },
- {
-  "id": "haikou-2d-sea-rain",
-  "query": "从深圳出发去海口过周末两天，想海岛休闲，万一下雨要备选，预算3000",
-  "days": 2,
-  "cities": [
-   "海口"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "海岛",
-   "雨天备选",
-   "周末"
-  ],
-  "split": "test"
- },
- {
-  "id": "beijing-3d-no-days",
-  "query": "从上海出发想去北京玩，喜欢博物馆和美食，预算3000左右",
-  "cities": [
-   "北京"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "信息缺失",
-   "博物馆",
-   "美食"
-  ],
-  "expect": "needs_clarification",
-  "split": "test"
- },
- {
-  "id": "multi-city-3d-5cities",
-  "query": "从上海出发三天想去成都重庆西安昆明贵阳，帮我安排路线",
-  "cities": [
-   "成都",
-   "重庆",
-   "西安",
-   "昆明",
-   "贵阳"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "目的地过多",
-   "跨城交通"
-  ],
-  "expect": "needs_clarification",
-  "split": "test"
- },
- {
-  "id": "budget-conflict-family",
-  "query": "从南京出发带老人孩子去三亚玩五天，预算1000以内，想住海边",
-  "cities": [
-   "三亚"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "预算矛盾",
-   "带老人",
-   "带娃"
-  ],
-  "expect": "needs_clarification",
-  "split": "test"
- },
- {
-  "id": "hangzhou-4d-spring-elder",
-  "query": "从苏州出发带父母去杭州玩四天，想赏花看西湖，走路别太累，预算3500",
-  "days": 4,
-  "cities": [
-   "杭州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "带老人",
-   "赏花",
-   "节奏慢"
-  ],
-  "split": "test"
- },
- {
-  "id": "xiamen-2d-couple-food",
-  "query": "我和对象想从福州去厦门过个周末，两天时间，主要想吃海鲜和拍照，预算三千左右",
-  "days": 2,
-  "cities": [
-   "厦门"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "美食",
-   "摄影",
-   "周末"
-  ],
-  "split": "test"
- },
- {
-  "id": "chongqing-4d-friends-night",
-  "query": "四个朋友约着从贵阳去重庆玩四天，火锅必须安排，晚上想去洪崖洞看夜景，人均预算两千五",
-  "days": 4,
-  "cities": [
-   "重庆"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "朋友",
-   "美食",
-   "夜生活",
-   "夜景"
-  ],
-  "split": "test"
- },
- {
-  "id": "beijing-5d-elder-museum",
-  "query": "想带爸妈从天津去北京玩五天，老人腿脚一般，博物馆和胡同都想看看，预算四千够吗",
-  "days": 5,
-  "cities": [
-   "北京"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带老人",
-   "博物馆",
-   "慢节奏"
-  ],
-  "split": "test"
- },
- {
-  "id": "hangzhou-3d-kid-nature",
-  "query": "带五岁孩子从苏州去杭州玩三天，想看自然风景少走路，最好有亲子活动，预算两千八",
-  "days": 3,
-  "cities": [
-   "杭州"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "亲子",
-   "自然",
-   "慢节奏"
-  ],
-  "split": "test"
- },
- {
-  "id": "chengdu-3d-food-photo",
-  "query": "从武汉去成都三天，想拍老街和吃苍蝇馆子，摄影为主别太赶，预算两千",
-  "days": 3,
-  "cities": [
-   "成都"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "摄影",
-   "美食",
-   "城市漫步"
-  ],
-  "split": "test"
- },
- {
-  "id": "xian-4d-solo-history",
-  "query": "一个人从郑州去西安玩四天，历史遗迹和博物馆优先，预算三千以内，帮我排个不累的路线",
-  "days": 4,
-  "cities": [
-   "西安"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "独自",
-   "历史",
-   "博物馆"
-  ],
-  "split": "test"
- },
- {
-  "id": "guilin-3d-family-boat",
-  "query": "一家三口从南宁去桂林三天，想坐船看山水，孩子六岁，预算三千五，别安排太满",
-  "days": 3,
-  "cities": [
-   "桂林"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "亲子",
-   "自然",
-   "游船"
-  ],
-  "split": "test"
- },
- {
-  "id": "harbin-4d-winter-ski",
-  "query": "冬天从沈阳去哈尔滨玩四天，想看冰雕和滑雪，羽绒服够厚，预算六千",
-  "days": 4,
-  "cities": [
-   "哈尔滨"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "冬季",
-   "滑雪",
-   "冰雪"
-  ],
-  "split": "test"
- },
- {
-  "id": "dali-3d-solo-slow",
-  "query": "从昆明去大理待三天，想拍照、逛古镇，节奏越慢越好，一个人预算两千左右",
-  "days": 3,
-  "cities": [
-   "大理"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "独自",
-   "摄影",
-   "古镇",
-   "慢节奏"
-  ],
-  "split": "test"
- },
- {
-  "id": "qingdao-3d-friends-beer",
-  "query": "四个朋友从济南去青岛玩三天，海鲜和啤酒都要，预算人均一千五，顺便看海",
-  "days": 3,
-  "cities": [
-   "青岛"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "朋友",
-   "美食",
-   "海边"
-  ],
-  "split": "test"
- },
- {
-  "id": "nanjing-2d-budget-tight",
-  "query": "预算一千以内，两个人从上海去南京过两天，想逛老门东和纪念馆，能省则省",
-  "days": 2,
-  "cities": [
-   "南京"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "穷游",
-   "历史",
-   "情侣"
-  ],
-  "split": "test"
- },
- {
-  "id": "changsha-3d-night-food",
-  "query": "从广州去长沙三天，主要是吃辣和逛夜市，夜生活丰富点，预算两千",
-  "days": 3,
-  "cities": [
-   "长沙"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "美食",
-   "夜生活",
-   "朋友"
-  ],
-  "split": "test"
- },
- {
-  "id": "lhasa-5d-solo-nature",
-  "query": "一个人从西宁去拉萨玩五天，想看自然风光和寺庙，怕高反想留出适应时间，预算六千",
-  "days": 5,
-  "cities": [
-   "拉萨"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "独自",
-   "自然",
-   "高原"
-  ],
-  "split": "test"
- },
- {
-  "id": "zhengzhou-2d-shaolin-2",
-  "query": "从太原去郑州两天，想去少林寺和博物馆，预算一千二，请问交通怎么安排",
-  "days": 2,
-  "cities": [
-   "郑州"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "历史",
-   "短途"
-  ],
-  "split": "test"
- },
- {
-  "id": "fuzhou-2d-oldtown-food",
-  "query": "从厦门去福州过周末，两天想逛三坊七巷、吃本地小吃，预算一千",
-  "days": 2,
-  "cities": [
-   "福州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "古镇",
-   "美食",
-   "周末"
-  ],
-  "split": "test"
- },
- {
-  "id": "zhuhai-2d-couple-island",
-  "query": "情侣从广州去珠海两天，想上海岛、看海，预算两千五，有没有安静的住宿推荐",
-  "days": 2,
-  "cities": [
-   "珠海"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "海岛",
-   "自然"
-  ],
-  "split": "test"
- },
- {
-  "id": "lanzhou-3d-food-museum",
-  "query": "从西安去兰州三天，想多吃牛肉面和逛博物馆，预算两千内，节奏随意点",
-  "days": 3,
-  "cities": [
-   "兰州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "美食",
-   "博物馆"
-  ],
-  "split": "test"
- },
- {
-  "id": "yinchuan-4d-nature-photo",
-  "query": "从兰州去银川四天，喜欢拍沙漠和西夏文化，预算三千，摄影为主",
-  "days": 4,
-  "cities": [
-   "银川"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "摄影",
-   "自然",
-   "历史"
-  ],
-  "split": "test"
- },
- {
-  "id": "hohhot-3d-grassland",
-  "query": "朋友四个人从北京去呼和浩特三天，想看草原和吃羊肉，预算人均两千",
-  "days": 3,
-  "cities": [
-   "呼和浩特"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "朋友",
-   "自然",
-   "美食"
-  ],
-  "split": "test"
- },
- {
-  "id": "urumqi-5d-solo-vast",
-  "query": "一个人从西安去乌鲁木齐玩五天，想看自然和逛大巴扎，预算宽裕七千",
-  "days": 5,
-  "cities": [
-   "乌鲁木齐"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "独自",
-   "自然",
-   "长途"
-  ],
-  "split": "test"
- },
- {
-  "id": "haikou-3d-elder-warm",
-  "query": "带老人从广州去海口三天，想避寒、节奏慢，看看海和公园，预算四千",
-  "days": 3,
-  "cities": [
-   "海口"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带老人",
-   "慢节奏",
-   "海边"
-  ],
-  "split": "test"
- },
- {
-  "id": "nanning-2d-friend-night",
-  "query": "从昆明去南宁两天，朋友一起，想吃夜市小吃、逛青秀山，预算一千五",
-  "days": 2,
-  "cities": [
-   "南宁"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "朋友",
-   "美食",
-   "自然"
-  ],
-  "split": "test"
- },
- {
-  "id": "guiyang-3d-kid-waterfall",
-  "query": "带孩子从重庆去贵阳三天，想看瀑布和黄果树，孩子四岁，预算三千",
-  "days": 3,
-  "cities": [
-   "贵阳"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "亲子",
-   "自然",
-   "短线"
-  ],
-  "split": "test"
- },
- {
-  "id": "shanghai-2d-rainy-museum",
-  "query": "从杭州去上海两天，怕下雨想要室内备选，主要看展和逛街，预算两千",
-  "days": 2,
-  "cities": [
-   "上海"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "雨天备选",
-   "博物馆",
-   "购物"
-  ],
-  "split": "test"
- },
- {
-  "id": "shenzhen-3d-tech-skyline",
-  "query": "从广州去深圳三天，想看科技园和城市天际线，顺便逛创意园，预算两千五",
-  "days": 3,
-  "cities": [
-   "深圳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "城市",
-   "摄影",
-   "科技"
-  ],
-  "split": "test"
- },
- {
-  "id": "suzhou-1d-garden-photo",
-  "query": "从上海去苏州只有半天时间，想拍园林和古街，预算八百，来得及吗",
-  "days": 1,
-  "cities": [
-   "苏州"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "摄影",
-   "园林",
-   "半日"
-  ],
-  "split": "test"
- },
- {
-  "id": "quanzhou-2d-oldtown-food",
-  "query": "从厦门去泉州两天，想逛古城、吃本地小吃，拍照为主，预算一千二",
-  "days": 2,
-  "cities": [
-   "泉州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "古镇",
-   "美食",
-   "摄影"
-  ],
-  "split": "test"
- },
- {
-  "id": "luoyang-3d-peony-history-2",
-  "query": "从郑州去洛阳三天，想看牡丹和龙门石窟，四月出行，预算两千",
-  "days": 3,
-  "cities": [
-   "洛阳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "赏花",
-   "历史"
-  ],
-  "split": "test"
- },
- {
-  "id": "dalian-2d-couple-seafood",
-  "query": "情侣从沈阳去大连过周末，想看海吃平价海鲜，预算一千八",
-  "days": 2,
-  "cities": [
-   "大连"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "海边",
-   "美食"
-  ],
-  "split": "test"
- },
- {
-  "id": "tianjin-1d-solo-crosstalk",
-  "query": "从北京去天津一天，想听相声吃小吃，预算六百，帮我排个紧凑路线",
-  "days": 1,
-  "cities": [
-   "天津"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "独自",
-   "曲艺",
-   "美食"
-  ],
-  "split": "test"
- },
- {
-  "id": "jinan-2d-spring-slow",
-  "query": "从青岛去济南两天，想看泉水和老街，节奏慢点，预算一千二",
-  "days": 2,
-  "cities": [
-   "济南"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "自然",
-   "慢节奏"
-  ],
-  "split": "test"
- },
- {
-  "id": "wuhan-3d-solo-food",
-  "query": "一个人从长沙去武汉三天，想吃热干面和逛博物馆，预算两千以内",
-  "days": 3,
-  "cities": [
-   "武汉"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "独自",
-   "美食",
-   "博物馆"
-  ],
-  "split": "test"
- },
- {
-  "id": "nanchang-2d-teambuilding",
-  "query": "公司团建六个人从长沙去南昌两天，想轻松点、吃点当地菜，预算人均一千五",
-  "days": 2,
-  "cities": [
-   "南昌"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "团建",
-   "美食",
-   "短途"
-  ],
-  "split": "test"
- },
- {
-  "id": "xian-3d-multicity-cross",
-  "query": "从郑州出发三天想去西安和洛阳，最后从洛阳回郑州，预算两千五",
-  "days": 3,
-  "cities": [
-   "西安",
-   "洛阳"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "跨城",
-   "历史",
-   "多城"
-  ],
-  "split": "test"
- },
- {
-  "id": "sanya-undated-family",
-  "query": "想带孩子去三亚玩，预算八千，住海边，你帮我看看要几天合适",
-  "cities": [
-   "三亚"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "亲子",
-   "海岛",
-   "缺少天数"
-  ],
-  "expect": "needs_clarification",
-  "split": "test"
- },
- {
-  "id": "chengdu-3d-toomanycities",
-  "query": "三天时间想去成都、重庆、西安、昆明、贵阳，从武汉出发，帮我安排路线",
-  "cities": [
-   "成都",
-   "重庆",
-   "西安",
-   "昆明",
-   "贵阳"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "多城",
-   "路线规划"
-  ],
-  "expect": "needs_clarification",
-  "split": "test"
- },
- {
-  "id": "beijing-2d-budget-conflict",
-  "query": "从上海去北京两天，人均预算五百还要住五星酒店，你帮我规划一下",
-  "cities": [
-   "北京"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "预算矛盾",
-   "高要求"
-  ],
-  "expect": "needs_clarification",
-  "split": "test"
- },
- {
-  "id": "guangzhou-4d-hotspring-relax",
-  "query": "从深圳去广州四天，想泡温泉、吃早茶，带老人一起，预算五千",
-  "days": 4,
-  "cities": [
-   "广州"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带老人",
-   "温泉",
-   "美食"
-  ],
-  "split": "test"
- },
- {
-  "id": "xiamen-2d-solo-photo",
-  "query": "我一个人从福州去厦门玩两天，想拍照逛老街，别太贵",
-  "days": 2,
-  "cities": [
-   "厦门"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "独自",
-   "摄影",
-   "老街"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "chengdu-3d-couple-food",
-  "query": "和对象从武汉去成都玩三天，主要想吃美食，大概想花三千",
-  "days": 3,
-  "cities": [
-   "成都"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "美食",
-   "三天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "chongqing-2d-friends-night",
-  "query": "四个朋友从贵阳去重庆过周末，想吃火锅看夜景，别太贵",
-  "days": 2,
-  "cities": [
-   "重庆"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "朋友同行",
-   "夜生活",
-   "美食"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "xian-1d-museum",
-  "query": "从郑州到西安就待一天，想看博物馆和古城墙，随便走走",
-  "days": 1,
-  "cities": [
-   "西安"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "一天",
-   "博物馆",
-   "历史"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "nanjing-2d-elder-slow",
-  "query": "带爸妈从上海去南京玩两天，节奏慢点，别走太累",
-  "days": 2,
-  "cities": [
-   "南京"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带老人",
-   "慢节奏",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "suzhou-1d-garden-halfday",
-  "query": "从杭州去苏州，只有半天时间，想逛园林拍拍照",
-  "days": 1,
-  "cities": [
-   "苏州"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "只有半天",
-   "园林",
-   "摄影"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "hangzhou-3d-kid-nature-2",
-  "query": "带五岁孩子从宁波去杭州玩三天，想看自然风景，别太赶",
-  "days": 3,
-  "cities": [
-   "杭州"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带娃",
-   "自然",
-   "慢节奏"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "shanghai-2d-couple-museum",
-  "query": "和对象从苏州去上海玩两天，想逛博物馆和咖啡店，预算中等",
-  "days": 2,
-  "cities": [
-   "上海"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "博物馆",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "beijing-4d-friends-budget",
-  "query": "我们四个人从天津去北京玩四天，想逛胡同看展，预算两千多",
-  "days": 4,
-  "cities": [
-   "北京"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "朋友同行",
-   "博物馆",
-   "胡同"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "guangzhou-2d-food-kid",
-  "query": "带孩子从深圳去广州玩两天，想喝早茶逛公园，别太贵",
-  "days": 2,
-  "cities": [
-   "广州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "带娃",
-   "美食",
-   "公园"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "shenzhen-1d-photo-skyline",
-  "query": "从广州去深圳一天，想拍城市天际线和创意园，随便走走",
-  "days": 1,
-  "cities": [
-   "深圳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "一天",
-   "摄影",
-   "城市"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "wuhan-2d-food-night",
-  "query": "和闺蜜从长沙去武汉过周末，主要吃小吃逛夜市，别太贵",
-  "days": 2,
-  "cities": [
-   "武汉"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "朋友同行",
-   "美食",
-   "夜生活"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "changsha-2d-food-hot",
-  "query": "从南昌去长沙玩两天，就想吃辣逛夜市，大概想花一千五",
-  "days": 2,
-  "cities": [
-   "长沙"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "美食",
-   "夜生活",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "kunming-3d-spring-flower",
-  "query": "三月从成都去昆明玩三天，想看花和自然风景，预算三四千",
-  "days": 3,
-  "cities": [
-   "昆明"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "赏花",
-   "自然",
-   "春季"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "dali-2d-slow-couple",
-  "query": "和对象从昆明去大理待两天，想环洱海住安静的，随便走走",
-  "days": 2,
-  "cities": [
-   "大理"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "慢节奏",
-   "洱海"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "lijiang-3d-photo-oldtown",
-  "query": "一个人从昆明去丽江玩三天，想拍古镇和雪山，别太贵",
-  "days": 3,
-  "cities": [
-   "丽江"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "独自",
-   "摄影",
-   "古镇"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "sanya-4d-kid-beach",
-  "query": "带三岁孩子从广州去三亚玩四天，想住海边节奏慢，预算宽松",
-  "days": 4,
-  "cities": [
-   "三亚"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "带娃",
-   "海岛",
-   "慢节奏"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "guilin-2d-nature-boat",
-  "query": "从南宁去桂林玩两天，想看山水坐船，预算两千左右",
-  "days": 2,
-  "cities": [
-   "桂林"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "自然",
-   "山水",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "harbin-3d-winter-ski",
-  "query": "冬天从北京去哈尔滨玩三天，想看冰雪滑雪，预算六千以上",
-  "days": 3,
-  "cities": [
-   "哈尔滨"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "冬季",
-   "滑雪",
-   "冰雪"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "dalian-2d-sea-cheap",
-  "query": "从沈阳去大连过周末，想看海吃海鲜，别太贵一千以内",
-  "days": 2,
-  "cities": [
-   "大连"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "看海",
-   "海鲜",
-   "省钱"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "tianjin-1d-food-crosstalk",
-  "query": "从北京去天津一天，想听相声吃小吃，随便走走",
-  "days": 1,
-  "cities": [
-   "天津"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "一天",
-   "美食",
-   "相声"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "zhengzhou-2d-shaolin-3",
-  "query": "朋友四人从武汉去郑州玩两天，想去少林寺看看，预算两千",
-  "days": 2,
-  "cities": [
-   "郑州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "朋友同行",
-   "历史",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "luoyang-2d-history-photo",
-  "query": "从郑州去洛阳玩两天，想看龙门石窟拍照，别太贵",
-  "days": 2,
-  "cities": [
-   "洛阳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "历史",
-   "摄影",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "jinan-2d-spring-walk",
-  "query": "从天津去济南过周末，想看泉逛老街，随便走走",
-  "days": 2,
-  "cities": [
-   "济南"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "泉水",
-   "老街",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "fuzhou-2d-food-oldtown-2",
-  "query": "一个人从厦门去福州玩两天，想吃小吃逛古街，别太贵",
-  "days": 2,
-  "cities": [
-   "福州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "独自",
-   "美食",
-   "古镇"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "quanzhou-3d-culture-food",
-  "query": "和对象从福州去泉州玩三天，想逛古城吃本地小吃，节奏慢点",
-  "days": 3,
-  "cities": [
-   "泉州"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "情侣",
-   "美食",
-   "古城"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "zhuhai-2d-sea-photo",
-  "query": "从广州去珠海玩两天，想看海拍照逛小岛，预算三千左右",
-  "days": 2,
-  "cities": [
-   "珠海"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "海岛",
-   "摄影",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "guiyang-2d-nature-food-2",
-  "query": "从重庆去贵阳过周末，想看自然风景吃小吃，别太贵",
-  "days": 2,
-  "cities": [
-   "贵阳"
-  ],
-  "difficulty": "easy",
-  "tags": [
-   "自然",
-   "美食",
-   "两天"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "lhasa-5d-photo-elder-2",
-  "query": "带爸妈从成都去拉萨玩五天，想拍照看寺庙，节奏慢点别太累",
-  "days": 5,
-  "cities": [
-   "拉萨"
-  ],
-  "difficulty": "hard",
-  "tags": [
-   "带老人",
-   "摄影",
-   "高原"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "xining-3d-nature-hike",
-  "query": "和朋友从西安去西宁玩三天，想看自然风光徒步，预算四千",
-  "days": 3,
-  "cities": [
-   "西宁"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "朋友同行",
-   "自然",
-   "徒步"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "yinchuan-2d-photo-history",
-  "query": "一个人从西安去银川玩两天，想拍戈壁看历史，别太贵",
-  "days": 2,
-  "cities": [
-   "银川"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "独自",
-   "摄影",
-   "历史"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "hohhot-3d-grassland-hike",
-  "query": "朋友四人从北京去呼和浩特玩三天，想看草原徒步，预算三千",
-  "days": 3,
-  "cities": [
-   "呼和浩特"
-  ],
-  "difficulty": "medium",
-  "tags": [
-   "朋友同行",
-   "自然",
-   "徒步"
-  ],
-  "split": "holdout"
- },
- {
-  "id": "named-hangzhou-westlake",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "杭州两天，一定要去西湖和灵隐寺，预算 1500 元",
-  "days": 2,
-  "cities": [
-   "杭州"
-  ],
-  "tags": [
-   "自然",
-   "人文"
-  ],
-  "named_places": [
-   "西湖",
-   "灵隐寺"
-  ]
- },
- {
-  "id": "named-beijing-palace",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "北京三天，想去故宫和天安门，预算 3000 元",
-  "days": 3,
-  "cities": [
-   "北京"
-  ],
-  "tags": [
-   "人文"
-  ],
-  "named_places": [
-   "故宫",
-   "天安门"
-  ]
- },
- {
-  "id": "named-xian-warriors",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "西安两天，想去看兵马俑和大雁塔",
-  "days": 2,
-  "cities": [
-   "西安"
-  ],
-  "tags": [
-   "人文"
-  ],
-  "named_places": [
-   "兵马俑",
-   "大雁塔"
-  ]
- },
- {
-  "id": "named-shanghai-bund",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "上海两天，想去外滩和豫园，预算 2000 元",
-  "days": 2,
-  "cities": [
-   "上海"
-  ],
-  "tags": [
-   "城市"
-  ],
-  "named_places": [
-   "外滩",
-   "豫园"
-  ]
- },
- {
-  "id": "named-chengdu-panda",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "成都两天，想去大熊猫基地和宽窄巷子",
-  "days": 2,
-  "cities": [
-   "成都"
-  ],
-  "tags": [
-   "亲子",
-   "美食"
-  ],
-  "named_places": [
-   "大熊猫基地",
-   "宽窄巷子"
-  ]
- },
- {
-  "id": "named-xiamen-gulangyu",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "厦门三天，想去鼓浪屿和厦门大学",
-  "days": 3,
-  "cities": [
-   "厦门"
-  ],
-  "tags": [
-   "海滨"
-  ],
-  "named_places": [
-   "鼓浪屿",
-   "厦门大学"
-  ]
- },
- {
-  "id": "named-suzhou-gardens",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "苏州两天，想去拙政园和狮子林",
-  "days": 2,
-  "cities": [
-   "苏州"
-  ],
-  "tags": [
-   "园林"
-  ],
-  "named_places": [
-   "拙政园",
-   "狮子林"
-  ]
- },
- {
-  "id": "named-guilin-lijiang",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "桂林三天，想去漓江和象鼻山",
-  "days": 3,
-  "cities": [
-   "桂林"
-  ],
-  "tags": [
-   "自然"
-  ],
-  "named_places": [
-   "漓江",
-   "象鼻山"
-  ]
- },
- {
-  "id": "named-qingdao-beer",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "青岛两天，想去栈桥和啤酒博物馆",
-  "days": 2,
-  "cities": [
-   "青岛"
-  ],
-  "tags": [
-   "海滨"
-  ],
-  "named_places": [
-   "栈桥",
-   "啤酒博物馆"
-  ]
- },
- {
-  "id": "named-chongqing-hongyadong",
-  "split": "test",
-  "difficulty": "easy",
-  "query": "重庆两天，想去洪崖洞和磁器口",
-  "days": 2,
-  "cities": [
-   "重庆"
-  ],
-  "tags": [
-   "城市",
-   "美食"
-  ],
-  "named_places": [
-   "洪崖洞",
-   "磁器口"
-  ]
- }
+  {
+    "id": "hangzhou-2d",
+    "split": "dev",
+    "difficulty": "easy",
+    "query": "从上海出发，周末去杭州玩两天，喜欢自然风光和咖啡馆，预算 1500 元",
+    "days": 2,
+    "cities": [
+      "杭州"
+    ],
+    "tags": [
+      "短途",
+      "偏好明确"
+    ]
+  },
+  {
+    "id": "chengdu-3d",
+    "split": "dev",
+    "difficulty": "easy",
+    "query": "国庆去成都玩三天，想吃地道美食也想看大熊猫，预算 3000 元",
+    "days": 3,
+    "cities": [
+      "成都"
+    ],
+    "tags": [
+      "美食",
+      "亲子"
+    ]
+  },
+  {
+    "id": "xian-1d",
+    "split": "dev",
+    "difficulty": "easy",
+    "query": "出差顺路在西安待一天，想看历史遗迹，预算 800 元",
+    "days": 1,
+    "cities": [
+      "西安"
+    ],
+    "tags": [
+      "单日",
+      "历史"
+    ]
+  },
+  {
+    "id": "suzhou-2d",
+    "split": "dev",
+    "difficulty": "medium",
+    "query": "从上海去苏州过周末，带老人和孩子，想看园林，节奏慢一点，预算 2000 元",
+    "days": 2,
+    "cities": [
+      "苏州"
+    ],
+    "tags": [
+      "家庭",
+      "慢节奏"
+    ]
+  },
+  {
+    "id": "eastchina-3d",
+    "split": "dev",
+    "difficulty": "hard",
+    "query": "从南京出发，三天里想去上海和杭州，最后从杭州回南京",
+    "days": 3,
+    "cities": [
+      "上海",
+      "杭州"
+    ],
+    "tags": [
+      "多城市",
+      "跨城交通"
+    ]
+  },
+  {
+    "id": "ambiguous",
+    "split": "dev",
+    "difficulty": "easy",
+    "query": "周末想出去玩两天，你有什么建议吗",
+    "expect": "needs_clarification",
+    "tags": [
+      "信息不全"
+    ]
+  },
+  {
+    "id": "budget-tight",
+    "split": "dev",
+    "difficulty": "medium",
+    "query": "学生党，北京玩三天，预算 1000 元，想省钱又有意思",
+    "days": 3,
+    "cities": [
+      "北京"
+    ],
+    "tags": [
+      "低预算"
+    ]
+  },
+  {
+    "id": "xiamen-rain",
+    "split": "dev",
+    "difficulty": "medium",
+    "query": "去厦门玩两天，听说可能下雨，想要室内备选方案，预算 1800 元",
+    "days": 2,
+    "cities": [
+      "厦门"
+    ],
+    "tags": [
+      "天气",
+      "备选方案"
+    ]
+  },
+  {
+    "id": "qingdao-2d",
+    "split": "dev",
+    "difficulty": "easy",
+    "query": "从济南去青岛过周末，想看海、喝啤酒，预算 2000 元",
+    "days": 2,
+    "cities": [
+      "青岛"
+    ],
+    "tags": [
+      "海边",
+      "短途"
+    ]
+  },
+  {
+    "id": "changsha-2d",
+    "split": "dev",
+    "difficulty": "easy",
+    "query": "长沙两天，主要是吃辣和逛夜生活，预算 1500 元",
+    "days": 2,
+    "cities": [
+      "长沙"
+    ],
+    "tags": [
+      "美食",
+      "夜生活"
+    ]
+  },
+  {
+    "id": "nanjing-1d",
+    "split": "dev",
+    "difficulty": "easy",
+    "query": "在南京出差，只有一天空闲，想看历史景点，预算 600 元",
+    "days": 1,
+    "cities": [
+      "南京"
+    ],
+    "tags": [
+      "单日",
+      "历史"
+    ]
+  },
+  {
+    "id": "chongqing-3d",
+    "split": "dev",
+    "difficulty": "medium",
+    "query": "去重庆玩三天，想吃火锅、看夜景，预算 2500 元",
+    "days": 3,
+    "cities": [
+      "重庆"
+    ],
+    "tags": [
+      "美食",
+      "夜景"
+    ]
+  },
+  {
+    "id": "kunming-4d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "十月去昆明玩四天，喜欢自然风光和花市，预算 4000 元",
+    "days": 4,
+    "cities": [
+      "昆明"
+    ],
+    "tags": [
+      "长线",
+      "自然"
+    ]
+  },
+  {
+    "id": "dali-3d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "去大理待三天，想环洱海、住安静的地方，节奏慢一点，预算 3000 元",
+    "days": 3,
+    "cities": [
+      "大理"
+    ],
+    "tags": [
+      "慢节奏",
+      "自然"
+    ]
+  },
+  {
+    "id": "huangshan-2d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "周末去黄山爬山两天，体力不错，想看日出，预算 1500 元",
+    "days": 2,
+    "cities": [
+      "黄山"
+    ],
+    "tags": [
+      "徒步",
+      "自然"
+    ]
+  },
+  {
+    "id": "luoyang-2d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "去洛阳玩两天，主要想看龙门石窟这类历史遗迹，预算 1200 元",
+    "days": 2,
+    "cities": [
+      "洛阳"
+    ],
+    "tags": [
+      "历史"
+    ]
+  },
+  {
+    "id": "hangzhou-parents-3d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "带父母去杭州玩三天，不想走太累，预算 3000 元",
+    "days": 3,
+    "cities": [
+      "杭州"
+    ],
+    "tags": [
+      "家庭",
+      "慢节奏"
+    ]
+  },
+  {
+    "id": "shanghai-kids-2d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "带孩子去上海玩两天，想去迪士尼，预算 4000 元",
+    "days": 2,
+    "cities": [
+      "上海"
+    ],
+    "tags": [
+      "亲子"
+    ]
+  },
+  {
+    "id": "beijing-student-4d",
+    "split": "test",
+    "difficulty": "hard",
+    "query": "大学生穷游北京四天，想多看博物馆和胡同，预算 2000 元",
+    "days": 4,
+    "cities": [
+      "北京"
+    ],
+    "tags": [
+      "低预算",
+      "博物馆"
+    ]
+  },
+  {
+    "id": "guangzhou-2d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "广州两天，想吃早茶、带孩子逛公园，预算 2500 元",
+    "days": 2,
+    "cities": [
+      "广州"
+    ],
+    "tags": [
+      "美食",
+      "亲子"
+    ]
+  },
+  {
+    "id": "shenzhen-1d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "深圳出差一天，想看看科技园区和城市天际线，预算 800 元",
+    "days": 1,
+    "cities": [
+      "深圳"
+    ],
+    "tags": [
+      "单日",
+      "城市"
+    ]
+  },
+  {
+    "id": "xiamen-3d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "厦门三天，想逛海岛和老街，万一下雨要有备选，预算 3000 元",
+    "days": 3,
+    "cities": [
+      "厦门"
+    ],
+    "tags": [
+      "天气",
+      "备选方案"
+    ]
+  },
+  {
+    "id": "qingdao-3d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "青岛玩三天，主要吃海鲜、看海，预算 2500 元",
+    "days": 3,
+    "cities": [
+      "青岛"
+    ],
+    "tags": [
+      "海边",
+      "美食"
+    ]
+  },
+  {
+    "id": "dalian-2d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "去大连过周末，预算只有 1200 元，想看海和吃平价海鲜",
+    "days": 2,
+    "cities": [
+      "大连"
+    ],
+    "tags": [
+      "低预算",
+      "海边"
+    ]
+  },
+  {
+    "id": "suzhou-1d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "在苏州停留一天，喜欢园林和拍照，预算 800 元",
+    "days": 1,
+    "cities": [
+      "苏州"
+    ],
+    "tags": [
+      "单日",
+      "摄影"
+    ]
+  },
+  {
+    "id": "wuxi-2d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "无锡两天，想去太湖和灵山，预算 1500 元",
+    "days": 2,
+    "cities": [
+      "无锡"
+    ],
+    "tags": [
+      "自然"
+    ]
+  },
+  {
+    "id": "ningbo-2d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "宁波两天，想吃海鲜、逛古镇，预算 1800 元",
+    "days": 2,
+    "cities": [
+      "宁波"
+    ],
+    "tags": [
+      "美食",
+      "古镇"
+    ]
+  },
+  {
+    "id": "shaoxing-2d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "绍兴两天，想喝黄酒、看人文故居，预算 1200 元",
+    "days": 2,
+    "cities": [
+      "绍兴"
+    ],
+    "tags": [
+      "人文"
+    ]
+  },
+  {
+    "id": "yangzhou-2d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "扬州过周末，主要想喝早茶、逛园林，预算 1500 元",
+    "days": 2,
+    "cities": [
+      "扬州"
+    ],
+    "tags": [
+      "美食",
+      "园林"
+    ]
+  },
+  {
+    "id": "zhengzhou-2d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "郑州两天，想去少林寺看看，预算 1200 元",
+    "days": 2,
+    "cities": [
+      "郑州"
+    ],
+    "tags": [
+      "历史"
+    ]
+  },
+  {
+    "id": "kaifeng-1d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "开封一天，想逛夜市和古迹，预算 600 元",
+    "days": 1,
+    "cities": [
+      "开封"
+    ],
+    "tags": [
+      "单日",
+      "美食"
+    ]
+  },
+  {
+    "id": "tianjin-1d",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "天津一天，想听相声、吃小吃，预算 500 元",
+    "days": 1,
+    "cities": [
+      "天津"
+    ],
+    "tags": [
+      "单日",
+      "美食"
+    ]
+  },
+  {
+    "id": "chengdu-chongqing-4d",
+    "split": "test",
+    "difficulty": "hard",
+    "query": "成都和重庆一共四天，最后从重庆回去，预算 3000 元",
+    "days": 4,
+    "cities": [
+      "成都",
+      "重庆"
+    ],
+    "tags": [
+      "多城市",
+      "跨城交通"
+    ]
+  },
+  {
+    "id": "sanya-5d",
+    "split": "test",
+    "difficulty": "medium",
+    "query": "带孩子去三亚玩五天，想住海边、节奏慢，预算 8000 元",
+    "days": 5,
+    "cities": [
+      "三亚"
+    ],
+    "tags": [
+      "亲子",
+      "长线"
+    ]
+  },
+  {
+    "id": "no-destination",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "下个月找个周末出去玩两天，你看着安排",
+    "expect": "needs_clarification",
+    "tags": [
+      "信息不全"
+    ]
+  },
+  {
+    "id": "contradictory",
+    "split": "test",
+    "difficulty": "hard",
+    "query": "三天里想去北京、上海、成都、广州、西安，帮我安排",
+    "expect": "needs_clarification",
+    "tags": [
+      "矛盾约束"
+    ]
+  },
+  {
+    "id": "harbin-3d",
+    "split": "holdout",
+    "difficulty": "medium",
+    "query": "冬天去哈尔滨三天，想看冰雪、吃东北菜，预算 5000 元",
+    "days": 3,
+    "cities": [
+      "哈尔滨"
+    ],
+    "tags": [
+      "季节",
+      "长线"
+    ]
+  },
+  {
+    "id": "guilin-3d",
+    "split": "holdout",
+    "difficulty": "medium",
+    "query": "桂林三天，想看山水、带孩子坐船，预算 4000 元",
+    "days": 3,
+    "cities": [
+      "桂林"
+    ],
+    "tags": [
+      "自然",
+      "亲子"
+    ]
+  },
+  {
+    "id": "zhangjiajie-3d",
+    "split": "holdout",
+    "difficulty": "hard",
+    "query": "张家界三天，主要是徒步看山，体力好，预算 3000 元",
+    "days": 3,
+    "cities": [
+      "张家界"
+    ],
+    "tags": [
+      "徒步",
+      "自然"
+    ]
+  },
+  {
+    "id": "quanzhou-2d",
+    "split": "holdout",
+    "difficulty": "easy",
+    "query": "泉州两天，想逛古城、吃本地小吃，预算 1500 元",
+    "days": 2,
+    "cities": [
+      "泉州"
+    ],
+    "tags": [
+      "人文",
+      "美食"
+    ]
+  },
+  {
+    "id": "dunhuang-3d",
+    "split": "holdout",
+    "difficulty": "medium",
+    "query": "敦煌三天，想拍戈壁和莫高窟，预算 4000 元",
+    "days": 3,
+    "cities": [
+      "敦煌"
+    ],
+    "tags": [
+      "摄影",
+      "自然"
+    ]
+  },
+  {
+    "id": "nanchang-2d",
+    "split": "holdout",
+    "difficulty": "easy",
+    "query": "南昌过周末，想看滕王阁、吃瓦罐汤，预算 1200 元",
+    "days": 2,
+    "cities": [
+      "南昌"
+    ],
+    "tags": [
+      "人文",
+      "美食"
+    ]
+  },
+  {
+    "id": "kunming-dali-5d",
+    "split": "holdout",
+    "difficulty": "hard",
+    "query": "昆明和大理一共五天，最后从大理飞回，预算 6000 元",
+    "days": 5,
+    "cities": [
+      "昆明",
+      "大理"
+    ],
+    "tags": [
+      "多城市",
+      "长线"
+    ]
+  },
+  {
+    "id": "shenzhen-2d",
+    "split": "holdout",
+    "difficulty": "easy",
+    "query": "深圳两天，想看海和逛创意园，预算 2000 元",
+    "days": 2,
+    "cities": [
+      "深圳"
+    ],
+    "tags": [
+      "城市",
+      "海边"
+    ]
+  },
+  {
+    "id": "beijing-2d-solo-museum",
+    "query": "从天津出发去北京玩两天，一个人想逛博物馆和胡同，预算控制在1000以内",
+    "days": 2,
+    "cities": [
+      "北京"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "独自",
+      "博物馆",
+      "预算紧"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "xiamen-3d-couple-photo",
+    "query": "从广州出发去厦门玩三天，情侣出行想拍照和海岛，预算2000到4000",
+    "days": 3,
+    "cities": [
+      "厦门"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "摄影",
+      "海岛"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "chengdu-4d-food-family",
+    "query": "从武汉出发带3岁孩子去成都玩四天，想吃美食又不想太累，预算适中",
+    "days": 4,
+    "cities": [
+      "成都"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带娃",
+      "美食",
+      "节奏慢"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "chongqing-2d-elder-night",
+    "query": "从西安出发陪老人去重庆玩两天，想看夜景但走路别太多，预算3000左右",
+    "days": 2,
+    "cities": [
+      "重庆"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带老人",
+      "夜生活",
+      "节奏慢"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "xian-3d-history-family",
+    "query": "从郑州出发一家人去西安玩三天，想看历史遗迹，孩子6岁，预算4000",
+    "days": 3,
+    "cities": [
+      "西安"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "亲子",
+      "历史",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "nanjing-2d-rain-museum",
+    "query": "从合肥出发去南京过两天，怕下雨想要室内备选，喜欢博物馆，预算2000",
+    "days": 2,
+    "cities": [
+      "南京"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "雨天备选",
+      "博物馆",
+      "周末"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "suzhou-1d-halfday-garden",
+    "query": "从上海出发到苏州只有半天时间，想看园林拍拍照，预算800以内",
+    "days": 1,
+    "cities": [
+      "苏州"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "只有半天",
+      "园林",
+      "摄影"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "hangzhou-3d-friends-tea",
+    "query": "从福州出发四个朋友去杭州玩三天，想喝茶逛西湖，预算人均3000",
+    "days": 3,
+    "cities": [
+      "杭州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "朋友4人",
+      "自然",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "shanghai-2d-team-building",
+    "query": "从北京出发公司团建去上海两天，想有夜生活和团队活动，预算6000以上",
+    "days": 2,
+    "cities": [
+      "上海"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "团建",
+      "夜生活",
+      "预算宽"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "guangzhou-3d-food-kids",
+    "query": "从深圳出发带孩子去广州玩三天，主要吃早茶逛公园，预算3000左右",
+    "days": 3,
+    "cities": [
+      "广州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "亲子",
+      "美食",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "shenzhen-2d-creative-sea",
+    "query": "从东莞出发去深圳玩两天，想看海和创意园，情侣出行，预算2500",
+    "days": 2,
+    "cities": [
+      "深圳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "海岛",
+      "摄影"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "wuhan-3d-food-couple",
+    "query": "从长沙出发情侣去武汉玩三天，想吃小吃看江景，预算2000到4000",
+    "days": 3,
+    "cities": [
+      "武汉"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "美食",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "changsha-2d-night-food",
+    "query": "从南昌出发去长沙过周末两天，主要是夜生活和吃辣，预算1500以内",
+    "days": 2,
+    "cities": [
+      "长沙"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "夜生活",
+      "美食",
+      "周末"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "kunming-5d-nature-elder",
+    "query": "从贵阳出发带老人去昆明玩五天，喜欢自然和花市，节奏慢，预算5000",
+    "days": 5,
+    "cities": [
+      "昆明"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带老人",
+      "自然",
+      "赏花"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "dali-3d-slow-couple",
+    "query": "从成都出发情侣去大理玩三天，想环湖住安静民宿，节奏慢，预算4000",
+    "days": 3,
+    "cities": [
+      "大理"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "自然",
+      "节奏慢"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "lijiang-4d-photo-guesthouse",
+    "query": "从重庆出发去丽江玩四天，喜欢摄影和古镇，想住有特色的客栈，预算5000",
+    "days": 4,
+    "cities": [
+      "丽江"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "摄影",
+      "古镇",
+      "预算宽"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "guilin-4d-family-boat",
+    "query": "从广州出发带孩子去桂林玩四天，想看山水坐船，预算4000左右",
+    "days": 4,
+    "cities": [
+      "桂林"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "亲子",
+      "自然",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "harbin-3d-winter-ice",
+    "query": "从沈阳出发冬天去哈尔滨玩三天，想看冰雪吃东北菜，预算5000",
+    "days": 3,
+    "cities": [
+      "哈尔滨"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "冬季",
+      "冰雪",
+      "美食"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "dalian-2d-cheap-sea",
+    "query": "从长春出发去大连过周末两天，想看海和吃平价海鲜，预算1200以内",
+    "days": 2,
+    "cities": [
+      "大连"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "海岛",
+      "美食",
+      "预算紧"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "tianjin-1d-cross-city",
+    "query": "从北京坐高铁去天津玩一天，想听相声吃小吃，再回北京，预算600",
+    "days": 1,
+    "cities": [
+      "天津"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "跨城交通",
+      "美食",
+      "一日游"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "zhengzhou-2d-shaolin",
+    "query": "从洛阳出发去郑州玩两天，想去少林寺看看，预算1500以内",
+    "days": 2,
+    "cities": [
+      "郑州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "历史",
+      "周末",
+      "预算紧"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "luoyang-3d-peony-history",
+    "query": "从郑州出发去洛阳玩三天，想看牡丹和龙门石窟，预算2500",
+    "days": 3,
+    "cities": [
+      "洛阳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "赏花",
+      "历史",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "jinan-2d-spring-couple",
+    "query": "从青岛出发情侣去济南过周末两天，想看泉水和老城，预算1800",
+    "days": 2,
+    "cities": [
+      "济南"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "自然",
+      "周末"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "fuzhou-2d-food-oldtown",
+    "query": "从厦门出发去福州玩两天，想吃本地小吃逛老城，预算1500",
+    "days": 2,
+    "cities": [
+      "福州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "美食",
+      "古镇",
+      "预算紧"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "quanzhou-2d-culture-snack",
+    "query": "从福州出发去泉州过两天，想逛古城吃小吃拍照，预算2000左右",
+    "days": 2,
+    "cities": [
+      "泉州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "古镇",
+      "美食",
+      "摄影"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "zhuhai-3d-family-sea",
+    "query": "从广州出发带孩子去珠海玩三天，想看海和长隆，预算4000",
+    "days": 3,
+    "cities": [
+      "珠海"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "亲子",
+      "海岛",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "guiyang-2d-nature-food",
+    "query": "从重庆出发去贵阳过周末两天，想看自然风景吃酸汤，预算1800",
+    "days": 2,
+    "cities": [
+      "贵阳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "自然",
+      "美食",
+      "周末"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "lhasa-5d-photo-elder",
+    "query": "从西宁出发带老人去拉萨玩五天，想拍照看布达拉宫，节奏慢，预算6000",
+    "days": 5,
+    "cities": [
+      "拉萨"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "带老人",
+      "摄影",
+      "节奏慢"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "xining-3d-nature-solo",
+    "query": "从兰州出发一个人去西宁玩三天，喜欢自然和徒步，预算2000以内",
+    "days": 3,
+    "cities": [
+      "西宁"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "独自",
+      "自然",
+      "徒步"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "yinchuan-3d-history-photo",
+    "query": "从西安出发去银川玩三天，想拍沙漠和西夏古迹，预算3000左右",
+    "days": 3,
+    "cities": [
+      "银川"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "摄影",
+      "历史",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "hohhot-2d-grassland-couple",
+    "query": "从北京出发情侣去呼和浩特玩两天，想看草原吃羊肉，预算2500",
+    "days": 2,
+    "cities": [
+      "呼和浩特"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "情侣",
+      "自然",
+      "美食"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "urumqi-6d-nature-friends",
+    "query": "从西安出发四个朋友去乌鲁木齐玩六天，想看自然风光，预算人均6000以上",
+    "days": 6,
+    "cities": [
+      "乌鲁木齐"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "朋友4人",
+      "自然",
+      "预算宽"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "nanning-3d-food-kids",
+    "query": "从广州出发带孩子去南宁玩三天，想吃米粉逛公园，预算2500",
+    "days": 3,
+    "cities": [
+      "南宁"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "亲子",
+      "美食",
+      "预算中"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "haikou-2d-sea-rain",
+    "query": "从深圳出发去海口过周末两天，想海岛休闲，万一下雨要备选，预算3000",
+    "days": 2,
+    "cities": [
+      "海口"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "海岛",
+      "雨天备选",
+      "周末"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "beijing-3d-no-days",
+    "query": "从上海出发想去北京玩，喜欢博物馆和美食，预算3000左右",
+    "cities": [
+      "北京"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "信息缺失",
+      "博物馆",
+      "美食"
+    ],
+    "expect": "needs_clarification",
+    "split": "test"
+  },
+  {
+    "id": "multi-city-3d-5cities",
+    "query": "从上海出发三天想去成都重庆西安昆明贵阳，帮我安排路线",
+    "cities": [
+      "成都",
+      "重庆",
+      "西安",
+      "昆明",
+      "贵阳"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "目的地过多",
+      "跨城交通"
+    ],
+    "expect": "needs_clarification",
+    "split": "test"
+  },
+  {
+    "id": "budget-conflict-family",
+    "query": "从南京出发带老人孩子去三亚玩五天，预算1000以内，想住海边",
+    "cities": [
+      "三亚"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "预算矛盾",
+      "带老人",
+      "带娃"
+    ],
+    "expect": "needs_clarification",
+    "split": "test"
+  },
+  {
+    "id": "hangzhou-4d-spring-elder",
+    "query": "从苏州出发带父母去杭州玩四天，想赏花看西湖，走路别太累，预算3500",
+    "days": 4,
+    "cities": [
+      "杭州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "带老人",
+      "赏花",
+      "节奏慢"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "xiamen-2d-couple-food",
+    "query": "我和对象想从福州去厦门过个周末，两天时间，主要想吃海鲜和拍照，预算三千左右",
+    "days": 2,
+    "cities": [
+      "厦门"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "美食",
+      "摄影",
+      "周末"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "chongqing-4d-friends-night",
+    "query": "四个朋友约着从贵阳去重庆玩四天，火锅必须安排，晚上想去洪崖洞看夜景，人均预算两千五",
+    "days": 4,
+    "cities": [
+      "重庆"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "朋友",
+      "美食",
+      "夜生活",
+      "夜景"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "beijing-5d-elder-museum",
+    "query": "想带爸妈从天津去北京玩五天，老人腿脚一般，博物馆和胡同都想看看，预算四千够吗",
+    "days": 5,
+    "cities": [
+      "北京"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带老人",
+      "博物馆",
+      "慢节奏"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "hangzhou-3d-kid-nature",
+    "query": "带五岁孩子从苏州去杭州玩三天，想看自然风景少走路，最好有亲子活动，预算两千八",
+    "days": 3,
+    "cities": [
+      "杭州"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "亲子",
+      "自然",
+      "慢节奏"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "chengdu-3d-food-photo",
+    "query": "从武汉去成都三天，想拍老街和吃苍蝇馆子，摄影为主别太赶，预算两千",
+    "days": 3,
+    "cities": [
+      "成都"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "摄影",
+      "美食",
+      "城市漫步"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "xian-4d-solo-history",
+    "query": "一个人从郑州去西安玩四天，历史遗迹和博物馆优先，预算三千以内，帮我排个不累的路线",
+    "days": 4,
+    "cities": [
+      "西安"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "独自",
+      "历史",
+      "博物馆"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "guilin-3d-family-boat",
+    "query": "一家三口从南宁去桂林三天，想坐船看山水，孩子六岁，预算三千五，别安排太满",
+    "days": 3,
+    "cities": [
+      "桂林"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "亲子",
+      "自然",
+      "游船"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "harbin-4d-winter-ski",
+    "query": "冬天从沈阳去哈尔滨玩四天，想看冰雕和滑雪，羽绒服够厚，预算六千",
+    "days": 4,
+    "cities": [
+      "哈尔滨"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "冬季",
+      "滑雪",
+      "冰雪"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "dali-3d-solo-slow",
+    "query": "从昆明去大理待三天，想拍照、逛古镇，节奏越慢越好，一个人预算两千左右",
+    "days": 3,
+    "cities": [
+      "大理"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "独自",
+      "摄影",
+      "古镇",
+      "慢节奏"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "qingdao-3d-friends-beer",
+    "query": "四个朋友从济南去青岛玩三天，海鲜和啤酒都要，预算人均一千五，顺便看海",
+    "days": 3,
+    "cities": [
+      "青岛"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "朋友",
+      "美食",
+      "海边"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "nanjing-2d-budget-tight",
+    "query": "预算一千以内，两个人从上海去南京过两天，想逛老门东和纪念馆，能省则省",
+    "days": 2,
+    "cities": [
+      "南京"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "穷游",
+      "历史",
+      "情侣"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "changsha-3d-night-food",
+    "query": "从广州去长沙三天，主要是吃辣和逛夜市，夜生活丰富点，预算两千",
+    "days": 3,
+    "cities": [
+      "长沙"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "美食",
+      "夜生活",
+      "朋友"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "lhasa-5d-solo-nature",
+    "query": "一个人从西宁去拉萨玩五天，想看自然风光和寺庙，怕高反想留出适应时间，预算六千",
+    "days": 5,
+    "cities": [
+      "拉萨"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "独自",
+      "自然",
+      "高原"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "zhengzhou-2d-shaolin-2",
+    "query": "从太原去郑州两天，想去少林寺和博物馆，预算一千二，请问交通怎么安排",
+    "days": 2,
+    "cities": [
+      "郑州"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "历史",
+      "短途"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "fuzhou-2d-oldtown-food",
+    "query": "从厦门去福州过周末，两天想逛三坊七巷、吃本地小吃，预算一千",
+    "days": 2,
+    "cities": [
+      "福州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "古镇",
+      "美食",
+      "周末"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "zhuhai-2d-couple-island",
+    "query": "情侣从广州去珠海两天，想上海岛、看海，预算两千五，有没有安静的住宿推荐",
+    "days": 2,
+    "cities": [
+      "珠海"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "海岛",
+      "自然"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "lanzhou-3d-food-museum",
+    "query": "从西安去兰州三天，想多吃牛肉面和逛博物馆，预算两千内，节奏随意点",
+    "days": 3,
+    "cities": [
+      "兰州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "美食",
+      "博物馆"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "yinchuan-4d-nature-photo",
+    "query": "从兰州去银川四天，喜欢拍沙漠和西夏文化，预算三千，摄影为主",
+    "days": 4,
+    "cities": [
+      "银川",
+      "中卫"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "摄影",
+      "自然",
+      "历史"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "hohhot-3d-grassland",
+    "query": "朋友四个人从北京去呼和浩特三天，想看草原和吃羊肉，预算人均两千",
+    "days": 3,
+    "cities": [
+      "呼和浩特"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "朋友",
+      "自然",
+      "美食"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "urumqi-5d-solo-vast",
+    "query": "一个人从西安去乌鲁木齐玩五天，想看自然和逛大巴扎，预算宽裕七千",
+    "days": 5,
+    "cities": [
+      "乌鲁木齐"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "独自",
+      "自然",
+      "长途"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "haikou-3d-elder-warm",
+    "query": "带老人从广州去海口三天，想避寒、节奏慢，看看海和公园，预算四千",
+    "days": 3,
+    "cities": [
+      "海口"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带老人",
+      "慢节奏",
+      "海边"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "nanning-2d-friend-night",
+    "query": "从昆明去南宁两天，朋友一起，想吃夜市小吃、逛青秀山，预算一千五",
+    "days": 2,
+    "cities": [
+      "南宁"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "朋友",
+      "美食",
+      "自然"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "guiyang-3d-kid-waterfall",
+    "query": "带孩子从重庆去贵阳三天，想看瀑布和黄果树，孩子四岁，预算三千",
+    "days": 3,
+    "cities": [
+      "贵阳"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "亲子",
+      "自然",
+      "短线"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "shanghai-2d-rainy-museum",
+    "query": "从杭州去上海两天，怕下雨想要室内备选，主要看展和逛街，预算两千",
+    "days": 2,
+    "cities": [
+      "上海"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "雨天备选",
+      "博物馆",
+      "购物"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "shenzhen-3d-tech-skyline",
+    "query": "从广州去深圳三天，想看科技园和城市天际线，顺便逛创意园，预算两千五",
+    "days": 3,
+    "cities": [
+      "深圳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "城市",
+      "摄影",
+      "科技"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "suzhou-1d-garden-photo",
+    "query": "从上海去苏州只有半天时间，想拍园林和古街，预算八百，来得及吗",
+    "days": 1,
+    "cities": [
+      "苏州"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "摄影",
+      "园林",
+      "半日"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "quanzhou-2d-oldtown-food",
+    "query": "从厦门去泉州两天，想逛古城、吃本地小吃，拍照为主，预算一千二",
+    "days": 2,
+    "cities": [
+      "泉州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "古镇",
+      "美食",
+      "摄影"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "luoyang-3d-peony-history-2",
+    "query": "从郑州去洛阳三天，想看牡丹和龙门石窟，四月出行，预算两千",
+    "days": 3,
+    "cities": [
+      "洛阳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "赏花",
+      "历史"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "dalian-2d-couple-seafood",
+    "query": "情侣从沈阳去大连过周末，想看海吃平价海鲜，预算一千八",
+    "days": 2,
+    "cities": [
+      "大连"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "海边",
+      "美食"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "tianjin-1d-solo-crosstalk",
+    "query": "从北京去天津一天，想听相声吃小吃，预算六百，帮我排个紧凑路线",
+    "days": 1,
+    "cities": [
+      "天津"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "独自",
+      "曲艺",
+      "美食"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "jinan-2d-spring-slow",
+    "query": "从青岛去济南两天，想看泉水和老街，节奏慢点，预算一千二",
+    "days": 2,
+    "cities": [
+      "济南"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "自然",
+      "慢节奏"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "wuhan-3d-solo-food",
+    "query": "一个人从长沙去武汉三天，想吃热干面和逛博物馆，预算两千以内",
+    "days": 3,
+    "cities": [
+      "武汉"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "独自",
+      "美食",
+      "博物馆"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "nanchang-2d-teambuilding",
+    "query": "公司团建六个人从长沙去南昌两天，想轻松点、吃点当地菜，预算人均一千五",
+    "days": 2,
+    "cities": [
+      "南昌"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "团建",
+      "美食",
+      "短途"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "xian-3d-multicity-cross",
+    "query": "从郑州出发三天想去西安和洛阳，最后从洛阳回郑州，预算两千五",
+    "days": 3,
+    "cities": [
+      "西安",
+      "洛阳"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "跨城",
+      "历史",
+      "多城"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "sanya-undated-family",
+    "query": "想带孩子去三亚玩，预算八千，住海边，你帮我看看要几天合适",
+    "cities": [
+      "三亚"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "亲子",
+      "海岛",
+      "缺少天数"
+    ],
+    "expect": "needs_clarification",
+    "split": "test"
+  },
+  {
+    "id": "chengdu-3d-toomanycities",
+    "query": "三天时间想去成都、重庆、西安、昆明、贵阳，从武汉出发，帮我安排路线",
+    "cities": [
+      "成都",
+      "重庆",
+      "西安",
+      "昆明",
+      "贵阳"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "多城",
+      "路线规划"
+    ],
+    "expect": "needs_clarification",
+    "split": "test"
+  },
+  {
+    "id": "beijing-2d-budget-conflict",
+    "query": "从上海去北京两天，人均预算五百还要住五星酒店，你帮我规划一下",
+    "cities": [
+      "北京"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "预算矛盾",
+      "高要求"
+    ],
+    "expect": "needs_clarification",
+    "split": "test"
+  },
+  {
+    "id": "guangzhou-4d-hotspring-relax",
+    "query": "从深圳去广州四天，想泡温泉、吃早茶，带老人一起，预算五千",
+    "days": 4,
+    "cities": [
+      "广州"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带老人",
+      "温泉",
+      "美食"
+    ],
+    "split": "test"
+  },
+  {
+    "id": "xiamen-2d-solo-photo",
+    "query": "我一个人从福州去厦门玩两天，想拍照逛老街，别太贵",
+    "days": 2,
+    "cities": [
+      "厦门"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "独自",
+      "摄影",
+      "老街"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "chengdu-3d-couple-food",
+    "query": "和对象从武汉去成都玩三天，主要想吃美食，大概想花三千",
+    "days": 3,
+    "cities": [
+      "成都"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "美食",
+      "三天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "chongqing-2d-friends-night",
+    "query": "四个朋友从贵阳去重庆过周末，想吃火锅看夜景，别太贵",
+    "days": 2,
+    "cities": [
+      "重庆"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "朋友同行",
+      "夜生活",
+      "美食"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "xian-1d-museum",
+    "query": "从郑州到西安就待一天，想看博物馆和古城墙，随便走走",
+    "days": 1,
+    "cities": [
+      "西安"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "一天",
+      "博物馆",
+      "历史"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "nanjing-2d-elder-slow",
+    "query": "带爸妈从上海去南京玩两天，节奏慢点，别走太累",
+    "days": 2,
+    "cities": [
+      "南京"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带老人",
+      "慢节奏",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "suzhou-1d-garden-halfday",
+    "query": "从杭州去苏州，只有半天时间，想逛园林拍拍照",
+    "days": 1,
+    "cities": [
+      "苏州"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "只有半天",
+      "园林",
+      "摄影"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "hangzhou-3d-kid-nature-2",
+    "query": "带五岁孩子从宁波去杭州玩三天，想看自然风景，别太赶",
+    "days": 3,
+    "cities": [
+      "杭州"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带娃",
+      "自然",
+      "慢节奏"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "shanghai-2d-couple-museum",
+    "query": "和对象从苏州去上海玩两天，想逛博物馆和咖啡店，预算中等",
+    "days": 2,
+    "cities": [
+      "上海"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "博物馆",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "beijing-4d-friends-budget",
+    "query": "我们四个人从天津去北京玩四天，想逛胡同看展，预算两千多",
+    "days": 4,
+    "cities": [
+      "北京"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "朋友同行",
+      "博物馆",
+      "胡同"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "guangzhou-2d-food-kid",
+    "query": "带孩子从深圳去广州玩两天，想喝早茶逛公园，别太贵",
+    "days": 2,
+    "cities": [
+      "广州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "带娃",
+      "美食",
+      "公园"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "shenzhen-1d-photo-skyline",
+    "query": "从广州去深圳一天，想拍城市天际线和创意园，随便走走",
+    "days": 1,
+    "cities": [
+      "深圳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "一天",
+      "摄影",
+      "城市"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "wuhan-2d-food-night",
+    "query": "和闺蜜从长沙去武汉过周末，主要吃小吃逛夜市，别太贵",
+    "days": 2,
+    "cities": [
+      "武汉"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "朋友同行",
+      "美食",
+      "夜生活"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "changsha-2d-food-hot",
+    "query": "从南昌去长沙玩两天，就想吃辣逛夜市，大概想花一千五",
+    "days": 2,
+    "cities": [
+      "长沙"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "美食",
+      "夜生活",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "kunming-3d-spring-flower",
+    "query": "三月从成都去昆明玩三天，想看花和自然风景，预算三四千",
+    "days": 3,
+    "cities": [
+      "昆明"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "赏花",
+      "自然",
+      "春季"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "dali-2d-slow-couple",
+    "query": "和对象从昆明去大理待两天，想环洱海住安静的，随便走走",
+    "days": 2,
+    "cities": [
+      "大理"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "慢节奏",
+      "洱海"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "lijiang-3d-photo-oldtown",
+    "query": "一个人从昆明去丽江玩三天，想拍古镇和雪山，别太贵",
+    "days": 3,
+    "cities": [
+      "丽江"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "独自",
+      "摄影",
+      "古镇"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "sanya-4d-kid-beach",
+    "query": "带三岁孩子从广州去三亚玩四天，想住海边节奏慢，预算宽松",
+    "days": 4,
+    "cities": [
+      "三亚"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "带娃",
+      "海岛",
+      "慢节奏"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "guilin-2d-nature-boat",
+    "query": "从南宁去桂林玩两天，想看山水坐船，预算两千左右",
+    "days": 2,
+    "cities": [
+      "桂林"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "自然",
+      "山水",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "harbin-3d-winter-ski",
+    "query": "冬天从北京去哈尔滨玩三天，想看冰雪滑雪，预算六千以上",
+    "days": 3,
+    "cities": [
+      "哈尔滨"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "冬季",
+      "滑雪",
+      "冰雪"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "dalian-2d-sea-cheap",
+    "query": "从沈阳去大连过周末，想看海吃海鲜，别太贵一千以内",
+    "days": 2,
+    "cities": [
+      "大连"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "看海",
+      "海鲜",
+      "省钱"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "tianjin-1d-food-crosstalk",
+    "query": "从北京去天津一天，想听相声吃小吃，随便走走",
+    "days": 1,
+    "cities": [
+      "天津"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "一天",
+      "美食",
+      "相声"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "zhengzhou-2d-shaolin-3",
+    "query": "朋友四人从武汉去郑州玩两天，想去少林寺看看，预算两千",
+    "days": 2,
+    "cities": [
+      "郑州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "朋友同行",
+      "历史",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "luoyang-2d-history-photo",
+    "query": "从郑州去洛阳玩两天，想看龙门石窟拍照，别太贵",
+    "days": 2,
+    "cities": [
+      "洛阳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "历史",
+      "摄影",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "jinan-2d-spring-walk",
+    "query": "从天津去济南过周末，想看泉逛老街，随便走走",
+    "days": 2,
+    "cities": [
+      "济南"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "泉水",
+      "老街",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "fuzhou-2d-food-oldtown-2",
+    "query": "一个人从厦门去福州玩两天，想吃小吃逛古街，别太贵",
+    "days": 2,
+    "cities": [
+      "福州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "独自",
+      "美食",
+      "古镇"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "quanzhou-3d-culture-food",
+    "query": "和对象从福州去泉州玩三天，想逛古城吃本地小吃，节奏慢点",
+    "days": 3,
+    "cities": [
+      "泉州"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "情侣",
+      "美食",
+      "古城"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "zhuhai-2d-sea-photo",
+    "query": "从广州去珠海玩两天，想看海拍照逛小岛，预算三千左右",
+    "days": 2,
+    "cities": [
+      "珠海"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "海岛",
+      "摄影",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "guiyang-2d-nature-food-2",
+    "query": "从重庆去贵阳过周末，想看自然风景吃小吃，别太贵",
+    "days": 2,
+    "cities": [
+      "贵阳"
+    ],
+    "difficulty": "easy",
+    "tags": [
+      "自然",
+      "美食",
+      "两天"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "lhasa-5d-photo-elder-2",
+    "query": "带爸妈从成都去拉萨玩五天，想拍照看寺庙，节奏慢点别太累",
+    "days": 5,
+    "cities": [
+      "拉萨"
+    ],
+    "difficulty": "hard",
+    "tags": [
+      "带老人",
+      "摄影",
+      "高原"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "xining-3d-nature-hike",
+    "query": "和朋友从西安去西宁玩三天，想看自然风光徒步，预算四千",
+    "days": 3,
+    "cities": [
+      "西宁"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "朋友同行",
+      "自然",
+      "徒步"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "yinchuan-2d-photo-history",
+    "query": "一个人从西安去银川玩两天，想拍戈壁看历史，别太贵",
+    "days": 2,
+    "cities": [
+      "银川"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "独自",
+      "摄影",
+      "历史"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "hohhot-3d-grassland-hike",
+    "query": "朋友四人从北京去呼和浩特玩三天，想看草原徒步，预算三千",
+    "days": 3,
+    "cities": [
+      "呼和浩特"
+    ],
+    "difficulty": "medium",
+    "tags": [
+      "朋友同行",
+      "自然",
+      "徒步"
+    ],
+    "split": "holdout"
+  },
+  {
+    "id": "named-hangzhou-westlake",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "杭州两天，一定要去西湖和灵隐寺，预算 1500 元",
+    "days": 2,
+    "cities": [
+      "杭州"
+    ],
+    "tags": [
+      "自然",
+      "人文"
+    ],
+    "named_places": [
+      "西湖",
+      "灵隐寺"
+    ]
+  },
+  {
+    "id": "named-beijing-palace",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "北京三天，想去故宫和天安门，预算 3000 元",
+    "days": 3,
+    "cities": [
+      "北京"
+    ],
+    "tags": [
+      "人文"
+    ],
+    "named_places": [
+      "故宫",
+      "天安门"
+    ]
+  },
+  {
+    "id": "named-xian-warriors",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "西安两天，想去看兵马俑和大雁塔",
+    "days": 2,
+    "cities": [
+      "西安"
+    ],
+    "tags": [
+      "人文"
+    ],
+    "named_places": [
+      "兵马俑",
+      "大雁塔"
+    ]
+  },
+  {
+    "id": "named-shanghai-bund",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "上海两天，想去外滩和豫园，预算 2000 元",
+    "days": 2,
+    "cities": [
+      "上海"
+    ],
+    "tags": [
+      "城市"
+    ],
+    "named_places": [
+      "外滩",
+      "豫园"
+    ]
+  },
+  {
+    "id": "named-chengdu-panda",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "成都两天，想去大熊猫基地和宽窄巷子",
+    "days": 2,
+    "cities": [
+      "成都"
+    ],
+    "tags": [
+      "亲子",
+      "美食"
+    ],
+    "named_places": [
+      "大熊猫基地",
+      "宽窄巷子"
+    ]
+  },
+  {
+    "id": "named-xiamen-gulangyu",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "厦门三天，想去鼓浪屿和厦门大学",
+    "days": 3,
+    "cities": [
+      "厦门"
+    ],
+    "tags": [
+      "海滨"
+    ],
+    "named_places": [
+      "鼓浪屿",
+      "厦门大学"
+    ]
+  },
+  {
+    "id": "named-suzhou-gardens",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "苏州两天，想去拙政园和狮子林",
+    "days": 2,
+    "cities": [
+      "苏州"
+    ],
+    "tags": [
+      "园林"
+    ],
+    "named_places": [
+      "拙政园",
+      "狮子林"
+    ]
+  },
+  {
+    "id": "named-guilin-lijiang",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "桂林三天，想去漓江和象鼻山",
+    "days": 3,
+    "cities": [
+      "桂林"
+    ],
+    "tags": [
+      "自然"
+    ],
+    "named_places": [
+      "漓江",
+      "象鼻山"
+    ]
+  },
+  {
+    "id": "named-qingdao-beer",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "青岛两天，想去栈桥和啤酒博物馆",
+    "days": 2,
+    "cities": [
+      "青岛"
+    ],
+    "tags": [
+      "海滨"
+    ],
+    "named_places": [
+      "栈桥",
+      "啤酒博物馆"
+    ]
+  },
+  {
+    "id": "named-chongqing-hongyadong",
+    "split": "test",
+    "difficulty": "easy",
+    "query": "重庆两天，想去洪崖洞和磁器口",
+    "days": 2,
+    "cities": [
+      "重庆"
+    ],
+    "tags": [
+      "城市",
+      "美食"
+    ],
+    "named_places": [
+      "洪崖洞",
+      "磁器口"
+    ]
+  }
 ]

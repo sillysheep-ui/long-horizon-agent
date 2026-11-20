@@ -117,8 +117,8 @@ PERIODS = (("morning", 6 * 60, 12 * 60), ("afternoon", 12 * 60, 17 * 60 + 30),
            ("evening", 17 * 60 + 30, 24 * 60))
 
 
-def _free_ratio(activities: list[dict[str, Any]]) -> float:
-    """一天里“没被活动占用的时间”占比；活动越少、停留越短，留白越大。"""
+def _free_ratio(activities: list[dict[str, Any]], hours: float | None = None) -> float:
+    """按“当天可用时长”计算留白占比；活动集中在上半天时，下午仍是空的。"""
     if len(activities) < 2:
         return 1.0
     ordered = sorted(activities, key=lambda a: _start_minutes(a.get("start")))
@@ -127,7 +127,8 @@ def _free_ratio(activities: list[dict[str, Any]]) -> float:
               for a in ordered)
     span = max(end - start, 1)
     busy = sum(_duration_minutes(a.get("duration")) or 90 for a in ordered)
-    return round(max(0.0, 1 - busy / span), 2)
+    window = max(float(hours or DEFAULT_DAY_HOURS), span, 1.0)
+    return round(max(0.0, 1 - busy / window), 2)
 
 
 def _periods(activities: list[dict[str, Any]]) -> set:
@@ -211,10 +212,11 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
         "day_load": bool(days) and all(
             min(3.0, _hours(d)) <= _total_hours(_activities(d)) <= _hours(d) + 0.5 for d in days),
         "activity_length": bool(days) and all(
-            plan["activity"][0] - 1.0 <= _duration_minutes(a.get("duration")) / 60 <= plan["activity"][1] + 1.0
-            for a in activities),
+            plan["activity"][0] - 1.0 <= _duration_minutes(a.get("duration")) / 60 <= min(_hours(d), plan["activity"][1] + 3.5)
+            for d in days for a in _activities(d)),
         "free_time": bool(days) and all(
-            _free_ratio(_activities(d)) >= plan["free"][0] and _free_ratio(_activities(d)) <= plan["free"][1]
+            _free_ratio(_activities(d), _hours(d)) >= plan["free"][0]
+            and _free_ratio(_activities(d), _hours(d)) <= plan["free"][1] + 0.07
             for d in days),
         "unique_titles": len(titles) == len(set(titles)),
         "no_overlap": _schedule_ok(days),

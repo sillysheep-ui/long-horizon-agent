@@ -173,6 +173,7 @@ async def main() -> None:
     parser.add_argument("--seed", type=int, default=0, help="随机种子，写入报告便于复现")
     parser.add_argument("--min-score", type=float, default=None, help="综合分低于该值时退出码 1")
     parser.add_argument("--cases", default="", help="用例文件，默认 evaluation/product_cases.json")
+    parser.add_argument("--ids", default="", help="只跑指定用例，逗号分隔")
     args = parser.parse_args()
     random.seed(args.seed)
 
@@ -180,6 +181,9 @@ async def main() -> None:
     cases_path = Path(args.cases) if args.cases else CASES_PATH
     cases = [c for c in json.loads(cases_path.read_text())
              if args.split == "all" or c.get("split") == args.split]
+    if args.ids:
+        wanted = {item.strip() for item in args.ids.split(",") if item.strip()}
+        cases = [c for c in cases if c.get("id") in wanted]
     if args.limit:
         cases = cases[:args.limit]
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
