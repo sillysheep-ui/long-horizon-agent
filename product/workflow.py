@@ -48,6 +48,7 @@ from product.revision import (
     parse_target_days,
     split_by_targets,
 )
+from product.revparse import ATTRIBUTE_LABELS, parse_revision
 from product.store import Store
 from product.tool_adapters import ResearchTools
 from product.tool_runtime import ResearchExecutor
@@ -125,6 +126,15 @@ class AgentWorkflow:
                 constraints["anchor"] = revised_anchor["anchor"]
             days_count = len(prior_days)
             changes = update_constraints(constraints, revision_text)
+            parsed_revision = await parse_revision(self.model, revision_text, len(prior_days),
+                                                   constraints, calls)
+            if parsed_revision["attributes"]:
+                labels = [ATTRIBUTE_LABELS[name] for name in parsed_revision["attributes"]]
+                constraints["revision_requirements"] = labels
+            for key, value in parsed_revision["changes"].items():
+                if key == "destinations" and key not in changes:
+                    value = list(dict.fromkeys([*_as_list(constraints.get("destinations"), 4), *value]))
+                changes.setdefault(key, value)
             if changes.get("destinations") and targets:
                 merged = list(dict.fromkeys([*_as_list(constraints.get("destinations"), 4),
                                              *changes["destinations"]]))
@@ -352,7 +362,8 @@ class AgentWorkflow:
         answer = {}
         answer_failed = False
         pace = constraints.get("pace") or detect_pace(query, revision_text)
-        answer_system = build_answer_system(pace, targets)
+        answer_system = build_answer_system(pace, targets,
+                                            (constraints.get("revision_requirements") or None))
         try:
             answer_payload = {"query": query, "constraints": constraints, "plan": plan, "evidence": good}
             if targets:
