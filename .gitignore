@@ -39,3 +39,5 @@ web/dist/
 # 本地模型推理环境
 .venv-local/
 results/product_eval/
+# ChinaTravel 沙盒（CC-BY-4.0，按需下载）
+data/sandbox/

@@ -384,3 +384,5 @@ results/original_protocol/  原协议逐题 Judge 分数与汇总
 - Judge 评测需要外部裁判模型服务；
 - 训练数据与模型权重不随仓库分发，复现边界见 [`docs/REPRODUCE.md`](docs/REPRODUCE.md)。
 - 结果来自 80 题双向配对评测，不代表任意线上流量分布。
+
+离线评测数据：[docs/SANDBOX.md](docs/SANDBOX.md)

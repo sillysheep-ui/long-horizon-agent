@@ -9,6 +9,8 @@ import httpx
 from product.names import clean_place_name, dedupe_names, looks_like_place
 from product.provenance import build_evidence
 from tools.poi import search_pois
+from tools.sandbox import available as sandbox_available
+from tools.sandbox import search as search_sandbox
 from tools.web import search_web
 
 
@@ -67,7 +69,12 @@ class ResearchTools:
                               items=items, source="网页搜索", source_kind="web_search")
 
     async def poi(self, keyword: str, city: str, evidence_id: str) -> dict[str, Any]:
-        """高德 POI：复用 tools.poi 的结构化查询，失败时降级到网页搜索。"""
+        """POI 查询：沙盒（离线评测）/ 高德 / 网页搜索。"""
+        if os.getenv("POI_PROVIDER", "").strip().lower() == "sandbox":
+            items = search_sandbox(city, keyword) if sandbox_available() else []
+            return build_evidence(evidence_id, "poi", keyword, city,
+                                  "ok" if items else "empty", items=items,
+                                  source="ChinaTravel 沙盒", source_kind="map_poi")
         if not self.amap_key:
             return await self.web_search(keyword, city, evidence_id)
         try:
