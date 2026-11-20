@@ -48,3 +48,17 @@ class ModelFallbackTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModelFirstTests(unittest.TestCase):
+    def test_model_overrides_wrong_rules(self):
+        model = FakeModel('{"intent":"ask","confidence":0.9,"target_days":[3]}')
+        result = asyncio.run(route_intent(model, "第三天远不远", True))
+        self.assertEqual(result["intent"], "ask")
+        self.assertEqual(result["source"], "model")
+
+    def test_cancel_stays_on_rules(self):
+        model = FakeModel('{"intent":"chat","confidence":0.9}')
+        result = asyncio.run(route_intent(model, "取消吧", True))
+        self.assertEqual(result["action"], "cancel")
+        self.assertEqual(model.calls, 0)

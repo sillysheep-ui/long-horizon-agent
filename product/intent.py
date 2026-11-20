@@ -30,6 +30,7 @@ ASK_PATTERNS = (
 
 CANCEL_PATTERNS = (
     r"^算了", r"不去了", r"不想去了", r"先不去", r"取消(这次|行程|安排)", r"退掉", r"不用了",
+    r"^取消(吧|了|掉)?[!！。.\s]*$",
 )
 
 UNDO_PATTERNS = (
@@ -222,21 +223,26 @@ async def classify_with_model(model: Any, content: str, has_trip: bool,
         return fallback
 
 
+_FAST_CHAT = re.compile(r"^(你好|您好|在吗|谢谢|多谢|好的|好|收到|辛苦了|再见)[!！。.，,\s]*$")
+
+
 async def route_intent(model: Any, content: str, has_trip: bool,
                        prior_status: str | None = None) -> dict[str, Any]:
-    """规则优先；规则判成闲聊或信息不足时交给模型。"""
-    ruled = classify_intent(content, has_trip)
+    """模型优先分类；取消/撤销与纯寒暄走规则，规则作为兜底与校验。"""
+    text = (content or "").strip()
+    ruled = classify_intent(text, has_trip)
     ruled["source"] = "rules"
-    if ruled["intent"] in ("new_trip", "revise_trip", "ask"):
+    if not text or _FAST_CHAT.match(text):
         return ruled
-    modeled = await classify_with_model(model, content, has_trip, prior_status)
-    if modeled.get("confidence", 0) < 0.6:
-        fallback = classify_intent(content, has_trip)
-        fallback["source"] = "rules_low_confidence"
-        return fallback
-    if modeled.get("intent") == "unclear":
-        if ruled["intent"] == "chat":
-            return ruled
-        return {"intent": "unclear", "confidence": modeled.get("confidence", 0.0),
-                "target_days": modeled.get("target_days", []), "reason": "模型认为信息不足", "source": "model"}
+    if ruled.get("action") in ("cancel", "undo"):
+        return ruled
+    modeled = await classify_with_model(model, text, has_trip, prior_status)
+    if modeled.get("source") == "rules_fallback":
+        ruled["source"] = "rules_fallback"
+        return ruled
+    if float(modeled.get("confidence") or 0) < 0.6:
+        ruled["source"] = "rules_low_confidence"
+        return ruled
+    if modeled.get("intent") == "unclear" and ruled["intent"] == "chat":
+        return ruled
     return modeled
