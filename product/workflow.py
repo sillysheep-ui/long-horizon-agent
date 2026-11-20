@@ -1,5 +1,6 @@
 """产品工作流：需求 → 计划 → 并行查询 → 核验 → 回答 → 收尾。"""
 
+import asyncio
 import json
 import re
 import time
@@ -442,8 +443,10 @@ class AgentWorkflow:
                 fix_payload = {**answer_payload, "previous_days": previous, "issues": violations}
                 fix_system = answer_system + ANSWER_REPAIR_SUFFIX % json.dumps(
                     violations, ensure_ascii=False)
-                fix_response = await self.model.complete("回答 Agent", fix_system,
-                    json.dumps(fix_payload, ensure_ascii=False), max_tokens=3000)
+                fix_response = await asyncio.wait_for(
+                    self.model.complete("回答 Agent", fix_system,
+                                        json.dumps(fix_payload, ensure_ascii=False), max_tokens=3000),
+                    timeout=90)
                 calls.append(call_info(fix_response))
                 candidate = parse_json(fix_response["content"])
                 after = check_day_plan(candidate.get("days"), constraints)["violations"]
@@ -452,7 +455,7 @@ class AgentWorkflow:
                     answer = candidate
                     violations = after
                     plan_repair["applied"] = True
-            except (ValueError, RuntimeError):
+            except (ValueError, RuntimeError, TimeoutError):
                 plan_repair.update({"attempted": True, "error": True})
         plan_ok = not check_day_plan(answer.get("days"), constraints)["violations"]
         valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
