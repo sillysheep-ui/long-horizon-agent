@@ -67,7 +67,12 @@ def _evidence_text(evidence: dict[str, Any]) -> str:
         for item in items:
             if not isinstance(item, dict):
                 continue
-            parts += [str(item.get("name") or ""), str(item.get("snippet") or "")]
+            for key in ("name", "snippet", "price", "opentime", "endtime",
+                        "recommendedfood", "featurehoteltype"):
+                value = item.get(key)
+                if value is not None:
+                    parts.append(str(value))
+            parts.append(" ")
     return "".join(parts)
 
 
