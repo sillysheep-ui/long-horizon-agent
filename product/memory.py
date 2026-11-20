@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from product.model_gateway import parse_json
+from product.model_gateway import call_info, parse_json
 
 CONTEXT_CHAR_BUDGET = 4000
 KEEP_RECENT_MESSAGES = 6
@@ -43,7 +43,7 @@ async def summarize_history(model: Any, previous: str | None, messages: list[dic
         response = await model.complete("摘要 Agent", SUMMARY_SYSTEM_PROMPT,
                                         json.dumps(payload, ensure_ascii=False), max_tokens=600)
         if calls is not None:
-            calls.append({key: response[key] for key in ("role", "provider", "model") if key in response})
+            calls.append(call_info(response))
         summary = str(parse_json(response["content"]).get("summary") or "").strip()
     except (ValueError, RuntimeError, KeyError):
         summary = ""

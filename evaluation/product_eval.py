@@ -64,12 +64,22 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: dict[str, Any]) 
         result = await workflow.run(job)
         elapsed = round(time.monotonic() - started, 2)
         store.finish(job, result)
+        trajectory = summarize_trajectory(case, result)
+        trace = result.get("trace") or {}
+        trajectory["latency_ms"] = {child.get("name"): child.get("latency_ms") or 0
+                                    for child in trace.get("children") or []}
         return {"id": case["id"], "query": case["query"], "status": result.get("status"),
                 "result": _compact(result), "checks": check_result(case, result),
-                "trajectory": summarize_trajectory(case, result), "elapsed": elapsed}
+                "trajectory": trajectory, "elapsed": elapsed}
     except Exception as error:
         return {"id": case["id"], "query": case["query"], "error": str(error)[:300],
                 "checks": {}, "elapsed": 0.0}
+
+
+def _stage_line(stages: dict[str, float] | None) -> str:
+    if not stages:
+        return "未记录"
+    return " / ".join(f"{name} {value}s" for name, value in stages.items())
 
 
 def write_report(target: Path, profile: str, summary: dict[str, Any], records: list[dict[str, Any]],
@@ -80,6 +90,7 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
              f"- 综合分均值：{summary['score_mean']}（0.6×硬检查 + 0.4×rubric − 编造扣分）",
              f"- 可交付：{summary['deliverable']}/{summary['cases']}",
              f"- 平均耗时：{summary['latency_mean']}s",
+             f"- 分段耗时：{_stage_line(summary.get('stage_latency_mean'))}",
              f"- 随机种子：{summary.get('seed')} / 裁判模型：{summary.get('judge_model')}", "",
              "## 检查通过率", "", "| 检查 | 通过率 |", "|---|---|"]
     lines += [f"| {name} | {rate:.0%} |" for name, rate in summary["check_pass_rate"].items()]

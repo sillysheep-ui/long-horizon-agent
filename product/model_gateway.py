@@ -85,13 +85,25 @@ class ModelGateway:
                 headers={"Authorization": "Bearer " + key},
                 json=body)
             response.raise_for_status()
-            choice = response.json()["choices"][0]
+            payload = response.json()
+            choice = payload["choices"][0]
             content = choice["message"]["content"]
             if choice.get("finish_reason") == "length":
                 raise ValueError("模型输出超出长度限制")
             if not content or not content.strip():
                 raise ValueError("模型返回空内容")
-            return {"content": content, "provider": name, "model": model, "role": role}
+            usage = payload.get("usage") or {}
+            return {"content": content, "provider": name, "model": model, "role": role,
+                    "usage": {"prompt_tokens": int(usage.get("prompt_tokens") or 0),
+                              "completion_tokens": int(usage.get("completion_tokens") or 0)}}
+
+
+def call_info(response: dict[str, Any]) -> dict[str, Any]:
+    """从模型返回里提取可记录的信息：角色/供应商/模型/用量。"""
+    info = {key: response.get(key) for key in ("role", "provider", "model")}
+    if response.get("usage"):
+        info["usage"] = response["usage"]
+    return info
 
 
 def parse_json(text: str) -> dict[str, Any]:

@@ -5,7 +5,7 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from product.model_gateway import parse_json
+from product.model_gateway import call_info, parse_json
 
 # 白名单：模型只能从这些 key 里选，避免抽出没用的特征。
 FACT_KEYS: dict[str, str] = {
@@ -184,7 +184,7 @@ async def _model_facts(model: Any, messages: list[dict[str, Any]], summary: str 
         response = await model.complete("画像 Agent", PROFILE_SYSTEM_PROMPT,
                                         json.dumps(payload, ensure_ascii=False), max_tokens=700)
         if calls is not None:
-            calls.append({key: response[key] for key in ("role", "provider", "model") if key in response})
+            calls.append(call_info(response))
         data = parse_json(response["content"])
         facts = data.get("facts") if isinstance(data, dict) else None
         return [fact for fact in facts if isinstance(fact, dict)] if isinstance(facts, list) else []

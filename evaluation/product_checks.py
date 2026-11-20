@@ -296,4 +296,15 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         "score_mean": round(sum(scores) / len(scores), 3) if scores else None,
         "deliverable": deliverable,
         "latency_mean": round(sum(r["elapsed"] for r in records) / total, 2) if total else None,
+        "stage_latency_mean": _stage_latency_mean(records),
     }
+
+
+def _stage_latency_mean(records: list[dict[str, Any]]) -> dict[str, float]:
+    """按阶段汇总平均耗时，便于对比两次回归是哪一段变慢。"""
+    buckets: dict[str, list[float]] = {}
+    for record in records:
+        latency = (record.get("trajectory") or {}).get("latency_ms") or {}
+        for name, value in latency.items():
+            buckets.setdefault(name, []).append(float(value or 0) / 1000)
+    return {name: round(sum(values) / len(values), 2) for name, values in buckets.items() if values}

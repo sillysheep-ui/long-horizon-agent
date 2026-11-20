@@ -10,7 +10,7 @@ from product.coverage import assess_days, build_repair_plan
 from product.crosscheck import cross_checks
 from product.destinations import unknown_destinations
 from product.memory import build_history
-from product.model_gateway import ModelGateway, parse_json
+from product.model_gateway import ModelGateway, call_info, parse_json
 from product.pace import count_bounds, detect_pace, requested_count
 from product.planner import (
     PLANNER_SYSTEM_PROMPT,
@@ -175,7 +175,7 @@ class AgentWorkflow:
                 intake_system = INTAKE_SYSTEM_PROMPT + "\n\n" + remembered
                 self._event(job, "intake", "参考了已记住的长期偏好")
             intake = await self.model.complete("需求 Agent", intake_system, intake_query, max_tokens=500)
-            calls.append({k: intake[k] for k in ("role", "provider", "model")})
+            calls.append(call_info(intake))
             constraints = parse_json(intake["content"])
             hints = latin_hints(intake_query)
             if not _as_list(constraints.get("destinations"), 4) and hints.get("destinations"):
@@ -266,7 +266,7 @@ class AgentWorkflow:
                 query, constraints, prior.get("plan"),
                 {"days": targets, "instruction": revision_text} if targets else None),
             max_tokens=1000)
-        calls.append({k: plan_response[k] for k in ("role", "provider", "model")})
+        calls.append(call_info(plan_response))
         plan = parse_json(plan_response["content"])
         if targets and prior.get("plan"):
             previous_plan = prior["plan"]
@@ -277,7 +277,7 @@ class AgentWorkflow:
                                          {"days": targets, "instruction": revision_text,
                                           "note": "上一次的查询词与原方案相同，请换用不同的地点关键词以体现修改意见"}),
                     max_tokens=1000)
-                calls.append({k: retry_response[k] for k in ("role", "provider", "model")})
+                calls.append(call_info(retry_response))
                 retry_plan = parse_json(retry_response["content"])
                 if not all(queries_for_day(retry_plan, day) == queries_for_day(previous_plan, day)
                            for day in targets):
@@ -382,7 +382,7 @@ class AgentWorkflow:
                     answer_payload["conversation_summary"] = summary
             answer_response = await self.model.complete("回答 Agent", answer_system,
                 json.dumps(answer_payload, ensure_ascii=False), max_tokens=3000)
-            calls.append({k: answer_response[k] for k in ("role", "provider", "model")})
+            calls.append(call_info(answer_response))
             answer = parse_json(answer_response["content"])
         except (ValueError, RuntimeError):
             answer_failed = True

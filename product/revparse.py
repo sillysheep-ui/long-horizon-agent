@@ -10,7 +10,7 @@ import json
 from typing import Any
 
 from product.destinations import known_destination
-from product.model_gateway import parse_json
+from product.model_gateway import call_info, parse_json
 
 ACTIONS = ("modify", "add", "remove", "move")
 ATTRIBUTES = ("quiet", "kid_friendly", "indoor", "outdoor", "nature",
@@ -133,5 +133,5 @@ async def parse_revision(model: Any, text: str, days_count: int,
     except Exception:  # noqa: BLE001 - 解析失败不应影响主流程
         return empty_revision()
     if calls is not None:
-        calls.append({key: response[key] for key in ("role", "provider", "model")})
+        calls.append(call_info(response))
     return validate_revision(parse_json(response["content"]), days_count, constraints)
