@@ -1,81 +1,14 @@
 """产品行程的确定性检查：不依赖裁判模型，先卡结构与可追溯性。
 
+规则定义在 `product/constraints/sets/v1.json`，这里只负责把结果转成报告用的字典。
 这一层对应 TravelPlanner（arXiv:2402.01622）里的 constraint pass rate：
 能程序化验证的约束就不交给模型判，既省钱，也能直接当 RL 的 dense reward。
 """
 
-import re
 from typing import Any
 
 from product.constraints.engine import build_view, evaluate
 from product.constraints.spec import load_set
-from product.pace import DEFAULT_DAY_HOURS, PACE_LIMITS, PACE_PLAN, count_bounds, detect_pace
-
-NOISE_TOKENS = ("攻略", "门票", "地址", "图片", "开放时间", "营业时间", "【", "】", "｜", "点评", "简介")
-TIME_ORDER_TOLERANCE = 0  # 只比较字符串顺序，HH:MM 定长可直接比
-DIGITS = re.compile(r"\d+")
-
-
-def _days(result: dict[str, Any]) -> list[dict[str, Any]]:
-    days = result.get("days")
-    return [d for d in days if isinstance(d, dict)] if isinstance(days, list) else []
-
-
-def _activities(day: dict[str, Any]) -> list[dict[str, Any]]:
-    items = day.get("activities")
-    return [a for a in items if isinstance(a, dict)] if isinstance(items, list) else []
-
-
-def _evidence_map(result: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {e.get("id"): e for e in result.get("evidence") or [] if isinstance(e, dict)}
-
-
-def _norm(text: Any) -> str:
-    return re.sub(r"[\s\W_]+", "", str(text or ""))
-
-
-def _item_names(evidence: dict[str, Any]) -> list[str]:
-    items = evidence.get("items")
-    if not isinstance(items, list):
-        return []
-    return [str(item.get("name") or "") for item in items if isinstance(item, dict)]
-
-
-def _bigrams(text: str) -> set:
-    return {text[index:index + 2] for index in range(len(text) - 1)}
-
-
-def _title_matches(title: str, names: list[str]) -> bool:
-    """标题与证据地点名：包含关系，或 2-gram 重合度 ≥60%（容忍“熊猫基地”这类简称）。"""
-    normalized = _norm(title)
-    if not normalized:
-        return False
-    grams = _bigrams(normalized)
-    for name in names:
-        candidate = _norm(name)
-        if not candidate:
-            continue
-        if normalized in candidate or candidate in normalized:
-            return True
-        if grams and len(grams & _bigrams(candidate)) / len(grams) >= 0.6:
-            return True
-    return False
-
-
-def _evidence_text(evidence: dict[str, Any]) -> str:
-    parts: list[str] = []
-    items = evidence.get("items")
-    if isinstance(items, list):
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            for key in ("name", "snippet", "price", "opentime", "endtime",
-                        "recommendedfood", "featurehoteltype"):
-                value = item.get(key)
-                if value is not None:
-                    parts.append(str(value))
-            parts.append(" ")
-    return "".join(parts)
 
 
 def hard_pass_rate(checks: dict[str, bool]) -> float:
@@ -85,250 +18,20 @@ def hard_pass_rate(checks: dict[str, bool]) -> float:
     return sum(1 for value in checks.values() if value) / len(checks)
 
 
-_HOURS = re.compile(r"([0-9]+(?:\.[0-9]+)?)\s*小时")
-_MINS = re.compile(r"([0-9]+)\s*分钟")
-
-
-def _start_minutes(value: Any) -> int:
-    hour, _, minute = str(value or "").partition(":")
-    try:
-        return int(hour) * 60 + int(minute)
-    except ValueError:
-        return -1
-
-
-def _duration_minutes(value: Any) -> int:
-    text = str(value or "")
-    match = _HOURS.search(text)
-    if match:
-        return int(float(match.group(1)) * 60)
-    match = _MINS.search(text)
-    return int(match.group(1)) if match else 0
-
-
-def _match_item(evidence: dict[str, Any], title: Any) -> dict[str, Any] | None:
-    """按活动标题找到对应的证据条目（用与标题匹配相同的宽松规则）。"""
-    items = [item for item in (evidence.get("items") or []) if isinstance(item, dict)] if isinstance(evidence, dict) else []
-    wanted = str(title or "")
-    for item in items:  # 先精确匹配，避免“成都博物馆”落到“成都大熊猫博物馆”上
-        name = str(item.get("name") or "")
-        if name and (name == wanted or wanted in name or name in wanted):
-            return item
-    for item in items:
-        name = str(item.get("name") or "")
-        if name and _title_matches(wanted, [name]):
-            return item
-    return None
-
-
-def _opening_ok(activity: dict[str, Any], item: dict[str, Any]) -> bool | None:
-    """活动是否落在证据给出的营业时间内；没有时间信息时返回 None。"""
-    open_minutes = _start_minutes(item.get("opentime"))
-    close_minutes = _start_minutes(item.get("endtime"))
-    start = _start_minutes(activity.get("start"))
-    if open_minutes < 0 or close_minutes < 0 or start < 0:
-        return None
-    duration = _duration_minutes(activity.get("duration")) or 90
-    return open_minutes <= start and start + duration <= close_minutes
-
-
-def _schedule_ok(days: list[dict[str, Any]]) -> bool:
-    """每天的开始时间递增，且前一项结束不晚于后一项开始。"""
-    for day in days:
-        activities = _activities(day)
-        starts = [_start_minutes(a.get("start")) for a in activities]
-        if any(start < 0 for start in starts) or starts != sorted(starts) or len(starts) != len(set(starts)):
-            return False
-        for current, following in zip(activities, activities[1:], strict=False):
-            finish = _start_minutes(current.get("start")) + _duration_minutes(current.get("duration"))
-            if finish > _start_minutes(following.get("start")):
-                return False
-    return True
-
-
-PERIODS = (("morning", 6 * 60, 12 * 60), ("afternoon", 12 * 60, 17 * 60 + 30),
-           ("evening", 17 * 60 + 30, 24 * 60))
-
-
-def _free_ratio(activities: list[dict[str, Any]], hours: float | None = None) -> float:
-    """按“当天可用时长”计算留白占比；活动集中在上半天时，下午仍是空的。"""
-    if len(activities) < 2:
-        return 1.0
-    ordered = sorted(activities, key=lambda a: _start_minutes(a.get("start")))
-    start = _start_minutes(ordered[0].get("start"))
-    end = max(_start_minutes(a.get("start")) + (_duration_minutes(a.get("duration")) or 90)
-              for a in ordered)
-    span = max(end - start, 1)
-    busy = sum(_duration_minutes(a.get("duration")) or 90 for a in ordered)
-    window = max(float(hours or DEFAULT_DAY_HOURS) * 60.0, span, 1.0)
-    return round(max(0.0, 1 - busy / window), 2)
-
-
-def _periods(activities: list[dict[str, Any]]) -> set:
-    """按活动占用区间判断覆盖时段：跨 17:30 的活动算下午+晚上。"""
-    buckets = set()
-    for activity in activities:
-        start = _start_minutes(activity.get("start"))
-        duration = _duration_minutes(activity.get("duration")) or 90
-        end = start + duration
-        for name, begin, finish in PERIODS:
-            if start < finish and end > begin:
-                buckets.add(name)
-    return buckets
-
-
-def _total_hours(activities: list[dict[str, Any]]) -> float:
-    return round(sum(_duration_minutes(activity.get("duration")) for activity in activities) / 60, 2)
-
-
-def _windows(result: dict[str, Any]) -> dict[int, float]:
-    raw = (result.get("constraints") or {}).get("day_windows") or []
-    return {int(item.get("day") or 0): float(item.get("hours") or DEFAULT_DAY_HOURS)
-            for item in raw if item.get("day") and item.get("hours")}
-
-
-def _legacy_checks(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
-    """旧实现的逐项检查；迁移完成后由引擎结果覆盖。"""
-    if case.get("expect") == "needs_clarification":
-        return {"clarification": result.get("status") == "needs_clarification"}
-    days = _days(result)
-    pace = detect_pace(case.get("query"))
-    plan = PACE_PLAN[pace]
-    windows = _windows(result)
-    requested = (result.get("constraints") or {}).get("requested_count")
-
-    def _hours(day: dict[str, Any]) -> float:
-        return windows.get(int(day.get("day") or 0), DEFAULT_DAY_HOURS)
-
-    def _bounds(day: dict[str, Any]) -> tuple[int, int]:
-        hours = windows.get(int(day.get("day") or 0))
-        if hours:
-            return count_bounds(hours, pace, requested)
-        return PACE_LIMITS[pace][0], PACE_LIMITS[pace][1]
-    activities = [a for d in days for a in _activities(d)]
-    titles = [str(a.get("title") or "") for a in activities]
-    evidence = _evidence_map(result)
-    expected_days = case.get("days")
-    expected_cities = [str(c).strip().rstrip("市") for c in case.get("cities") or [] if str(c).strip()]
-
-    city_coverage = True
-    if expected_cities:
-        city_coverage = bool(days) and all(
-            str(d.get("city") or "").strip().rstrip("市") in expected_cities for d in days)
-
-    opening_hours = True
-    hours_checked = 0
-    for activity in activities:
-        item = _match_item(evidence.get(activity.get("evidence_id")) or {}, activity.get("title"))
-        if not item:
-            continue
-        verdict = _opening_ok(activity, item)
-        if verdict is None:
-            continue
-        hours_checked += 1
-        if not verdict:
-            opening_hours = False
-
-    title_matches_evidence = True
-    for activity in activities:
-        names = _item_names(evidence.get(activity.get("evidence_id")) or {})
-        if not names:
-            continue
-        if not _title_matches(str(activity.get("title") or ""), names):
-            title_matches_evidence = False
-            break
-
-    # 行程里出现的数字（票价、时长金额）必须能在证据原文里找到，否则视为编造。
-    no_fabricated_cost = True
-    for activity in activities:
-        numbers = DIGITS.findall(str(activity.get("cost") or ""))
-        if not numbers:
-            continue
-        source = _evidence_text(evidence.get(activity.get("evidence_id")) or {}) + str(activity.get("description") or "")
-        if any(number not in source for number in numbers):
-            no_fabricated_cost = False
-            break
-
-    checks = {
-        "complete": result.get("status") == "complete",
-        "day_count": bool(days) and (expected_days is None or len(days) == expected_days),
-        "density": bool(days) and all(
-            _bounds(d)[0] <= len(_activities(d)) <= _bounds(d)[1] for d in days),
-        "periods": bool(days) and all(len(_periods(_activities(d))) >= 2 for d in days),
-        "day_load": bool(days) and all(
-            min(3.0, _hours(d)) <= _total_hours(_activities(d)) <= _hours(d) + 0.5 for d in days),
-        "activity_length": bool(days) and all(
-            plan["activity"][0] - 1.0 <= _duration_minutes(a.get("duration")) / 60 <= min(_hours(d), plan["activity"][1] + 3.5)
-            for d in days for a in _activities(d)),
-        "free_time": bool(days) and all(
-            _free_ratio(_activities(d), _hours(d)) >= plan["free"][0]
-            and _free_ratio(_activities(d), _hours(d)) <= plan["free"][1] + 0.07
-            for d in days),
-        "unique_titles": len(titles) == len(set(titles)),
-        "no_overlap": _schedule_ok(days),
-        "title_clean": bool(titles) and all(
-            len(title) <= 24 and not any(token in title for token in NOISE_TOKENS) for title in titles),
-        "time_order": bool(days) and all(
-            [str(a.get("start")) for a in _activities(d)] == sorted(str(a.get("start")) for a in _activities(d))
-            for d in days),
-        "fields_filled": bool(activities) and all(
-            a.get("start") and a.get("duration") and a.get("transport") and a.get("cost") for a in activities),
-        "evidence_ok": bool(activities) and all(
-            (evidence.get(a.get("evidence_id")) or {}).get("status") == "ok" for a in activities),
-        "city_coverage": city_coverage,
-        "title_matches_evidence": title_matches_evidence,
-        "no_fabricated_cost": no_fabricated_cost,
-    }
-    if hours_checked:
-        checks["opening_hours"] = opening_hours
-    wanted = [str(place).strip() for place in case.get("named_places") or [] if str(place).strip()]
-    if wanted:
-        checks["named_places_covered"] = _named_places_covered(wanted, titles)
-    anchor = str(case.get("anchor") or "")
-    if anchor == "food":
-        checks["anchor_satisfied"] = bool(days) and all(day.get("meals") for day in days)
-    elif anchor == "stay":
-        checks["anchor_satisfied"] = bool(days) and all(day.get("lodging_area") for day in days)
-    meals = [meal for day in days for meal in (day.get("meals") or [])]
-    if meals:
-        checks["meal_grounded"] = all(
-            bool(_item_names(evidence.get(meal.get("evidence_id")) or {}))
-            and _title_matches(str(meal.get("title") or ""),
-                               _item_names(evidence.get(meal.get("evidence_id")) or {}))
-            for meal in meals
-        )
-    return checks
-
-
 CONSTRAINT_SET = load_set()
 
 
 def engine_checks(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
-    """声明式约束层的判定结果（与被覆盖的旧检查逐条对齐）。"""
+    """按约束集求解，返回逐项通过与否。"""
     findings = evaluate(build_view(result, case), CONSTRAINT_SET)
     return {finding.id: finding.ok for finding in findings}
 
 
 def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
-    """返回逐项检查结果：迁移项由约束引擎判，其余暂走旧实现。"""
+    """返回逐项检查结果；追问类用例只看是否真的追问了。"""
     if case.get("expect") == "needs_clarification":
         return {"clarification": result.get("status") == "needs_clarification"}
-    checks = _legacy_checks(case, result)
-    checks.update(engine_checks(case, result))
-    return checks
-
-
-def _squash(text: Any) -> str:
-    return re.sub(r"[\s\W_]+", "", str(text or ""))
-
-
-def _named_places_covered(wanted: list[str], titles: list[str]) -> bool:
-    flattened = [_squash(title) for title in titles if _squash(title)]
-    for place in wanted:
-        target = _squash(place)
-        if not target or not any(target in title or title in target for title in flattened):
-            return False
-    return True
+    return engine_checks(case, result)
 
 
 def combined_score(checks: dict[str, bool], rubric: Any, fabrication: bool = False) -> Any:
