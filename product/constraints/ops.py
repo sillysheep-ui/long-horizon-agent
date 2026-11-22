@@ -359,6 +359,28 @@ def evidence_ok(view: ItineraryView, constraint: Constraint) -> Finding:
     )
 
 
+def valid_times(view: ItineraryView, constraint: Constraint) -> Finding:
+    """每个活动的开始时间都是 HH:MM。"""
+    import re
+
+    pattern = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d$")
+    bad = []
+    for day in view.days:
+        for item in view.activities(day):
+            if not pattern.match(str(item.get("start") or "")):
+                bad.append(f"第{day.get('day')}天「{item.get('title') or '活动'}」")
+    ok = not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "开始时间不是 HH:MM",
+        expected="HH:MM",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
 OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "count_between": count_between,
     "time_order": time_order,
@@ -372,6 +394,7 @@ OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "text_clean": text_clean,
     "city_coverage": city_coverage,
     "evidence_ok": evidence_ok,
+    "valid_times": valid_times,
 }
 
 

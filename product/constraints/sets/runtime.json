@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "constraints": [
+    {"id": "too_many", "category": "hard", "severity": "hard", "type": "count_between",
+     "select": "days[].activities[]", "params": {"min": 0, "max": 4}},
+    {"id": "order", "category": "hard", "severity": "hard", "type": "time_order",
+     "select": "days[].activities[]", "params": {}},
+    {"id": "overlap", "category": "hard", "severity": "hard", "type": "no_overlap",
+     "select": "days[].activities[]",
+     "params": {"include_meals": false, "default_minutes": 0, "require_times": false, "require_order": false}},
+    {"id": "over_hours", "category": "commonsense", "severity": "hard", "type": "sum_le",
+     "select": "days[].activities[]", "params": {"min_hours": 0, "tolerance": 0, "default_hours": 10.0}},
+    {"id": "bad_time", "category": "hard", "severity": "hard", "type": "valid_times",
+     "select": "days[].activities[]", "params": {}}
+  ]
+}
