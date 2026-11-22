@@ -16,6 +16,7 @@ def build_view(result: dict[str, Any], case: dict[str, Any] | None = None) -> It
         evidence=[item for item in result.get("evidence") or [] if isinstance(item, dict)],
         constraints=result.get("constraints") or {},
         case=case or {},
+        status=str(result.get("status") or ""),
     )
 
 

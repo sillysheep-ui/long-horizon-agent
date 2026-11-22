@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from product.constraints.engine import build_view, evaluate, failed_ids, passed, summary
+from product.constraints.model import Constraint, ConstraintSet
 from product.constraints.spec import load_set
 
 
@@ -10,9 +11,9 @@ def _activity(title: str, start: str, duration: str = "1 小时", **extra):
     return {"title": title, "start": start, "duration": duration, **extra}
 
 
-def _view(days, constraints=None, evidence=None):
+def _view(days, constraints=None, evidence=None, status=""):
     return build_view(
-        {"days": days, "evidence": evidence or [], "constraints": constraints or {}},
+        {"status": status, "days": days, "evidence": evidence or [], "constraints": constraints or {}},
     )
 
 
@@ -69,7 +70,8 @@ def test_time_window_uses_opening_hours():
         [{"day": 1, "activities": [_activity("陶陶居", "09:30", "1.5 小时")]}],
         evidence=[{"id": "d1-p1", "items": [{"name": "陶陶居", "opentime": "10:00", "endtime": "22:00"}]}],
     )
-    result = _finding(evaluate(view, load_set()), "opening_hours")
+    constraint_set = ConstraintSet("test", (Constraint("opening_hours", "commonsense", "hard", "time_window"),))
+    result = _finding(evaluate(view, constraint_set), "opening_hours")
     assert result.ok is False
     assert "早于营业时间 10:00" in result.actual
 
@@ -97,20 +99,25 @@ def test_exists_contains_reports_missing_named_place():
         [{"day": 1, "activities": [_activity("灵隐寺", "09:00"), _activity("九溪", "13:00")]}],
         constraints={"named_places": ["西湖"]},
     )
-    result = _finding(evaluate(view, load_set()), "named_places_covered")
+    constraint_set = ConstraintSet("test", (Constraint("named_places_covered", "hard", "hard", "exists_contains"),))
+    result = _finding(evaluate(view, constraint_set), "named_places_covered")
     assert result.ok is False
     assert "西湖" in result.actual
 
 
 def test_all_constraints_pass_on_clean_day():
     day = [
-        _activity("西湖", "09:00", "2 小时"),
-        _activity("灵隐寺", "13:00", "2 小时"),
+        _activity("西湖", "09:00", "2 小时", evidence_id="d1-p1"),
+        _activity("灵隐寺", "13:00", "2 小时", evidence_id="d1-p1"),
     ]
-    view = _view([{"day": 1, "activities": day}], constraints={"named_places": ["西湖", "灵隐寺"]})
+    view = _view(
+        [{"day": 1, "city": "杭州", "activities": day}],
+        evidence=[{"id": "d1-p1", "status": "ok", "items": [{"name": "西湖"}, {"name": "灵隐寺"}]}],
+        status="complete",
+    )
     findings = evaluate(view, load_set())
     assert passed(findings) is True
     assert failed_ids(findings) == []
     counts = summary(findings)
-    assert counts["total"] >= 6
+    assert counts["total"] >= 10
     assert counts["hard_passed"] == counts["hard_total"]

@@ -1,48 +1,126 @@
-"""约束集规格与加载测试。"""
+"""约束引擎与算子测试。"""
 
 from __future__ import annotations
 
-import json
-
-import pytest
-
-from product.constraints.spec import load_set, validate
+from product.constraints.engine import build_view, evaluate, failed_ids, passed, summary
+from product.constraints.model import Constraint, ConstraintSet
+from product.constraints.spec import load_set
 
 
-def test_load_default_set():
-    constraint_set = load_set()
-    assert constraint_set.version
-    assert constraint_set.by_id("density") is not None
-    assert constraint_set.by_id("opening_hours") is not None
-    assert len(constraint_set.constraints) >= 6
+def _activity(title: str, start: str, duration: str = "1 小时", **extra):
+    return {"title": title, "start": start, "duration": duration, **extra}
 
 
-def test_validate_rejects_unknown_operator():
-    with pytest.raises(ValueError, match="算子未知"):
-        validate({"id": "x", "category": "hard", "severity": "hard", "type": "no_such_op"})
+def _view(days, constraints=None, evidence=None):
+    return build_view(
+        {"days": days, "evidence": evidence or [], "constraints": constraints or {}},
+    )
 
 
-def test_validate_rejects_bad_category():
-    with pytest.raises(ValueError, match="category"):
-        validate({"id": "x", "category": "misc", "severity": "hard", "type": "time_order"})
+def _finding(findings, constraint_id):
+    for item in findings:
+        if item.id == constraint_id:
+            return item
+    raise AssertionError(f"找不到约束 {constraint_id}")
 
 
-def test_load_set_rejects_duplicate_ids(tmp_path):
-    payload = {
-        "version": "0.0.0",
-        "constraints": [
-            {"id": "dup", "category": "hard", "severity": "hard", "type": "time_order"},
-            {"id": "dup", "category": "hard", "severity": "hard", "type": "no_overlap"},
+def test_density_flags_day_with_one_activity():
+    view = _view([{"day": 1, "activities": [_activity("西湖", "09:00")]}])
+    result = _finding(evaluate(view, load_set()), "density")
+    assert result.ok is False
+    assert "第1天 1 个" in result.actual
+
+
+def test_time_order_reports_out_of_order():
+    view = _view(
+        [
+            {
+                "day": 1,
+                "activities": [
+                    _activity("A", "10:00"),
+                    _activity("B", "09:00"),
+                ],
+            }
+        ]
+    )
+    result = _finding(evaluate(view, load_set()), "time_order")
+    assert result.ok is False
+    assert "09:00 早于 10:00" in result.actual
+
+
+def test_no_overlap_detects_overlap():
+    view = _view(
+        [
+            {
+                "day": 1,
+                "activities": [
+                    _activity("A", "09:00", "2 小时"),
+                    _activity("B", "10:00", "1 小时"),
+                ],
+            }
+        ]
+    )
+    result = _finding(evaluate(view, load_set()), "no_overlap")
+    assert result.ok is False
+    assert "重叠" in result.actual
+
+
+def test_time_window_uses_opening_hours():
+    view = _view(
+        [{"day": 1, "activities": [_activity("陶陶居", "09:30", "1.5 小时")]}],
+        evidence=[{"id": "d1-p1", "items": [{"name": "陶陶居", "opentime": "10:00", "endtime": "22:00"}]}],
+    )
+    constraint_set = ConstraintSet("test", (Constraint("opening_hours", "commonsense", "hard", "time_window"),))
+    result = _finding(evaluate(view, constraint_set), "opening_hours")
+    assert result.ok is False
+    assert "早于营业时间 10:00" in result.actual
+
+
+def test_sum_le_uses_day_window():
+    view = _view(
+        [
+            {
+                "day": 1,
+                "activities": [
+                    _activity("A", "09:00", "2 小时"),
+                    _activity("B", "12:00", "2 小时"),
+                ],
+            }
         ],
-    }
-    path = tmp_path / "set.json"
-    path.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(ValueError, match="重复"):
-        load_set(path)
+        constraints={"day_windows": [{"day": 1, "hours": 3}]},
+    )
+    result = _finding(evaluate(view, load_set()), "day_load")
+    assert result.ok is False
+    assert "4.0 小时" in result.actual
 
 
-def test_load_set_rejects_empty(tmp_path):
-    path = tmp_path / "set.json"
-    path.write_text(json.dumps({"version": "1", "constraints": []}), encoding="utf-8")
-    with pytest.raises(ValueError, match="不能为空"):
-        load_set(path)
+def test_exists_contains_reports_missing_named_place():
+    view = _view(
+        [{"day": 1, "activities": [_activity("灵隐寺", "09:00"), _activity("九溪", "13:00")]}],
+        constraints={"named_places": ["西湖"]},
+    )
+    constraint_set = ConstraintSet("test", (Constraint("named_places_covered", "hard", "hard", "exists_contains"),))
+    result = _finding(evaluate(view, constraint_set), "named_places_covered")
+    assert result.ok is False
+    assert "西湖" in result.actual
+
+
+def test_all_constraints_pass_on_clean_day():
+    day = [
+        _activity("西湖", "09:00", "2 小时", evidence_id="d1-p1"),
+        _activity("灵隐寺", "13:00", "2 小时", evidence_id="d1-p1"),
+    ]
+    view = build_view(
+        {
+            "status": "complete",
+            "days": [{"day": 1, "city": "杭州", "activities": day}],
+            "evidence": [{"id": "d1-p1", "status": "ok", "items": [{"name": "西湖"}, {"name": "灵隐寺"}]}],
+            "constraints": {"named_places": ["西湖", "灵隐寺"]},
+        }
+    )
+    findings = evaluate(view, load_set())
+    assert passed(findings) is True
+    assert failed_ids(findings) == []
+    counts = summary(findings)
+    assert counts["total"] >= 6
+    assert counts["hard_passed"] == counts["hard_total"]

@@ -7,6 +7,8 @@
 import re
 from typing import Any
 
+from product.constraints.engine import build_view, evaluate
+from product.constraints.spec import load_set
 from product.pace import DEFAULT_DAY_HOURS, PACE_LIMITS, PACE_PLAN, count_bounds, detect_pace
 
 NOISE_TOKENS = ("攻略", "门票", "地址", "图片", "开放时间", "营业时间", "【", "】", "｜", "点评", "简介")
@@ -185,8 +187,8 @@ def _windows(result: dict[str, Any]) -> dict[int, float]:
             for item in raw if item.get("day") and item.get("hours")}
 
 
-def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
-    """返回逐项检查结果；键名会直接进报告。"""
+def _legacy_checks(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
+    """旧实现的逐项检查；迁移完成后由引擎结果覆盖。"""
     if case.get("expect") == "needs_clarification":
         return {"clarification": result.get("status") == "needs_clarification"}
     days = _days(result)
@@ -295,6 +297,24 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
                                _item_names(evidence.get(meal.get("evidence_id")) or {}))
             for meal in meals
         )
+    return checks
+
+
+CONSTRAINT_SET = load_set()
+
+
+def engine_checks(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
+    """声明式约束层的判定结果（与被覆盖的旧检查逐条对齐）。"""
+    findings = evaluate(build_view(result, case), CONSTRAINT_SET)
+    return {finding.id: finding.ok for finding in findings}
+
+
+def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool]:
+    """返回逐项检查结果：迁移项由约束引擎判，其余暂走旧实现。"""
+    if case.get("expect") == "needs_clarification":
+        return {"clarification": result.get("status") == "needs_clarification"}
+    checks = _legacy_checks(case, result)
+    checks.update(engine_checks(case, result))
     return checks
 
 

@@ -70,6 +70,7 @@ class ItineraryView:
     evidence: list[dict[str, Any]] = field(default_factory=list)
     constraints: dict[str, Any] = field(default_factory=dict)
     case: dict[str, Any] = field(default_factory=dict)
+    status: str = ""
 
     def activities(self, day: dict[str, Any]) -> list[dict[str, Any]]:
         items = day.get("activities") if isinstance(day, dict) else None
@@ -128,12 +129,12 @@ def duration_minutes(value: Any) -> int | None:
     return int(round(amount))
 
 
-def activity_window(activity: dict[str, Any]) -> tuple[int, int] | None:
+def activity_window(activity: dict[str, Any], default_minutes: int = 60) -> tuple[int, int] | None:
     """活动占用区间（分钟），缺开始时间返回 None。"""
     start = parse_hhmm(activity.get("start"))
     if start is None:
         return None
     minutes = duration_minutes(activity.get("duration"))
     if minutes is None:
-        minutes = 60
+        minutes = default_minutes
     return start, start + minutes

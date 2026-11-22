@@ -1,13 +1,36 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "constraints": [
+    {
+      "id": "complete",
+      "category": "hard",
+      "severity": "hard",
+      "type": "status_equals",
+      "params": {
+        "value": "complete"
+      }
+    },
+    {
+      "id": "day_count",
+      "category": "hard",
+      "severity": "hard",
+      "type": "count_equals",
+      "params": {
+        "target": "days"
+      }
+    },
     {
       "id": "density",
       "category": "hard",
       "severity": "hard",
       "type": "count_between",
       "select": "days[].activities[]",
-      "params": {"min": 2, "max": 4}
+      "params": {
+        "bounds": "day_windows",
+        "min": 2,
+        "max": 4,
+        "require_days": true
+      }
     },
     {
       "id": "time_order",
@@ -15,23 +38,22 @@
       "severity": "hard",
       "type": "time_order",
       "select": "days[].activities[]",
-      "params": {}
+      "params": {
+        "require_days": true
+      }
     },
     {
       "id": "no_overlap",
       "category": "hard",
       "severity": "hard",
       "type": "no_overlap",
-      "select": "days[].activities[]+meals[]",
-      "params": {}
-    },
-    {
-      "id": "opening_hours",
-      "category": "commonsense",
-      "severity": "hard",
-      "type": "time_window",
       "select": "days[].activities[]",
-      "params": {}
+      "params": {
+        "include_meals": false,
+        "default_minutes": 90,
+        "require_times": true,
+        "require_order": true
+      }
     },
     {
       "id": "day_load",
@@ -39,13 +61,59 @@
       "severity": "soft",
       "type": "sum_le",
       "select": "days[].activities[]",
+      "params": {
+        "min_hours": 3.0,
+        "tolerance": 0.5,
+        "require_days": true,
+        "default_hours": 10.0
+      }
+    },
+    {
+      "id": "unique_titles",
+      "category": "hard",
+      "severity": "hard",
+      "type": "unique_values",
+      "select": "days[].activities[]",
+      "params": {
+        "field": "title"
+      }
+    },
+    {
+      "id": "title_clean",
+      "category": "commonsense",
+      "severity": "hard",
+      "type": "text_clean",
+      "select": "days[].activities[]",
+      "params": {
+        "max_len": 24,
+        "tokens": [
+          "攻略",
+          "门票",
+          "地址",
+          "图片",
+          "开放时间",
+          "营业时间",
+          "【",
+          "】",
+          "｜",
+          "点评",
+          "简介"
+        ]
+      }
+    },
+    {
+      "id": "city_coverage",
+      "category": "hard",
+      "severity": "hard",
+      "type": "city_coverage",
+      "select": "days[]",
       "params": {}
     },
     {
-      "id": "named_places_covered",
+      "id": "evidence_ok",
       "category": "hard",
       "severity": "hard",
-      "type": "exists_contains",
+      "type": "evidence_ok",
       "select": "days[].activities[]",
       "params": {}
     }

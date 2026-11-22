@@ -24,23 +24,46 @@ def _examples(items: list[str], limit: int = 3) -> str:
 
 
 def count_between(view: ItineraryView, constraint: Constraint) -> Finding:
-    """每天活动数落在 [min, max]。"""
+    """每天活动数落在 [min, max]；bounds=day_windows 时按节奏动态取上下限。"""
+    dynamic = constraint.params.get("bounds") == "day_windows"
+    require_days = bool(constraint.params.get("require_days", False))
     low = int(constraint.params.get("min", 0))
     high = int(constraint.params.get("max", 99))
     skip_empty = bool(constraint.params.get("skip_empty", True))
+    pace = requested = windows = None
+    if dynamic:
+        from product.pace import PACE_LIMITS, count_bounds, detect_pace
+
+        pace = detect_pace(view.case.get("query"))
+        requested = view.constraints.get("requested_count")
+        windows = {
+            int(window.get("day") or 0): float(window.get("hours") or 0)
+            for window in view.constraints.get("day_windows") or []
+            if isinstance(window, dict) and window.get("day") and window.get("hours")
+        }
+        if not windows:
+            low, high = PACE_LIMITS[pace][:2]
     violations: list[str] = []
+    expected_parts: list[str] = []
+    if require_days and not view.days:
+        violations.append("没有任何安排")
     for index, day in enumerate(view.days, start=1):
         count = len(view.activities(day))
         if count == 0 and skip_empty:
             continue
-        if not low <= count <= high:
-            violations.append(f"第{index}天 {count} 个")
+        day_low, day_high = low, high
+        if dynamic and windows and index in windows:
+            day_low, day_high = count_bounds(windows[index], pace, requested)
+            expected_parts.append(f"第{index}天 {day_low}–{day_high}")
+        if not day_low <= count <= day_high:
+            violations.append(f"第{index}天 {count} 个（应 {day_low}–{day_high}）")
     ok = not violations
+    expected = "；".join(expected_parts) if expected_parts else f"{low}–{high} 个/天"
     return Finding(
         id=constraint.id,
         ok=ok,
-        detail="" if ok else f"每天活动数应为 {low}–{high} 个",
-        expected=f"{low}–{high} 个/天",
+        detail="" if ok else "每天活动数超出允许区间",
+        expected=expected,
         actual=_examples(violations),
         category=constraint.category,
         severity=constraint.severity,
@@ -50,6 +73,8 @@ def count_between(view: ItineraryView, constraint: Constraint) -> Finding:
 def time_order(view: ItineraryView, constraint: Constraint) -> Finding:
     """同一天内按开始时间升序。"""
     violations: list[str] = []
+    if constraint.params.get("require_days") and not view.days:
+        violations.append("没有任何安排")
     for index, day in enumerate(view.days, start=1):
         starts = [(parse_hhmm(item.get("start")), item) for item in view.activities(day)]
         starts = [(value, item) for value, item in starts if value is not None]
@@ -71,19 +96,33 @@ def time_order(view: ItineraryView, constraint: Constraint) -> Finding:
 
 def no_overlap(view: ItineraryView, constraint: Constraint) -> Finding:
     """同一天的活动 / 用餐时间不重叠。"""
+    include_meals = bool(constraint.params.get("include_meals", True))
+    default_minutes = int(constraint.params.get("default_minutes", 60))
+    require_times = bool(constraint.params.get("require_times", False))
+    require_order = bool(constraint.params.get("require_order", False))
     violations: list[str] = []
     for index, day in enumerate(view.days, start=1):
         blocks: list[tuple[int, int, str]] = []
+        if require_order:
+            ordered = [parse_hhmm(item.get("start")) for item in view.activities(day)]
+            ordered = [value for value in ordered if value is not None]
+            if ordered != sorted(ordered) or len(ordered) != len(set(ordered)):
+                violations.append(f"第{index}天开始时间未按顺序或存在重复")
+                break
         for item in view.activities(day):
-            window = activity_window(item)
+            window = activity_window(item, default_minutes)
             if window:
                 blocks.append((window[0], window[1], str(item.get("title") or item.get("display_title") or "活动")))
-        for meal in day.get("meals") or []:
-            if not isinstance(meal, dict):
-                continue
-            window = activity_window(meal)
-            if window:
-                blocks.append((window[0], window[1], str(meal.get("title") or "用餐")))
+            elif require_times:
+                violations.append(f"第{index}天「{item.get('title') or '活动'}」缺少开始时间")
+                break
+        if include_meals:
+            for meal in day.get("meals") or []:
+                if not isinstance(meal, dict):
+                    continue
+                window = activity_window(meal, default_minutes)
+                if window:
+                    blocks.append((window[0], window[1], str(meal.get("title") or "用餐")))
         blocks.sort()
         for (_start, end, name), (next_start, _, next_name) in zip(blocks, blocks[1:], strict=False):
             if next_start < end:
@@ -135,9 +174,15 @@ def time_window(view: ItineraryView, constraint: Constraint) -> Finding:
 
 
 def sum_le(view: ItineraryView, constraint: Constraint) -> Finding:
-    """每天活动总时长不超过当天可用时长（或固定上限）。"""
+    """每天活动总时长落在 [min, 可用时长 + tolerance] 内。"""
     limit_param = constraint.params.get("limit")
+    default_hours = float(constraint.params.get("default_hours", 10.0))
+    min_hours = float(constraint.params.get("min_hours", 0.0))
+    tolerance = float(constraint.params.get("tolerance", 0.0))
     violations: list[str] = []
+    expected = "不超过当天可用时长"
+    if constraint.params.get("require_days") and not view.days:
+        violations.append("没有任何安排")
     for index, day in enumerate(view.days, start=1):
         activities = view.activities(day)
         if not activities:
@@ -151,16 +196,21 @@ def sum_le(view: ItineraryView, constraint: Constraint) -> Finding:
                     limit_minutes = int(float(window.get("hours") or 0) * 60)
                     break
         if not limit_minutes:
-            continue
+            limit_minutes = int(default_hours * 60)
         total = sum(duration_minutes(item.get("duration")) or 0 for item in activities)
-        if total > limit_minutes:
+        lower = min(min_hours, limit_minutes / 60) * 60
+        upper = limit_minutes + tolerance * 60
+        if total > upper or total < lower:
             violations.append(f"第{index}天 {total / 60:.1f} 小时")
+        if limit_param is not None:
+            expected = f"{min_hours:g}–{float(limit_param) + tolerance:g} 小时/天"
+        else:
+            expected = f"{min_hours:g} 小时–当天可用时长"
     ok = not violations
-    expected = f"≤ {int(float(limit_param) * 60) / 60:.1f} 小时/天" if limit_param is not None else "不超过当天可用时长"
     return Finding(
         id=constraint.id,
         ok=ok,
-        detail="" if ok else "当天活动总时长超出可用时间",
+        detail="" if ok else "当天活动总时长超出允许区间",
         expected=expected,
         actual=_examples(violations),
         category=constraint.category,
@@ -202,6 +252,113 @@ def exists_contains(view: ItineraryView, constraint: Constraint) -> Finding:
     )
 
 
+def status_equals(view: ItineraryView, constraint: Constraint) -> Finding:
+    """结果状态等于给定值（如 complete）。"""
+    wanted = str(constraint.params.get("value") or "complete")
+    actual = view.status
+    ok = actual == wanted
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else f"状态应为 {wanted}",
+        expected=wanted,
+        actual=actual,
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def count_equals(view: ItineraryView, constraint: Constraint) -> Finding:
+    """顶层数量等于期望值（天数）；期望来自用例。"""
+    if constraint.params.get("target") == "days":
+        wanted = view.case.get("days")
+        actual = len(view.days)
+        ok = bool(view.days) and (wanted is None or actual == int(wanted))
+        return Finding(
+            id=constraint.id,
+            ok=ok,
+            detail="" if ok else "天数与需求不一致",
+            expected=str(wanted) if wanted is not None else "非空",
+            actual=str(actual),
+            category=constraint.category,
+            severity=constraint.severity,
+        )
+    raise KeyError(f"count_equals 不支持 target={constraint.params.get('target')}")
+
+
+def unique_values(view: ItineraryView, constraint: Constraint) -> Finding:
+    """某字段在同一行程内不重复（默认活动标题）。"""
+    field = str(constraint.params.get("field") or "title")
+    values = [str(item.get(field) or "") for day in view.days for item in view.activities(day)]
+    duplicates = sorted({value for value in values if value and values.count(value) > 1})
+    ok = not duplicates
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "存在重复条目",
+        expected="不重复",
+        actual=_examples(duplicates),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def text_clean(view: ItineraryView, constraint: Constraint) -> Finding:
+    """标题长度与噪声词检查。"""
+    max_len = int(constraint.params.get("max_len", 24))
+    tokens = [str(token) for token in constraint.params.get("tokens") or []]
+    titles = [str(item.get("title") or "") for day in view.days for item in view.activities(day)]
+    bad = [title for title in titles if len(title) > max_len or any(token in title for token in tokens)]
+    ok = bool(titles) and not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "标题过长或含网页噪声词",
+        expected=f"≤{max_len} 字且无噪声词",
+        actual=_examples([title[:20] for title in bad]),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def city_coverage(view: ItineraryView, constraint: Constraint) -> Finding:
+    """每天的城市都属于用例期望城市。"""
+    wanted = [str(city).strip().rstrip("市") for city in view.case.get("cities") or [] if str(city).strip()]
+    if not wanted:
+        return Finding(id=constraint.id, ok=True, expected="", actual="",
+                       category=constraint.category, severity=constraint.severity)
+    actual = [str(day.get("city") or "").strip().rstrip("市") for day in view.days]
+    bad = [city for city in actual if city not in wanted]
+    ok = bool(view.days) and not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "行程城市与需求不一致",
+        expected="/".join(wanted),
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def evidence_ok(view: ItineraryView, constraint: Constraint) -> Finding:
+    """每个活动都绑定了 status=ok 的证据。"""
+    evidence = {item.get("id"): item for item in view.evidence if isinstance(item, dict)}
+    activities = [item for day in view.days for item in view.activities(day)]
+    bad = [str(item.get("title") or "") for item in activities
+           if (evidence.get(item.get("evidence_id")) or {}).get("status") != "ok"]
+    ok = bool(activities) and not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "存在没有可追溯证据的活动",
+        expected="全部绑定 ok 证据",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
 OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "count_between": count_between,
     "time_order": time_order,
@@ -209,6 +366,12 @@ OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "time_window": time_window,
     "sum_le": sum_le,
     "exists_contains": exists_contains,
+    "status_equals": status_equals,
+    "count_equals": count_equals,
+    "unique_values": unique_values,
+    "text_clean": text_clean,
+    "city_coverage": city_coverage,
+    "evidence_ok": evidence_ok,
 }
 
 
