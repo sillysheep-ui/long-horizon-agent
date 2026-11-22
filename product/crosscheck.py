@@ -10,6 +10,8 @@ from product.constraints.spec import SET_DIR, load_set
 
 CROSSCHECK_SET = load_set(SET_DIR / "crosscheck.json")
 MAX_MEAL_KM = 1.5
+MAX_STAY_TRANSFER_MINUTES = 30
+MEAL_MINUTES = 60
 
 
 def _finding(days: list[dict[str, Any]], constraints: dict[str, Any], constraint_id: str):
