@@ -353,9 +353,13 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
                       and all(r["checks"].values())
                       and (r.get("judge") or {}).get("rubric", 0) >= 0.7
                       and not (r.get("judge") or {}).get("fabrication"))
+    micro = (sum(sum(1 for value in r["checks"].values() if value) / max(1, len(r["checks"]))
+                 for r in records) / total) if total else None
     return {
         "cases": total,
         "check_pass_rate": {name: round(passed[name] / applicable[name], 3) for name in check_names},
+        "checks_micro": round(micro, 3) if micro is not None else None,
+        "checks_macro": round(sum(1 for r in records if all(r["checks"].values())) / total, 3) if total else None,
         "all_checks_passed": sum(1 for r in records if all(r["checks"].values())),
         "hard_mean": round(sum(hard_pass_rate(r["checks"]) for r in records) / total, 3) if total else None,
         "rubric_mean": round(sum(rubrics) / len(rubrics), 3) if rubrics else None,

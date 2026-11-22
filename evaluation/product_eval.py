@@ -18,7 +18,7 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
-from evaluation.product_checks import check_result, combined_score, summarize
+from evaluation.product_checks import CONSTRAINT_SET, check_result, combined_score, summarize
 from evaluation.product_judge import judge as judge_itinerary
 from evaluation.stage_checks import evaluator_health, summarize_trajectory
 from product.orchestrator import AgentWorkflow
@@ -87,6 +87,8 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
                  split: str = "all", health: dict[str, Any] | None = None) -> None:
     lines = [f"# 产品行程评测 · {profile} · {split}", "", f"- 用例：{summary['cases']}",
              f"- 确定性检查全过：{summary['all_checks_passed']}/{summary['cases']}（平均通过率 {summary['hard_mean']}）",
+             f"- 检查 micro/macro：{summary.get('checks_micro')}/{summary.get('checks_macro')}"
+             f"（约束集 v{summary.get('constraint_set')}）",
              f"- rubric 均分：{summary['rubric_mean']}（0–1，10 条清单）",
              f"- 综合分均值：{summary['score_mean']}（0.6×硬检查 + 0.4×rubric − 编造扣分）",
              f"- 可交付：{summary['deliverable']}/{summary['cases']}",
@@ -240,6 +242,7 @@ async def main() -> None:
     summary = summarize(records)
     summary["seed"] = args.seed
     summary["judge_model"] = judge_model
+    summary["constraint_set"] = CONSTRAINT_SET.version
     summary["pools"] = {pool: sum(1 for record in records if record.get("pool") == pool)
                         for pool in ("sandbox", "live", "unknown")}
     summary["pool_pass"] = {
