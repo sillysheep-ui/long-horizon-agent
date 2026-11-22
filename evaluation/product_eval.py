@@ -23,6 +23,7 @@ from evaluation.product_judge import judge as judge_itinerary
 from evaluation.stage_checks import evaluator_health, summarize_trajectory
 from product.orchestrator import AgentWorkflow
 from product.store import Store
+from tools import sandbox as sandbox_data
 
 CASES_PATH = Path(__file__).with_name("product_cases.json")
 
@@ -69,11 +70,11 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: dict[str, Any]) 
         trajectory["latency_ms"] = {child.get("name"): child.get("latency_ms") or 0
                                     for child in trace.get("children") or []}
         return {"id": case["id"], "query": case["query"], "status": result.get("status"),
-                "result": _compact(result), "checks": check_result(case, result),
-                "trajectory": trajectory, "elapsed": elapsed}
+                "pool": case.get("pool", "unknown"), "result": _compact(result),
+                "checks": check_result(case, result), "trajectory": trajectory, "elapsed": elapsed}
     except Exception as error:
-        return {"id": case["id"], "query": case["query"], "error": str(error)[:300],
-                "checks": {}, "elapsed": 0.0}
+        return {"id": case["id"], "query": case["query"], "pool": case.get("pool", "unknown"),
+                "error": str(error)[:300], "checks": {}, "elapsed": 0.0}
 
 
 def _stage_line(stages: dict[str, float] | None) -> str:
@@ -91,7 +92,10 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
              f"- 可交付：{summary['deliverable']}/{summary['cases']}",
              f"- 平均耗时：{summary['latency_mean']}s",
              f"- 分段耗时：{_stage_line(summary.get('stage_latency_mean'))}",
-             f"- 随机种子：{summary.get('seed')} / 裁判模型：{summary.get('judge_model')}", "",
+             f"- 随机种子：{summary.get('seed')} / 裁判模型：{summary.get('judge_model')}",
+             f"- 分池：沙盒 {summary.get('pools', {}).get('sandbox', 0)} 条（全过 {summary.get('pool_pass', {}).get('sandbox')}）"
+             f" / 联网 {summary.get('pools', {}).get('live', 0)} 条（全过 {summary.get('pool_pass', {}).get('live')}）",
+             f"- 沙盒数据：{summary.get('sandbox_data', {}).get('tables') or '未加载'}", "",
              "## 检查通过率", "", "| 检查 | 通过率 |", "|---|---|"]
     lines += [f"| {name} | {rate:.0%} |" for name, rate in summary["check_pass_rate"].items()]
     lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | rubric | 综合分 | 判定 |",
@@ -197,6 +201,14 @@ async def main() -> None:
         cases = [c for c in cases if c.get("id") in wanted]
     if args.limit:
         cases = cases[:args.limit]
+    sandbox_cities = sandbox_data.cities()
+    for case in cases:
+        cities = {sandbox_data.normalize_city(item) for item in case.get("cities") or []}
+        if not cities or not sandbox_cities:
+            case["pool"] = "unknown"
+        else:
+            case["pool"] = "sandbox" if cities <= sandbox_cities else "live"
+
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
     Path(db_path).unlink(missing_ok=True)
 
@@ -228,6 +240,17 @@ async def main() -> None:
     summary = summarize(records)
     summary["seed"] = args.seed
     summary["judge_model"] = judge_model
+    summary["pools"] = {pool: sum(1 for record in records if record.get("pool") == pool)
+                        for pool in ("sandbox", "live", "unknown")}
+    summary["pool_pass"] = {
+        pool: round(sum(1 for record in records
+                        if record.get("pool") == pool and all(record["checks"].values()))
+                    / max(1, summary["pools"][pool]), 3)
+        for pool in ("sandbox", "live")}
+    summary["sandbox_data"] = {
+        "cities": sorted(sandbox_cities),
+        "tables": {name: len(sandbox_data._table(name)) for name in sandbox_data._TABLES},
+    } if sandbox_cities else {}
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = Path(args.out or f"results/product_eval/{stamp}-{args.profile}")
     health = evaluator_health(records)

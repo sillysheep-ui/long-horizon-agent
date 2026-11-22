@@ -74,7 +74,7 @@ class ResearchTools:
             items = search_sandbox(city, keyword) if sandbox_available() else []
             return build_evidence(evidence_id, "poi", keyword, city,
                                   "ok" if items else "empty", items=items,
-                                  source="ChinaTravel 沙盒", source_kind="map_poi")
+                                  source="ChinaTravel 沙盒", source_kind="sandbox")
         if not self.amap_key:
             return await self.web_search(keyword, city, evidence_id)
         try:

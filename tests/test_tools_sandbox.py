@@ -29,6 +29,10 @@ def sandbox_dir(tmp_path, monkeypatch):
         {"city": "苏州", "name": "拙政园", "type": "园林", "lat": 31.32, "lon": 120.63,
          "opentime": "07:30", "endtime": "17:30", "price": 80,
          "recommendmintime": 1.5, "recommendmaxtime": 2.5},
+        {"city": "杭州", "name": "城西公园", "type": "公园", "lat": 30.29, "lon": 120.05,
+         "opentime": "06:00", "endtime": "21:00", "price": 0},
+        {"city": "杭州", "name": "灵隐寺法物流通处分馆", "type": "寺庙", "lat": 30.24, "lon": 120.10,
+         "opentime": "08:00", "endtime": "17:00", "price": 0},
     ])
     _write(tmp_path, "restaurants", [
         {"city": "杭州", "name": "杭州酒家", "cuisine": "杭帮菜", "lat": 30.25, "lon": 120.16,
@@ -46,7 +50,7 @@ def test_search_matches_name_and_returns_fields(sandbox_dir):
     items = sandbox.search("杭州", "西湖")
     assert items and items[0]["name"] == "西湖风景名胜区"
     assert items[0]["coordinates"] == [120.15, 30.24]
-    assert items[0]["opentime"] == "00:00"
+    assert items[0]["opentime"] is None
     assert items[0]["price"] == 0
     assert items[0]["source_table"] == "attractions"
 
@@ -76,6 +80,23 @@ def test_poi_uses_sandbox_provider(sandbox_dir, monkeypatch):
 
     assert evidence["status"] == "ok"
     assert evidence["source"] == "ChinaTravel 沙盒"
-    assert evidence["source_kind"] == "map_poi"
+    assert evidence["source_kind"] == "sandbox"
+    assert evidence["verification_level"] == "source_linked"
     assert evidence["items"][0]["name"] == "西湖风景名胜区"
     assert evidence["items"][0]["coordinates"] == [120.15, 30.24]
+
+
+def test_city_name_is_normalized(sandbox_dir):
+    assert sandbox.search("杭州市", "西湖")
+    assert sandbox.search("Hangzhou", "西湖")
+    assert sandbox.search("苏州", "西湖") == []
+
+
+def test_child_spots_are_filtered(sandbox_dir):
+    names = [item["name"] for item in sandbox.search("杭州", "灵隐寺")]
+    assert names == ["灵隐寺"]
+
+
+def test_synonym_expands_keyword(sandbox_dir):
+    items = sandbox.search("杭州", "摄影")
+    assert any(item["name"] == "城西公园" for item in items)

@@ -9,11 +9,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 STATUSES = ("ok", "empty", "failed", "unavailable")
-SOURCE_KINDS = ("map_poi", "web_search", "simulated", "none")
+SOURCE_KINDS = ("map_poi", "sandbox", "web_search", "simulated", "none")
 VERIFICATION_LEVELS = ("address_verified", "source_linked", "unverified", "none")
 
 # 来源类型到默认核实级别的映射：只有地图 POI 才带地址与坐标。
-_DEFAULT_LEVELS = {"map_poi": "address_verified", "web_search": "source_linked"}
+_DEFAULT_LEVELS = {"map_poi": "address_verified", "sandbox": "source_linked",
+                   "web_search": "source_linked"}
 
 
 def utc_now() -> str:
