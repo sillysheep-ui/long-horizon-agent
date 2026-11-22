@@ -8,7 +8,7 @@ from product.constraints.spec import load_set
 
 
 def _activity(title: str, start: str, duration: str = "1 小时", **extra):
-    return {"title": title, "start": start, "duration": duration, **extra}
+    return {"title": title, "start": start, "duration": duration, "transport": "步行", "cost": "免费", **extra}
 
 
 def _view(days, constraints=None, evidence=None, status=""):
