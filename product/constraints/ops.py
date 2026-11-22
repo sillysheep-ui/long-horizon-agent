@@ -381,6 +381,104 @@ def valid_times(view: ItineraryView, constraint: Constraint) -> Finding:
     )
 
 
+def distance_le(view: ItineraryView, constraint: Constraint) -> Finding:
+    """当天用餐到最近活动的距离不超过阈值；缺坐标不算失败。"""
+    from product.geo import haversine_km, parse_coord
+
+    radius = float(constraint.params.get("radius_km", 1.5))
+    worst = 0.0
+    known = False
+    for day in view.days:
+        activities = [item for item in view.activities(day) if parse_coord(item)]
+        meals = [item for item in day.get("meals") or [] if isinstance(item, dict) and parse_coord(item)]
+        if not activities or not meals:
+            continue
+        for meal in meals:
+            nearest = min(haversine_km(parse_coord(meal), parse_coord(activity)) for activity in activities)
+            worst = max(worst, nearest)
+            known = True
+    ok = worst <= radius
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else f"有餐离当天活动超过 {radius:g} 公里",
+        expected=f"≤ {radius:g} km",
+        actual=f"{worst:.2f} km" if known else "",
+        category=constraint.category,
+        severity=constraint.severity,
+        meta={"max_km": round(worst, 2), "known": known},
+    )
+
+
+def budget_sum_le(view: ItineraryView, constraint: Constraint) -> Finding:
+    """把行程里写明的票价/人均加起来与预算比较；数字不全不算失败。"""
+    import re
+
+    budget_text = str(view.constraints.get("budget") or "")
+    match = re.search(r"(\d{3,6})", budget_text)
+    budget = float(match.group(1)) if match else 0.0
+    numbers = re.compile(r"\d+(?:\.\d+)?")
+    total = 0.0
+    seen = False
+    for day in view.days:
+        for item in list(view.activities(day)) + [meal for meal in day.get("meals") or [] if isinstance(meal, dict)]:
+            found = numbers.findall(str(item.get("cost") or ""))
+            if found:
+                seen = True
+                total += float(found[0])
+    known = bool(match) and budget > 0 and seen and total > 0
+    ok = (total <= budget) if known else True
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "行程花费超过预算",
+        expected=f"≤ {budget:.0f}" if budget else "",
+        actual=f"{total:.0f}" if known else "",
+        category=constraint.category,
+        severity=constraint.severity,
+        meta={"total": round(total, 1), "budget": budget, "known": known},
+    )
+
+
+def meal_conflicts(view: ItineraryView, constraint: Constraint) -> Finding:
+    """用餐时间与活动重叠；没有 meals 视为不适用。"""
+    from product.constraints.model import activity_window
+
+    minutes = int(constraint.params.get("meal_minutes", 60))
+    bad: list[str] = []
+    known = False
+    for day in view.days:
+        meals = [meal for meal in day.get("meals") or [] if isinstance(meal, dict)]
+        if not meals:
+            continue
+        known = True
+        spans = []
+        for activity in view.activities(day):
+            window = activity_window(activity, 90)
+            if window:
+                spans.append(window)
+        for meal in meals:
+            start, _ = activity_window(meal, minutes) or (None, None)
+            title = str(meal.get("title") or "用餐")
+            if start is None:
+                bad.append(title)
+                continue
+            end = start + minutes
+            if any(start < span_end and end > span_start for span_start, span_end in spans):
+                bad.append(title)
+    ok = not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "用餐时间与活动重叠",
+        expected="不重叠",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+        meta={"bad": bad, "known": known},
+    )
+
+
 OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "count_between": count_between,
     "time_order": time_order,
@@ -395,6 +493,9 @@ OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "city_coverage": city_coverage,
     "evidence_ok": evidence_ok,
     "valid_times": valid_times,
+    "distance_le": distance_le,
+    "budget_sum_le": budget_sum_le,
+    "meal_conflicts": meal_conflicts,
 }
 
 

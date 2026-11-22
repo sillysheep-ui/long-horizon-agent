@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "constraints": [
+    {"id": "meal_near", "category": "commonsense", "severity": "hard", "type": "distance_le",
+     "params": {"radius_km": 1.5}},
+    {"id": "meal_time", "category": "commonsense", "severity": "hard", "type": "meal_conflicts",
+     "params": {"meal_minutes": 60}},
+    {"id": "budget_fits", "category": "hard", "severity": "hard", "type": "budget_sum_le",
+     "params": {}}
+  ]
+}

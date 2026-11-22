@@ -27,6 +27,7 @@ class Finding:
     actual: str = ""
     category: str = "hard"
     severity: str = "hard"
+    meta: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
