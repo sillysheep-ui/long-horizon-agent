@@ -250,6 +250,7 @@ async def main() -> None:
     summary["sandbox_data"] = {
         "cities": sorted(sandbox_cities),
         "tables": {name: len(sandbox_data._table(name)) for name in sandbox_data._TABLES},
+        "version": sandbox_data.version(),
     } if sandbox_cities else {}
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = Path(args.out or f"results/product_eval/{stamp}-{args.profile}")

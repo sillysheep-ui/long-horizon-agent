@@ -11,6 +11,7 @@
 这里统一做归一化，产品侧只看到和地图 POI 相近的结构。
 """
 
+import hashlib
 import json
 import os
 import re
@@ -62,6 +63,15 @@ def cities() -> set[str]:
     if not available():
         return set()
     return {str(row.get("city") or "") for row in _table("attractions") if row.get("city")}
+
+
+def version() -> dict:
+    """数据集版本：文件哈希 + 修改时间，写进评测报告保证可复现。"""
+    path = DEFAULT_DIR / "attractions.jsonl"
+    if not path.exists():
+        return {}
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    return {"sha256": digest, "mtime": int(path.stat().st_mtime), "rows": len(_table("attractions"))}
 
 
 def normalize_city(city: str) -> str:
