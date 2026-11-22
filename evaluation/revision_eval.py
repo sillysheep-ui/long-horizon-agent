@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from evaluation.contract import CheckRecord, SuiteReport, dataset_version
 from evaluation.revision_checks import (
     check_answer_turn,
     check_followup,
@@ -160,6 +161,34 @@ async def main() -> None:
     target = Path(args.out or f"results/product_eval/{stamp}-revision-{args.profile}")
     target.mkdir(parents=True, exist_ok=True)
     write_report(target, args.profile, summary, records)
+    per_case = [
+        [CheckRecord(id=name, ok=value, layer="revision") for name, value in (record.get("checks") or {}).items()]
+        for record in records
+    ]
+    report = SuiteReport(
+        suite="revision",
+        main_metric="all_passed_rate",
+        main_value=summary["all_passed_rate"],
+        cases=summary["cases"],
+        dataset_version=dataset_version(CASES_PATH),
+        evaluator_version="revision-checks-v1",
+        checks=[item for group in per_case for item in group],
+        metrics={
+            "all_passed": summary["all_passed"],
+            "pass_rate": summary["pass_rate"],
+            "targeted_with_change": summary["targeted_with_change"],
+            "first_elapsed_mean": summary["first_elapsed_mean"],
+            "revision_elapsed_mean": summary["revision_elapsed_mean"],
+        },
+        labels={
+            "comparable": False,
+            "main_metric_note": "多轮检查全过的用例比例",
+            "profile": args.profile,
+            "seed": args.seed,
+        },
+    )
+    report.write(target / "report.json")
+    print(f"统一报告：suite=revision main=all_passed_rate {report.main_value} dataset={report.dataset_version}")
     print(json.dumps(summary, ensure_ascii=False))
     print(f"报告：{target / 'report.md'}")
 

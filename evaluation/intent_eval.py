@@ -14,6 +14,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from evaluation.contract import CheckRecord, SuiteReport, dataset_version
 from product.intent import INTENTS, classify_intent, route_intent
 from product.model_gateway import ModelGateway
 
@@ -106,6 +107,25 @@ async def main() -> None:
     summary = summarize(records)
     target = Path(args.out) if args.out else Path("results") / "intent_eval" / time.strftime("%Y%m%d-%H%M%S")
     write_report(target, summary, records, not args.no_model)
+    report = SuiteReport(
+        suite="intent",
+        main_metric="final_accuracy",
+        main_value=summary["final_accuracy"],
+        cases=summary["cases"],
+        dataset_version=dataset_version(cases_path),
+        evaluator_version="intent-router-v1",
+        checks=[CheckRecord(id=record["id"], ok=record["final"] == record["expect"], layer="intent")
+                for record in records],
+        metrics={
+            "rule_accuracy": summary["rule_accuracy"],
+            "final_accuracy": summary["final_accuracy"],
+            "fallback_rate": summary["fallback_rate"],
+            "per_class": summary["per_class"],
+        },
+        labels={"comparable": False, "main_metric_note": "意图分类准确率", "use_model": not args.no_model},
+    )
+    report.write(target / "report.json")
+    print(f"统一报告：suite=intent main=final_accuracy {report.main_value} dataset={report.dataset_version}")
     print(json.dumps({"cases": summary["cases"], "rule_accuracy": summary["rule_accuracy"],
                       "final_accuracy": summary["final_accuracy"], "fallback_rate": summary["fallback_rate"],
                       "elapsed": round(time.monotonic() - started, 2)}, ensure_ascii=False))
