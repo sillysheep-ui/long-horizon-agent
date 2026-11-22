@@ -49,6 +49,8 @@ def test_constraint_set_covers_migrated_checks():
         "complete", "day_count", "density", "time_order", "no_overlap", "day_load",
         "unique_titles", "title_clean", "city_coverage", "evidence_ok",
         "periods", "activity_length", "free_time", "no_fabricated_cost",
+        "fields_filled", "title_matches_evidence", "opening_hours", "meal_grounded",
+        "anchor_satisfied", "named_places_covered",
     }
     missing = expected - ids
     assert not missing, missing

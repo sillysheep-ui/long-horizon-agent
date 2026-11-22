@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "constraints": [
     {
       "id": "complete",
@@ -150,6 +150,61 @@
       "category": "hard",
       "severity": "hard",
       "type": "cost_grounded",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "fields_filled",
+      "category": "hard",
+      "severity": "hard",
+      "type": "fields_filled",
+      "select": "days[].activities[]",
+      "params": {
+        "fields": [
+          "start",
+          "duration",
+          "transport",
+          "cost"
+        ]
+      }
+    },
+    {
+      "id": "title_matches_evidence",
+      "category": "commonsense",
+      "severity": "hard",
+      "type": "title_matches",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "opening_hours",
+      "category": "commonsense",
+      "severity": "hard",
+      "type": "opening_hours",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "meal_grounded",
+      "category": "commonsense",
+      "severity": "hard",
+      "type": "meals_grounded",
+      "select": "days[].meals[]",
+      "params": {}
+    },
+    {
+      "id": "anchor_satisfied",
+      "category": "hard",
+      "severity": "hard",
+      "type": "anchor_satisfied",
+      "select": "days[]",
+      "params": {}
+    },
+    {
+      "id": "named_places_covered",
+      "category": "hard",
+      "severity": "hard",
+      "type": "named_places_covered",
       "select": "days[].activities[]",
       "params": {}
     }

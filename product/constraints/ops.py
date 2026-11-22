@@ -639,6 +639,179 @@ def cost_grounded(view: ItineraryView, constraint: Constraint) -> Finding:
     )
 
 
+def fields_filled(view: ItineraryView, constraint: Constraint) -> Finding:
+    """每个活动都必须有开始时间、时长、交通和费用。"""
+    fields = [str(field) for field in constraint.params.get("fields") or ("start", "duration", "transport", "cost")]
+    activities = [item for day in view.days for item in view.activities(day)]
+    missing: list[str] = []
+    for item in activities:
+        absent = [field for field in fields if not item.get(field)]
+        if absent:
+            missing.append(f"「{item.get('title') or '活动'}」缺 {','.join(absent)}")
+    ok = bool(activities) and not missing
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else ("行程为空" if not activities else "活动字段不完整"),
+        expected="开始时间/时长/交通/费用",
+        actual=_examples(missing),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def title_matches(view: ItineraryView, constraint: Constraint) -> Finding:
+    """活动标题必须落在对应证据的地点名上；没有证据名的不判。"""
+    from product.names import title_matches as matches
+
+    evidence = _evidence_map(view.evidence)
+    bad: list[str] = []
+    for day in view.days:
+        for item in view.activities(day):
+            names = _item_names(evidence.get(str(item.get("evidence_id") or "")) or {})
+            if names and not matches(str(item.get("title") or ""), names):
+                bad.append(f"「{item.get('title') or '活动'}」不在证据里")
+    ok = not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "活动标题与证据地点名不一致",
+        expected="标题来自证据",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def _match_item(evidence_item: dict[str, Any], title: Any) -> dict[str, Any] | None:
+    from product.names import title_matches as matches
+
+    items = [item for item in evidence_item.get("items") or [] if isinstance(item, dict)] if evidence_item else []
+    wanted = str(title or "")
+    for item in items:
+        name = str(item.get("name") or "")
+        if name and (name == wanted or wanted in name or name in wanted):
+            return item
+    for item in items:
+        name = str(item.get("name") or "")
+        if name and matches(wanted, [name]):
+            return item
+    return None
+
+
+def opening_hours(view: ItineraryView, constraint: Constraint) -> Finding:
+    """活动必须落在证据给出的营业时间窗内；无时间数据的不判。"""
+    evidence = _evidence_map(view.evidence)
+    checked = 0
+    bad: list[str] = []
+    for day in view.days:
+        for item in view.activities(day):
+            match = _match_item(evidence.get(str(item.get("evidence_id") or "")) or {}, item.get("title"))
+            if not match:
+                continue
+            start = _clock_minutes(item.get("start"))
+            open_at = _clock_minutes(match.get("opentime"))
+            close_at = _clock_minutes(match.get("endtime"))
+            if start < 0 or open_at < 0 or close_at < 0:
+                continue
+            checked += 1
+            duration = _duration_or_default(item.get("duration"))
+            if not (open_at <= start and start + duration <= close_at):
+                bad.append(f"「{item.get('title') or '活动'}」{item.get('start')} 不在 {match.get('opentime')}–{match.get('endtime')}")
+    if not checked:
+        return Finding(id=constraint.id, ok=True, detail="无营业时间数据", category=constraint.category,
+                       severity=constraint.severity, meta={"skip": True, "known": 0})
+    ok = not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "活动落在营业时间之外",
+        expected="在营业时间内",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+        meta={"known": checked},
+    )
+
+
+def meals_grounded(view: ItineraryView, constraint: Constraint) -> Finding:
+    """每顿饭的名字必须能在证据里找到；没有餐饮槽位时不判。"""
+    from product.names import title_matches as matches
+
+    evidence = _evidence_map(view.evidence)
+    bad: list[str] = []
+    total = 0
+    for day in view.days:
+        for meal in day.get("meals") or []:
+            if not isinstance(meal, dict):
+                continue
+            total += 1
+            names = _item_names(evidence.get(str(meal.get("evidence_id") or "")) or {})
+            if not names or not matches(str(meal.get("title") or ""), names):
+                bad.append(f"「{meal.get('title') or '用餐'}」没有来源")
+    if not total:
+        return Finding(id=constraint.id, ok=True, detail="没有餐饮槽位", category=constraint.category,
+                       severity=constraint.severity, meta={"skip": True})
+    ok = not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "餐饮没有证据来源",
+        expected="每顿都有来源",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def anchor_satisfied(view: ItineraryView, constraint: Constraint) -> Finding:
+    """锚定饮食/住宿时，每天都要有对应槽位；其他锚定不判。"""
+    anchor = str(view.case.get("anchor") or "")
+    if anchor not in ("food", "stay"):
+        return Finding(id=constraint.id, ok=True, detail="非饮食/住宿锚定", category=constraint.category,
+                       severity=constraint.severity, meta={"skip": True})
+    key = "meals" if anchor == "food" else "lodging_area"
+    missing = [f"第{day.get('day')}天" for day in view.days if not day.get(key)]
+    ok = bool(view.days) and not missing
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else f"锚定 {anchor} 但缺少 {key}",
+        expected="每天都有槽位",
+        actual=_examples(missing),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def named_places_covered(view: ItineraryView, constraint: Constraint) -> Finding:
+    """用户点名地点必须出现在行程标题里；没点名时不判。"""
+    wanted = [str(place) for place in view.case.get("named_places") or [] if str(place).strip()]
+    if not wanted:
+        return Finding(id=constraint.id, ok=True, detail="没有点名地点", category=constraint.category,
+                       severity=constraint.severity, meta={"skip": True})
+    titles = [_squash(item.get("title")) for day in view.days for item in view.activities(day)]
+    missing = []
+    for place in wanted:
+        target = _squash(place)
+        if not target or not any(target in title or title in target for title in titles if title):
+            missing.append(place)
+    ok = not missing
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "有点名地点没有排进行程",
+        expected=",".join(wanted),
+        actual=_examples(missing),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def _squash(value: Any) -> str:
+    return re.sub(r"[\s\W_]+", "", str(value or ""))
+
+
 OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "count_between": count_between,
     "time_order": time_order,
@@ -660,6 +833,12 @@ OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "activity_length": activity_length,
     "free_time": free_time,
     "cost_grounded": cost_grounded,
+    "fields_filled": fields_filled,
+    "title_matches": title_matches,
+    "opening_hours": opening_hours,
+    "meals_grounded": meals_grounded,
+    "anchor_satisfied": anchor_satisfied,
+    "named_places_covered": named_places_covered,
 }
 
 

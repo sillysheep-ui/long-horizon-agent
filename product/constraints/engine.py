@@ -27,7 +27,10 @@ def evaluate(view: ItineraryView, constraint_set: ConstraintSet) -> list[Finding
         operator = OPERATORS.get(constraint.type)
         if operator is None:
             raise KeyError(f"未知约束算子：{constraint.type}（约束 {constraint.id}）")
-        findings.append(operator(view, constraint))
+        finding = operator(view, constraint)
+        if finding.meta.get("skip"):
+            continue
+        findings.append(finding)
     return findings
 
 
