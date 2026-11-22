@@ -33,6 +33,8 @@ class ModelGateway:
             self.routes = self.routes[1:] + self.routes[:1]
         elif profile == "api_only":
             self.routes = self.routes[1:]
+        elif profile == "local_only":
+            self.routes = self.routes[:1]
         elif profile == "local_first" and not os.getenv("LOCAL_MODEL_BASE_URL") and (
                 os.getenv("MODEL_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("DEEPSEEK_API_KEY")):
             # 本地服务未显式配置时，沿用项目已有 API 配置以避免每轮空等连接超时。
