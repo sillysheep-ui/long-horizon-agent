@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "constraints": [
+    {
+      "id": "density",
+      "category": "hard",
+      "severity": "hard",
+      "type": "count_between",
+      "select": "days[].activities[]",
+      "params": {"min": 2, "max": 4}
+    },
+    {
+      "id": "time_order",
+      "category": "hard",
+      "severity": "hard",
+      "type": "time_order",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "no_overlap",
+      "category": "hard",
+      "severity": "hard",
+      "type": "no_overlap",
+      "select": "days[].activities[]+meals[]",
+      "params": {}
+    },
+    {
+      "id": "opening_hours",
+      "category": "commonsense",
+      "severity": "hard",
+      "type": "time_window",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "day_load",
+      "category": "commonsense",
+      "severity": "soft",
+      "type": "sum_le",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "named_places_covered",
+      "category": "hard",
+      "severity": "hard",
+      "type": "exists_contains",
+      "select": "days[].activities[]",
+      "params": {}
+    }
+  ]
+}
