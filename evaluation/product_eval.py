@@ -18,6 +18,8 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
+from evaluation.contract import CheckRecord, SuiteReport, dataset_version
+from evaluation.metrics import summarize as summarize_metrics
 from evaluation.product_checks import CONSTRAINT_SET, check_result, combined_score, summarize
 from evaluation.product_judge import judge as judge_itinerary
 from evaluation.stage_checks import evaluator_health, summarize_trajectory
@@ -260,6 +262,39 @@ async def main() -> None:
     health = evaluator_health(records)
     summary["evaluator"] = health
     write_report(target, args.profile, summary, records, args.split, health)
+    layer = "sandbox" if any(record.get("pool") == "sandbox" for record in records) else "single_turn"
+    per_case = [
+        [CheckRecord(id=name, ok=value, layer=layer) for name, value in record["checks"].items()]
+        for record in records
+    ]
+    scores = [float(record["score"]) for record in records if record.get("score") is not None]
+    report = SuiteReport(
+        suite="single_turn",
+        main_metric="score_mean",
+        main_value=summary["score_mean"],
+        cases=len(records),
+        dataset_version=dataset_version(cases_path),
+        evaluator_version=f"constraints-{CONSTRAINT_SET.version}",
+        checks=[item for group in per_case for item in group],
+        metrics={
+            **summarize_metrics(per_case, scores),
+            "score_mean": summary["score_mean"],
+            "rubric_mean": summary["rubric_mean"],
+            "deliverable": summary["deliverable"],
+            "latency_mean": summary["latency_mean"],
+        },
+        labels={
+            "comparable": False,
+            "main_metric_note": "0.6×硬检查 + 0.4×rubric − 0.2×编造",
+            "split": args.split,
+            "profile": args.profile,
+            "pool": layer,
+        },
+        health=health,
+    )
+    report.write(target / "report.json")
+    print(f"统一报告：suite={report.suite} main={report.main_metric} {report.main_value} "
+          f"dataset={report.dataset_version} checks={len(report.checks)}")
     print(json.dumps(summary, ensure_ascii=False))
     print(f"报告：{target/'report.md'}")
     if args.min_score is not None and float(summary["score_mean"]) < args.min_score:
