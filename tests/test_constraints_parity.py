@@ -39,3 +39,16 @@ def test_engine_matches_legacy_checks():
             if name in legacy and legacy[name] != value:
                 mismatches.append(f"{case_id}/{name}: legacy={legacy[name]} engine={value}")
     assert not mismatches, mismatches[:10]
+
+
+def test_constraint_set_covers_migrated_checks():
+    from evaluation.product_checks import CONSTRAINT_SET
+
+    ids = {constraint.id for constraint in CONSTRAINT_SET.constraints}
+    expected = {
+        "complete", "day_count", "density", "time_order", "no_overlap", "day_load",
+        "unique_titles", "title_clean", "city_coverage", "evidence_ok",
+        "periods", "activity_length", "free_time", "no_fabricated_cost",
+    }
+    missing = expected - ids
+    assert not missing, missing

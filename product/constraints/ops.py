@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
+from typing import Any
 
 from product.constraints.model import (
     Constraint,
@@ -479,6 +481,164 @@ def meal_conflicts(view: ItineraryView, constraint: Constraint) -> Finding:
     )
 
 
+_PERIODS = (("morning", 6 * 60, 12 * 60), ("afternoon", 12 * 60, 17 * 60 + 30),
+            ("evening", 17 * 60 + 30, 24 * 60))
+_DIGITS = re.compile(r"\d+(?:\.\d+)?")
+_CLOCK = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
+
+
+def _clock_minutes(value: Any) -> int:
+    match = _CLOCK.match(str(value or ""))
+    if not match:
+        return -1
+    return int(match.group(1)) * 60 + int(match.group(2))
+
+
+def _duration_or_default(value: Any, default: int = 90) -> int:
+    minutes = duration_minutes(value)
+    return minutes if minutes else default
+
+
+def _evidence_map(evidence: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {str(item.get("id") or ""): item for item in evidence if isinstance(item, dict)}
+
+
+def _item_names(evidence_item: dict[str, Any]) -> list[str]:
+    return [str(item.get("name") or "") for item in evidence_item.get("items") or []
+            if isinstance(item, dict) and item.get("name")]
+
+
+def _evidence_text(evidence_item: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for item in evidence_item.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        for key in ("name", "snippet", "price", "opentime", "endtime", "recommendedfood", "featurehoteltype"):
+            if item.get(key) is not None:
+                parts.append(str(item.get(key)))
+    return " ".join(parts)
+
+
+def _day_hours(view: ItineraryView, number: int) -> float:
+    for window in view.constraints.get("day_windows") or []:
+        if isinstance(window, dict) and int(window.get("day") or 0) == number:
+            return float(window.get("hours") or 10.0)
+    return 10.0
+
+
+def distinct_periods(view: ItineraryView, constraint: Constraint) -> Finding:
+    """每天覆盖的时段数达到下限（上午/下午/晚上）。"""
+    need = int(constraint.params.get("min_periods", 2))
+    bad: list[str] = []
+    for day in view.days:
+        buckets = set()
+        for item in view.activities(day):
+            start = _clock_minutes(item.get("start"))
+            if start < 0:
+                continue
+            end = start + _duration_or_default(item.get("duration"))
+            for name, begin, finish in _PERIODS:
+                if start < finish and end > begin:
+                    buckets.add(name)
+        if len(buckets) < need:
+            bad.append(f"第{day.get('day')}天只覆盖 {len(buckets)} 个时段")
+    ok = not bad and bool(view.days)
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else f"每天至少覆盖 {need} 个时段",
+        expected=f"{need} 个时段",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def activity_length(view: ItineraryView, constraint: Constraint) -> Finding:
+    """单个活动的停留时长落在节奏区间内。"""
+    from product.pace import PACE_PLAN, detect_pace
+
+    plan = PACE_PLAN[detect_pace(view.case.get("query"))]["activity"]
+    low = float(constraint.params.get("lower_offset", 1.0))
+    high = float(constraint.params.get("upper_offset", 3.5))
+    bad: list[str] = []
+    for day in view.days:
+        day_cap = min(_day_hours(view, int(day.get("day") or 0)), plan[1] + high)
+        for item in view.activities(day):
+            hours = _duration_or_default(item.get("duration"), 0) / 60
+            if hours < plan[0] - low or hours > day_cap:
+                bad.append(f"第{day.get('day')}天「{item.get('title') or '活动'}」{hours:g} 小时")
+    ok = not bad and bool(view.days)
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "单个活动时长超出节奏区间",
+        expected=f"{plan[0] - low:g}–{plan[1] + high:g} 小时",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def free_time(view: ItineraryView, constraint: Constraint) -> Finding:
+    """按当天可用时长计算留白比例。"""
+    from product.pace import PACE_PLAN, detect_pace
+
+    plan = PACE_PLAN[detect_pace(view.case.get("query"))]["free"]
+    upper_slack = float(constraint.params.get("upper_slack", 0.07))
+    bad: list[str] = []
+    for day in view.days:
+        activities = view.activities(day)
+        number = int(day.get("day") or 0)
+        if len(activities) < 2:
+            ratio = 1.0
+        else:
+            ordered = sorted(activities, key=lambda item: _clock_minutes(item.get("start")))
+            start = _clock_minutes(ordered[0].get("start"))
+            end = max(_clock_minutes(item.get("start")) + _duration_or_default(item.get("duration"))
+                      for item in ordered)
+            span = max(end - start, 1)
+            busy = sum(_duration_or_default(item.get("duration")) for item in ordered)
+            window = max(_day_hours(view, number) * 60.0, span, 1.0)
+            ratio = max(0.0, 1 - busy / window)
+        if ratio < plan[0] or ratio > plan[1] + upper_slack:
+            bad.append(f"第{number}天留白 {ratio:.2f}")
+    ok = not bad and bool(view.days)
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "留白比例超出节奏区间",
+        expected=f"{plan[0]:.2f}–{plan[1] + upper_slack:.2f}",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
+def cost_grounded(view: ItineraryView, constraint: Constraint) -> Finding:
+    """行程里的价格数字必须能在证据原文或描述里找到。"""
+    evidence = _evidence_map(view.evidence)
+    bad: list[str] = []
+    for day in view.days:
+        for item in view.activities(day):
+            numbers = _DIGITS.findall(str(item.get("cost") or ""))
+            if not numbers:
+                continue
+            source = _evidence_text(evidence.get(str(item.get("evidence_id") or "")) or {}) + str(item.get("description") or "")
+            if any(number not in source for number in numbers):
+                bad.append(f"第{day.get('day')}天「{item.get('title') or '活动'}」{item.get('cost')}")
+    ok = not bad
+    return Finding(
+        id=constraint.id,
+        ok=ok,
+        detail="" if ok else "价格没有来源",
+        expected="数字必须出现在证据里",
+        actual=_examples(bad),
+        category=constraint.category,
+        severity=constraint.severity,
+    )
+
+
 OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "count_between": count_between,
     "time_order": time_order,
@@ -496,6 +656,10 @@ OPERATORS: dict[str, Callable[[ItineraryView, Constraint], Finding]] = {
     "distance_le": distance_le,
     "budget_sum_le": budget_sum_le,
     "meal_conflicts": meal_conflicts,
+    "distinct_periods": distinct_periods,
+    "activity_length": activity_length,
+    "free_time": free_time,
+    "cost_grounded": cost_grounded,
 }
 
 

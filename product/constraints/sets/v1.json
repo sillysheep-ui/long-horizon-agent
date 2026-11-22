@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "constraints": [
     {
       "id": "complete",
@@ -114,6 +114,42 @@
       "category": "hard",
       "severity": "hard",
       "type": "evidence_ok",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "periods",
+      "category": "hard",
+      "severity": "hard",
+      "type": "distinct_periods",
+      "select": "days[].activities[]",
+      "params": {
+        "min_periods": 2
+      }
+    },
+    {
+      "id": "activity_length",
+      "category": "commonsense",
+      "severity": "hard",
+      "type": "activity_length",
+      "select": "days[].activities[]",
+      "params": {}
+    },
+    {
+      "id": "free_time",
+      "category": "commonsense",
+      "severity": "hard",
+      "type": "free_time",
+      "select": "days[].activities[]",
+      "params": {
+        "upper_slack": 0.07
+      }
+    },
+    {
+      "id": "no_fabricated_cost",
+      "category": "hard",
+      "severity": "hard",
+      "type": "cost_grounded",
       "select": "days[].activities[]",
       "params": {}
     }
