@@ -138,6 +138,14 @@ score = 0.6 × 硬检查通过率 + 0.4 × rubric 得分 − 0.2 × 编造惩罚
 - 发布：test 110 综合分不低于基线 2pp、无可交付率下降、无新增编造；holdout 报告随版本归档。
 - 对外：必须写清模型档位、seed、裁判模型、样本量与区间。
 
+### 8.1 收尾状态
+
+- 已统一：四套 suite 都写 `report.json`（`evaluation/contract.py`），字段含 suite、主指标、用例数、数据版本哈希、评测器版本、逐条检查；单轮/沙盒/多轮/意图均已接入。
+- 联合报告：`python3 -m evaluation.combined --dir results` 生成一张表，并在 CI 的 eval job 里作为 artifact 上传（`results/combined.md`）。
+- 例外：多轮那套的 9 项检查仍是 `evaluation/revision_checks.py` 的自定义实现，没有复用约束引擎；原因是它包含 `kept_days`/`target_changed` 这类“修改前后对比”检查，不属于单份行程的约束。已在 `docs/PRODUCT_EVAL.md` 标注，不阻塞发布。
+- 待用户操作：仓库 Settings → Secrets 配置 `DEEPSEEK_API_KEY`，否则 eval job 一直走跳过分支。
+- 未做且暂不做：裁判重复跑取方差、`comparable=true` 的跨 suite 比较、人工金标准。
+
 ## 9. 三个月路线
 
 **第 1 个月（可信度）**

@@ -164,3 +164,7 @@ api_only 唯一没过的硬检查是 `hangzhou-2d` 的 `title_matches_evidence`�
 ## 完整规划
 
 数据集规模、可信度保障、运行矩阵与三个月路线见 `docs/EVAL_PLAN.md`。
+
+## 附：多轮检查为何没有并入约束引擎
+
+多轮的 9 项检查（`evaluation/revision_checks.py`）里有 `kept_days`、`target_changed`、`applied` 这类**修改前后对比**的判定，输入是两次行程而不是单份行程；约束引擎面向单份行程，强行并入会让算子签名变复杂、收益有限。因此多轮这套保持自定义实现，只在报告信封上与其它 suite 对齐。

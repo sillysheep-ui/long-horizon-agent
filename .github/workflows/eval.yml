@@ -34,10 +34,15 @@ jobs:
             --judge-model deepseek-v4-flash \
             --db /tmp/eval-smoke.db --out results/ci-eval \
             --min-score 0.80
+      - name: Combined report
+        if: env.HAS_KEY != ''
+        run: python -m evaluation.combined --dir results --out results/combined.md
       - name: Upload report
         if: always() && env.HAS_KEY != ''
         uses: actions/upload-artifact@v4
         with:
           name: eval-report
-          path: results/ci-eval
+          path: |
+            results/ci-eval
+            results/combined.md
           if-no-files-found: ignore
