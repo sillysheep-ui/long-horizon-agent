@@ -74,7 +74,7 @@ product/constraints/
 2. 跑 `python3 -m pytest tests/test_constraints_parity.py -q`，确认没有改变旧判定；
 3. 若这条检查此前在 `_legacy_checks` 里，删除对应分支，让引擎结果生效。
 
-约束集有 `version`，报告会写 `约束集 v1.1.0`，历史分数不可比时能看出是哪一版。
+约束集有 `version`，报告会写 `约束集 v1.3.0`，历史分数不可比时能看出是哪一版。
 
 ## 指标
 
@@ -82,9 +82,19 @@ product/constraints/
 - **macro**：整条行程全部检查通过的比例；
 - 报告里同时给 `checks_micro` 与 `checks_macro`，避免“平均通过率”掩盖个别用例全崩。
 
+## 条件检查与 unknown 语义
+
+检查分三类：
+
+1. **无条件**：`complete` / `density` / `day_load` 等，永远出现；数据不足按失败算（例如空行程）。
+2. **有数据才判**：`opening_hours`（没有营业时间）、`meal_grounded`（没有餐饮槽位）——不出现，不判失败。
+3. **用例开启才判**：`anchor_satisfied`（`case.anchor` 是 food/stay）、`named_places_covered`（`case.named_places` 非空）——不适用时省略。
+
+实现方式：算子返回 `meta={"skip": True}`，引擎跳过该键。这样报告里不会出现“没有数据却判失败”的假阴性，代价是不同用例的约束总数可能不同（micro 按各自总数算）。
+
 ## 为什么不做完整 DSL
 
-- 规则是封闭集合，10 个算子覆盖 95%，完整 DSL 需要词法/语法/AST/错误定位（1.5–3k 行）；
+- 规则是封闭集合，20 多条约束覆盖全部检查，完整 DSL 需要词法/语法/AST/错误定位（1.5–3k 行）；
 - 参考 Drools 的教训：规则引擎容易变成难调试的黑盒；
 - ChinaTravel 用 DSL 是因为它要处理开放自然语言的组合约束，场景不同。
 
