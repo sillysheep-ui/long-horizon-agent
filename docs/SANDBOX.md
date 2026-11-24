@@ -38,7 +38,7 @@ python3 -m evaluation.product_eval --split test --ids <10城用例> --out result
 
 ```bash
 POI_PROVIDER=sandbox MODEL_PROFILE=api_only \
-python3 -m evaluation.product_eval --spec evaluation/specs/sandbox.yaml \
+python3 -m evaluation.product_eval --spec evaluation/specs/travel_plan.yaml \
   --pool sandbox --trials 2 --skip-judge --out results/product_eval/sandbox
 ```
 

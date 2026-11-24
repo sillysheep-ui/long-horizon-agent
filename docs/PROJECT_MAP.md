@@ -63,16 +63,17 @@ Docker：`Dockerfile` + `docker-compose.yml`；本机没有 Docker Desktop 时�
 
 | suite | 数据 | 主指标 | 最近结果 |
 |---|---|---|---|
-| 单轮 | `evaluation/product_cases.json` 162 条（test 110） | 综合分 0.6×硬检查+0.4×rubric−编造 | 101/110 全过，0.898，11.8s |
+| 单轮 | `evaluation/product_cases.json` 172 条（test 120，含 10 条锚定） | 综合分 0.6×硬检查+0.4×rubric−编造 | 101/110 全过，0.898，11.8s（原 110 条基线） |
 | 沙盒 | 同上，10 城子集 36 条 | 硬约束全过率 | 34/36，10.35s |
 | 多轮 | `product_revision_cases.json` 30 条 | 整条用例全过率 | 30/30，改 6.0s |
-| 意图 | `intent_cases.json` 100 / `holdout` 40 | 分类准确率 | holdout 模型优先 100%，兜底 30% |
+| 意图 | `intent_holdout.json` 40 / `intent_smoke.json` 20 | 分类准确率 | holdout 模型优先 100%，兜底 30% |
 
 ```bash
 python3 -m evaluation.product_eval --profile api_only --split test --judge-model deepseek-v4-flash
 POI_PROVIDER=sandbox python3 -m evaluation.product_eval --profile api_only --split test --skip-judge
 python3 -m evaluation.revision_eval --profile api_only
-python3 -m evaluation.intent_eval --cases evaluation/intent_holdout.json
+python3 -m evaluation.intent_eval                       # 默认 40 条 holdout
+python3 -m evaluation.intent_eval --cases evaluation/intent_smoke.json  # 20 条冒烟
 python3 -m evaluation.combined --dir results/product_eval
 ```
 

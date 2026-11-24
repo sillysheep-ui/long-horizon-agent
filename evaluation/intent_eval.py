@@ -2,6 +2,7 @@
 
 用法：
     python3 -m evaluation.intent_eval                      # 规则 + 模型兜底
+    python3 -m evaluation.intent_eval --cases evaluation/intent_smoke.json  # 20 条冒烟
     python3 -m evaluation.intent_eval --no-model           # 只看规则
     python3 -m evaluation.intent_eval --ids int-chat-01,int-rev-03
 """
@@ -18,7 +19,7 @@ from evaluation.contract import CheckRecord, SuiteReport, dataset_version
 from product.intent import INTENTS, classify_intent, route_intent
 from product.model_gateway import ModelGateway
 
-CASES_PATH = Path(__file__).with_name("intent_cases.json")
+CASES_PATH = Path(__file__).with_name("intent_holdout.json")
 RULES_ONLY = ("new_trip", "revise_trip", "ask")
 
 

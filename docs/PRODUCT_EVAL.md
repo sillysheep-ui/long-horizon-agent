@@ -35,8 +35,8 @@
 
 这些检查便宜、稳定、可回归，适合放进 CI；`no_fabricated_cost` 是纯程序化的“编造探测器”，也是 RL 奖励里最不该被 hack 的一项。
 
-锚定专项用例在 `evaluation/anchor_cases.json`（10 条：美食 4 / 住宿 3 / 默认 3），
-用 `python3 -m evaluation.product_eval --cases evaluation/anchor_cases.json` 单独跑。
+锚定用例已并入主集（10 条：美食 4 / 住宿 3 / 默认 3），带 `tags: ["anchor", "anchor:food"]`，
+用 `--ids` 或按 tag 过滤即可单独跑。
 
 ## 第二层：rubric 裁判（一次模型调用/条）
 

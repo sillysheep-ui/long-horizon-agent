@@ -5,7 +5,8 @@ from pathlib import Path
 
 from evaluation.product_checks import check_result
 
-CASES = json.loads(Path(__file__).resolve().parents[1].joinpath("evaluation/anchor_cases.json").read_text())
+ALL_CASES = json.loads(Path(__file__).resolve().parents[1].joinpath("evaluation/product_cases.json").read_text())
+CASES = [case for case in ALL_CASES if "anchor" in (case.get("tags") or [])]
 
 
 def test_anchor_cases_shape():

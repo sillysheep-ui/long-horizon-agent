@@ -9,8 +9,8 @@ SPLITS = Counter(case.get("split") for case in CASES)
 
 class CaseSetTests(unittest.TestCase):
     def test_expected_size_and_splits(self):
-        self.assertEqual(len(CASES), 162)
-        self.assertEqual(SPLITS, {"dev": 12, "test": 110, "holdout": 40})
+        self.assertEqual(len(CASES), 172)
+        self.assertEqual(SPLITS, {"dev": 12, "test": 120, "holdout": 40})
 
     def test_ids_are_unique(self):
         ids = [case["id"] for case in CASES]

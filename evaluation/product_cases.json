@@ -2398,5 +2398,165 @@
       "洪崖洞",
       "磁器口"
     ]
+  },
+  {
+    "id": "chengdu-food-2d",
+    "query": "成都两天，以吃为主，想吃火锅和小吃，预算1500",
+    "days": 2,
+    "cities": [
+      "成都"
+    ],
+    "anchor": "food",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "food",
+      "anchor",
+      "anchor:food"
+    ]
+  },
+  {
+    "id": "xian-food-2d",
+    "query": "西安两天，主要是吃，想吃肉夹馍、泡馍和面食",
+    "days": 2,
+    "cities": [
+      "西安"
+    ],
+    "anchor": "food",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "food",
+      "anchor",
+      "anchor:food"
+    ]
+  },
+  {
+    "id": "guangzhou-food-2d",
+    "query": "广州两天，吃货行程，早茶和粤菜为主",
+    "days": 2,
+    "cities": [
+      "广州"
+    ],
+    "anchor": "food",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "food",
+      "anchor",
+      "anchor:food"
+    ]
+  },
+  {
+    "id": "changsha-food-2d",
+    "query": "长沙两天，以吃为主，小吃和夜宵都想试试",
+    "days": 2,
+    "cities": [
+      "长沙"
+    ],
+    "anchor": "food",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "food",
+      "anchor",
+      "anchor:food"
+    ]
+  },
+  {
+    "id": "sanya-stay-3d",
+    "query": "三亚三天，主要泡酒店，海景房躺平，预算3000",
+    "days": 3,
+    "cities": [
+      "三亚"
+    ],
+    "anchor": "stay",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "stay",
+      "anchor",
+      "anchor:stay"
+    ]
+  },
+  {
+    "id": "moganshan-stay-2d",
+    "query": "莫干山两天，住山里的民宿，不想跑太远",
+    "days": 2,
+    "cities": [
+      "莫干山"
+    ],
+    "anchor": "stay",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "stay",
+      "anchor",
+      "anchor:stay"
+    ]
+  },
+  {
+    "id": "anji-stay-2d",
+    "query": "安吉两天，找个度假酒店躺着，周边随便走走",
+    "days": 2,
+    "cities": [
+      "安吉"
+    ],
+    "anchor": "stay",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "stay",
+      "anchor",
+      "anchor:stay"
+    ]
+  },
+  {
+    "id": "hangzhou-sight-2d",
+    "query": "杭州两天，想看西湖和灵隐寺",
+    "days": 2,
+    "cities": [
+      "杭州"
+    ],
+    "anchor": "sight",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "sight",
+      "anchor",
+      "anchor:sight"
+    ]
+  },
+  {
+    "id": "beijing-sight-3d",
+    "query": "北京三天，第一次去，主要看故宫、天安门和长城",
+    "days": 3,
+    "cities": [
+      "北京"
+    ],
+    "anchor": "sight",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "sight",
+      "anchor",
+      "anchor:sight"
+    ]
+  },
+  {
+    "id": "suzhou-sight-2d",
+    "query": "苏州两天，想去拙政园和苏州博物馆，慢慢逛",
+    "days": 2,
+    "cities": [
+      "苏州"
+    ],
+    "anchor": "sight",
+    "split": "test",
+    "difficulty": "medium",
+    "tags": [
+      "sight",
+      "anchor",
+      "anchor:sight"
+    ]
   }
 ]

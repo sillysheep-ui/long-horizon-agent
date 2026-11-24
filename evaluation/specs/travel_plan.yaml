@@ -6,7 +6,7 @@ suite: single_turn
 dataset:
   path: evaluation/product_cases.json
   split: test
-  cases: 110
+  cases: 120
 
 judge:
   model: deepseek-v4-flash

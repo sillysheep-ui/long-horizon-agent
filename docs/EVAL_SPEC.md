@@ -5,12 +5,11 @@
 - `implemented`：runner 真的会执行；
 - `declared`：只是契约，runner 尚未执行。
 
-## 六份配置
+## 五份配置
 
 | 文件 | 层 | 已实现 | 仅声明 |
 |---|---|---|---|
 | `travel_plan.yaml` | 单轮 110 | 20 条硬约束、10 条 rubric | 状态自洽、工具断言、回合上限 |
-| `sandbox.yaml` | 沙盒 36 | 硬约束（不跑裁判） | 裁判开关 |
 | `revision.yaml` | 多轮 30 | 6 项修改检查 | — |
 | `intent.yaml` | 意图 40 | 五分类准确率 | — |
 | `regression.yaml` | 回归 8（历史 bug） | 硬约束、`pass_rate_min: 1.0`、每次 push | — |

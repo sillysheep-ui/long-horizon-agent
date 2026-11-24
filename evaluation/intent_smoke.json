@@ -1,0 +1,208 @@
+[
+  {
+    "id": "int-new-01",
+    "text": "重新规划去成都玩三天",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "int-new-02",
+    "text": "换个目的地吧，想去西安",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "int-new-03",
+    "text": "再来一次，这次去厦门",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "int-new-04",
+    "text": "我想去青岛玩两天，帮我安排",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "int-new-05",
+    "text": "计划去长沙吃三天",
+    "expect": "new_trip",
+    "has_trip": true,
+    "tags": [
+      "new"
+    ]
+  },
+  {
+    "id": "int-rev-01",
+    "text": "第二天换成博物馆",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "target_days": [
+      2
+    ],
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "int-rev-02",
+    "text": "最后一天加一个博物馆",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "target_days": [
+      3
+    ],
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "int-rev-03",
+    "text": "第三天不要户外",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "target_days": [
+      3
+    ],
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "int-rev-04",
+    "text": "第一天换成安静的咖啡馆",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "target_days": [
+      1
+    ],
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "int-rev-05",
+    "text": "第二天多安排一个景点",
+    "expect": "revise_trip",
+    "has_trip": true,
+    "target_days": [
+      2
+    ],
+    "tags": [
+      "revise"
+    ]
+  },
+  {
+    "id": "int-ask-01",
+    "text": "第二天几点出发？",
+    "expect": "ask",
+    "has_trip": true,
+    "target_days": [
+      2
+    ],
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "int-ask-02",
+    "text": "这个预算够吗？",
+    "expect": "ask",
+    "has_trip": true,
+    "target_days": [],
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "int-ask-03",
+    "text": "第一天去哪里？",
+    "expect": "ask",
+    "has_trip": true,
+    "target_days": [
+      1
+    ],
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "int-ask-04",
+    "text": "第三天怎么走？",
+    "expect": "ask",
+    "has_trip": true,
+    "target_days": [
+      3
+    ],
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "int-ask-05",
+    "text": "酒店订在哪里？",
+    "expect": "ask",
+    "has_trip": true,
+    "target_days": [],
+    "tags": [
+      "ask"
+    ]
+  },
+  {
+    "id": "int-chat-01",
+    "text": "好的",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "int-chat-02",
+    "text": "谢谢",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "int-chat-03",
+    "text": "哈哈",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "int-chat-04",
+    "text": "你真棒",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  },
+  {
+    "id": "int-chat-05",
+    "text": "嗯……",
+    "expect": "chat",
+    "has_trip": true,
+    "tags": [
+      "chat"
+    ]
+  }
+]
