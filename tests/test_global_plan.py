@@ -81,3 +81,35 @@ def test_global_partition_beats_sequential_split_on_interleaved_order():
     sequential = [interleaved[:3], interleaved[3:]]
     grouped = assign_days(interleaved, 2, 3)
     assert total_distance(grouped) < total_distance(sequential) * 0.5
+
+
+def test_candidates_from_evidence_dedupes_and_drops_unlocated():
+    from product.global_plan import candidates_from_evidence
+
+    evidence = [
+        {"id": "e1", "status": "ok", "city": "杭州", "items": [
+            {"name": "西湖", "coordinates": [120.15, 30.25], "source_table": "attractions"},
+            {"name": "西湖", "coordinates": [120.15, 30.25]},
+            {"name": "无坐标", "coordinates": None},
+        ]},
+        {"id": "e2", "status": "failed", "items": [{"name": "失败的", "coordinates": [120.0, 30.0]}]},
+    ]
+    candidates = candidates_from_evidence(evidence)
+    assert [item["name"] for item in candidates] == ["西湖"]
+    assert candidates[0]["evidence_id"] == "e1"
+    assert candidates[0]["city"] == "杭州"
+
+
+def test_skeleton_to_days_outputs_answer_schema():
+    from product.global_plan import skeleton_to_days
+
+    skeleton = [{"day": 1, "activities": [
+        {"name": "西湖", "start": "09:00", "duration_minutes": 120, "evidence_id": "e1"},
+        {"name": "楼外楼", "start": "12:00", "duration_minutes": 60, "evidence_id": "e2", "kind": "meal"},
+    ]}]
+    evidence = [{"id": "e1", "items": [{"name": "西湖"}]}, {"id": "e2", "items": [{"name": "楼外楼"}]}]
+    days = skeleton_to_days(skeleton, evidence)
+    assert days[0]["day"] == 1
+    assert [item["title"] for item in days[0]["activities"]] == ["西湖", "楼外楼"]
+    assert days[0]["activities"][0]["duration"] == "2 小时"
+    assert days[0]["activities"][1]["kind"] == "meal"

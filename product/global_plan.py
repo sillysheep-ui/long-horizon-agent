@@ -251,3 +251,59 @@ def total_distance(days: list[list[dict[str, Any]]]) -> float:
             total += haversine_km(previous, coord) if coord and previous else 0.0
             previous = coord or previous
     return round(total, 2)
+
+
+def candidates_from_evidence(evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """把检索证据里的地点摊平成候选池，按名字去重，只保留有坐标的。"""
+    candidates: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for record in evidence:
+        if str(record.get("status")) != "ok":
+            continue
+        for item in record.get("items") or []:
+            name = str(item.get("name") or "").strip()
+            if not name or name in seen or not coord_of(item):
+                continue
+            seen.add(name)
+            candidate = dict(item)
+            candidate["city"] = str(item.get("city") or record.get("city") or "")
+            candidate["evidence_id"] = str(record.get("id") or "")
+            candidates.append(candidate)
+    return candidates
+
+
+def _duration_text(minutes: int) -> str:
+    hours = minutes / 60
+    if abs(hours - round(hours)) < 0.25:
+        return "%d 小时" % round(hours)
+    return "%.1f 小时" % hours
+
+
+def skeleton_to_days(skeleton: list[dict[str, Any]],
+                     evidence: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """把选点骨架转成回答协议里的 days，模型只需补文案时也能直接当兜底。"""
+    by_id = {str(record.get("id")): record for record in (evidence or []) if record.get("id")}
+    days: list[dict[str, Any]] = []
+    for day in skeleton:
+        activities = []
+        for item in day.get("activities") or []:
+            record = by_id.get(str(item.get("evidence_id") or "")) or {}
+            names = [str(row.get("name") or "") for row in record.get("items") or [] if row.get("name")]
+            title = str(item.get("name") or "").strip() or (names[0] if names else "")
+            if not title:
+                continue
+            minutes = int(item.get("duration_minutes") or DEFAULT_DURATION_MINUTES)
+            activities.append({
+                "title": title,
+                "start": str(item.get("start") or "09:00"),
+                "duration": _duration_text(minutes),
+                "description": ("推荐游览 %s。" % _duration_text(minutes)) if str(item.get("kind")) != "meal"
+                               else "用餐时间，可按口味替换。",
+                "transport": "市内步行/打车，按导航为准",
+                "cost": (str(item.get("price")) + " 元") if item.get("price") not in (None, "") else "费用未核实",
+                "evidence_id": item.get("evidence_id"),
+                **({"kind": "meal"} if str(item.get("kind")) == "meal" else {}),
+            })
+        if activities:
+            days.append({"day": int(day.get("day") or len(days) + 1), "activities": activities})
+    return days
