@@ -71,7 +71,17 @@ def version() -> dict:
     if not path.exists():
         return {}
     digest = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
-    return {"sha256": digest, "mtime": int(path.stat().st_mtime), "rows": len(_table("attractions"))}
+    payload = {"sha256": digest, "mtime": int(path.stat().st_mtime), "rows": len(_table("attractions"))}
+    meta = DEFAULT_DIR / "META.json"
+    if meta.exists():
+        try:
+            extra = json.loads(meta.read_text(encoding="utf-8"))
+        except ValueError:
+            extra = {}
+        for key in ("source", "downloaded_at"):
+            if extra.get(key):
+                payload[key] = extra[key]
+    return payload
 
 
 def normalize_city(city: str) -> str:

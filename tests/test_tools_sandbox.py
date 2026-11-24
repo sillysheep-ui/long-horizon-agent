@@ -100,3 +100,19 @@ def test_child_spots_are_filtered(sandbox_dir):
 def test_synonym_expands_keyword(sandbox_dir):
     items = sandbox.search("杭州", "摄影")
     assert any(item["name"] == "城西公园" for item in items)
+
+
+def test_version_includes_dataset_metadata(tmp_path, monkeypatch):
+    import json
+
+    from tools import sandbox
+
+    (tmp_path / "attractions.jsonl").write_text('{"name": "西湖", "city": "杭州"}\n', encoding="utf-8")
+    (tmp_path / "META.json").write_text(
+        json.dumps({"source": "demo", "downloaded_at": "2026-11-20T21:20:00+08:00"}), encoding="utf-8")
+    monkeypatch.setattr(sandbox, "DEFAULT_DIR", tmp_path)
+    sandbox.reset_cache()
+    payload = sandbox.version()
+    assert payload["source"] == "demo"
+    assert payload["downloaded_at"].startswith("2026-11-20")
+    assert payload["rows"] == 1

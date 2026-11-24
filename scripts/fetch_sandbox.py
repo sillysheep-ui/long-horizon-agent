@@ -8,6 +8,7 @@
 """
 
 import argparse
+import datetime
 import json
 import sys
 import urllib.request
@@ -57,6 +58,16 @@ def main() -> None:
                 handle.write(json.dumps(clean, ensure_ascii=False) + "\n")
         parquet.unlink()
         print("写入 %s（%d 条）" % (jsonl, len(frame)))
+
+    meta = out / "META.json"
+    payload = json.loads(meta.read_text(encoding="utf-8")) if meta.exists() else {}
+    payload.update({
+        "source": "LAMDA-NeSy/ChinaTravel-Sandbox (CC-BY-4.0)",
+        "downloaded_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "tables": sorted(item.name for item in out.glob("*.jsonl")),
+    })
+    meta.write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print("写入 %s" % meta)
 
 
 if __name__ == "__main__":

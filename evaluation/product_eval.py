@@ -200,6 +200,8 @@ async def main() -> None:
     parser.add_argument("--min-score", type=float, default=None, help="综合分低于该值时退出码 1")
     parser.add_argument("--cases", default="", help="用例文件，默认 evaluation/product_cases.json")
     parser.add_argument("--ids", default="", help="只跑指定用例，逗号分隔")
+    parser.add_argument("--pool", default="", choices=["", "sandbox", "live", "unknown"],
+                        help="只跑某个数据池：sandbox/live/unknown")
     parser.add_argument("--spec", default="", help="声明式评测配置（YAML），可用 --cases/--split 覆盖")
     parser.add_argument("--trials", type=int, default=1, help="同一批用例重复采样次数，>1 时报告 pass@k / pass^k")
     parser.add_argument("--min-pass-rate", type=float, default=None, help="确定性检查全过比例低于该值时退出码 1")
@@ -235,6 +237,10 @@ async def main() -> None:
         else:
             case["pool"] = "sandbox" if cities <= sandbox_cities else "live"
 
+    if args.pool:
+        cases = [case for case in cases if case.get("pool") == args.pool]
+        if not cases:
+            raise SystemExit(f"没有 pool={args.pool} 的用例")
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
     trials = max(1, int(args.trials))
     client = AsyncOpenAI(base_url=os.environ.get("OPENAI_BASE_URL"), api_key=os.environ.get("OPENAI_API_KEY"),
