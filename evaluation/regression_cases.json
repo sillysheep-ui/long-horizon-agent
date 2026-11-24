@@ -1,0 +1,131 @@
+[
+ {
+  "id": "suzhou-1d-halfday-garden",
+  "query": "从上海出发到苏州只有半天时间，想看园林拍拍照，预算800以内",
+  "days": 1,
+  "cities": [
+   "苏州"
+  ],
+  "difficulty": "hard",
+  "tags": [
+   "只有半天",
+   "园林",
+   "摄影"
+  ],
+  "split": "test",
+  "history": "半天被当成一天，误判太紧→追问"
+ },
+ {
+  "id": "nanchang-2d-teambuilding",
+  "query": "公司团建六个人从长沙去南昌两天，想轻松点、吃点当地菜，预算人均一千五",
+  "days": 2,
+  "cities": [
+   "南昌"
+  ],
+  "difficulty": "medium",
+  "tags": [
+   "团建",
+   "美食",
+   "短途"
+  ],
+  "split": "test",
+  "history": "目的地白名单缺南昌，被误判为未知城市"
+ },
+ {
+  "id": "guangzhou-2d",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "广州两天，想吃早茶、带孩子逛公园，预算 2500 元",
+  "days": 2,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "美食",
+   "亲子"
+  ],
+  "history": "早茶店 09:30 排到 10:00 开门的店"
+ },
+ {
+  "id": "named-chengdu-panda",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "成都两天，想去大熊猫基地和宽窄巷子",
+  "days": 2,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "亲子",
+   "美食"
+  ],
+  "named_places": [
+   "大熊猫基地",
+   "宽窄巷子"
+  ],
+  "history": "沙盒子景点压过基础景点，点名地点未覆盖"
+ },
+ {
+  "id": "eastchina-3d",
+  "split": "dev",
+  "difficulty": "hard",
+  "query": "从南京出发，三天里想去上海和杭州，最后从杭州回南京",
+  "days": 3,
+  "cities": [
+   "上海",
+   "杭州"
+  ],
+  "tags": [
+   "多城市",
+   "跨城交通"
+  ],
+  "history": "多城 3 天，天数/密度边界"
+ },
+ {
+  "id": "budget-conflict-family",
+  "query": "从南京出发带老人孩子去三亚玩五天，预算1000以内，想住海边",
+  "cities": [
+   "三亚"
+  ],
+  "difficulty": "hard",
+  "tags": [
+   "预算矛盾",
+   "带老人",
+   "带娃"
+  ],
+  "expect": "needs_clarification",
+  "split": "test",
+  "history": "预算与住宿标准冲突，应追问"
+ },
+ {
+  "id": "beijing-3d-no-days",
+  "query": "从上海出发想去北京玩，喜欢博物馆和美食，预算3000左右",
+  "cities": [
+   "北京"
+  ],
+  "difficulty": "hard",
+  "tags": [
+   "信息缺失",
+   "博物馆",
+   "美食"
+  ],
+  "expect": "needs_clarification",
+  "split": "test",
+  "history": "没说天数，应追问"
+ },
+ {
+  "id": "xian-1d",
+  "split": "dev",
+  "difficulty": "easy",
+  "query": "出差顺路在西安待一天，想看历史遗迹，预算 800 元",
+  "days": 1,
+  "cities": [
+   "西安"
+  ],
+  "tags": [
+   "单日",
+   "历史"
+  ],
+  "history": "三次采样里偶发编造价格"
+ }
+]

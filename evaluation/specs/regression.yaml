@@ -5,9 +5,9 @@ version: 1
 suite: regression
 
 dataset:
-  path: evaluation/product_cases.json
-  split: dev
-  cases: 12
+  path: evaluation/regression_cases.json
+  split: all
+  cases: 8
 
 judge:
   model: deepseek-v4-flash

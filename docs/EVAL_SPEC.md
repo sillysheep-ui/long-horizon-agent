@@ -13,12 +13,13 @@
 | `sandbox.yaml` | 沙盒 36 | 硬约束（不跑裁判） | 裁判开关 |
 | `revision.yaml` | 多轮 30 | 6 项修改检查 | — |
 | `intent.yaml` | 意图 40 | 五分类准确率 | — |
-| `regression.yaml` | dev 12 | 硬约束、`pass_rate_min: 1.0`、每次 push | — |
+| `regression.yaml` | 回归 8（历史 bug） | 硬约束、`pass_rate_min: 1.0`、每次 push | — |
 | `capability.yaml` | holdout 40 | 硬约束 + rubric，只记录、不卡合并 | — |
 
 ## 回归 vs 能力
 
-- 回归（`regression.yaml`）：只跑 dev 12，只卡确定性检查，要求 100% 通过；失败即退出码 1，CI 用它拦合并。
+- 回归（`regression.yaml`）：跑 `evaluation/regression_cases.json` 的 8 条历史 bug（半天误判、南昌白名单、
+  营业时间、点名地点、多城边界、预算冲突、缺天数、偶发编造价格），只卡确定性检查，要求 100% 通过。
 - 能力（`capability.yaml`）：holdout 40，带裁判，允许不满分；用于画能力曲线、观察饱和，不拦合并。
 - 多次采样：`product_eval --trials N`。每个 trial 用独立 DB、独立 seed；报告 `pass@1`（单次平均）、
   `pass@N`（至少一次通过）、`pass^N`（N 次全过）与逐 trial 通过率，用来区分真回归和模型抖动。
@@ -31,6 +32,12 @@ python3 -m evaluation.product_eval --spec evaluation/specs/regression.yaml \
 # 能力：手动/每周跑，只看曲线
 python3 -m evaluation.product_eval --spec evaluation/specs/capability.yaml --seed 7
 ```
+
+## 负控制
+
+`tests/test_constraints_negative.py` 故意构造 8 类错误行程（编造价格、闭馆时间、时间重叠、天数不符、
+跨天重复、证据缺失、标题对不上、超出当日时长），断言对应检查必须失败；每类配一条正例，防止检查
+退化成“永远失败”。这份测试不调模型，每次 CI 都会跑。
 
 ## 字段，以及谁在读
 
