@@ -712,8 +712,8 @@ def opening_hours(view: ItineraryView, constraint: Constraint) -> Finding:
             start = _clock_minutes(item.get("start"))
             open_at = _clock_minutes(match.get("opentime"))
             close_at = _clock_minutes(match.get("endtime"))
-            if start < 0 or open_at < 0 or close_at < 0:
-                continue
+            if start < 0 or open_at < 0 or close_at < 0 or close_at <= open_at:
+                continue  # 00:00–00:00 这类占位数据按“时间未知”处理
             checked += 1
             duration = _duration_or_default(item.get("duration"))
             if not (open_at <= start and start + duration <= close_at):

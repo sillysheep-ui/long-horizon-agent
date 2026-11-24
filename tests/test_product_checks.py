@@ -173,3 +173,17 @@ def test_opening_hours_skipped_without_times():
     }
     checks = check_result({"query": "杭州一天", "days": 1, "cities": ["杭州"]}, result)
     assert "opening_hours" not in checks
+
+
+def test_opening_hours_skips_placeholder_window():
+    result = {
+        "status": "complete",
+        "evidence": [{"id": "d1-p1", "items": [
+            {"name": "玉林四巷街道", "opentime": "00:00", "endtime": "00:00"}]}],
+        "constraints": {"days": 1},
+        "days": [{"day": 1, "city": "成都", "activities": [
+            {"title": "玉林四巷街道", "start": "14:00", "duration": "1.5 小时", "evidence_id": "d1-p1"}]}],
+        "plan": {"days": [{"day": 1, "city": "成都"}]},
+    }
+    checks = check_result({"query": "成都一天", "days": 1, "cities": ["成都"]}, result)
+    assert "opening_hours" not in checks
