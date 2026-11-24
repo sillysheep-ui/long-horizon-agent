@@ -167,3 +167,34 @@ def test_build_days_ignores_lodging_and_only_uses_attractions():
     titles = [item["name"] for item in days[0]["activities"]]
     assert "西湖" in titles
     assert "某酒店" not in titles
+
+
+def test_half_day_trip_has_no_dinner():
+    sights = [make(f"景点{i}", 120.0 + i * 0.001, 30.0) for i in range(2)]
+    foods = [make(f"餐厅{i}", 120.001, 30.001, "restaurants") for i in range(3)]
+    days = build_days(sights + foods, 1, pace="relaxed")
+    starts = [item["start"] for item in days[0]["activities"] if item.get("kind") == "meal"]
+    assert all(start < "17:00" for start in starts)
+
+
+def test_dinner_follows_last_activity_instead_of_fixed_1800():
+    sights = [make(f"景点{i}", 120.0 + i * 0.002, 30.0, opentime="09:00", endtime="18:00",
+                   recommendmintime=2, recommendmaxtime=3)
+              for i in range(3)]
+    foods = [make(f"餐厅{i}", 120.001, 30.001, "restaurants") for i in range(3)]
+    days = build_days(sights + foods, 1, pace="normal")
+    dinner = [item for item in days[0]["activities"] if item.get("kind") == "meal"][-1]
+    assert dinner["start"] >= "17:30"
+
+
+def test_dinner_inserted_before_night_activity():
+    daytime = [make("白天1", 120.0, 30.0, opentime="09:00", endtime="17:00"),
+               make("白天2", 120.003, 30.0, opentime="09:00", endtime="17:00")]
+    night = make("夜市", 120.006, 30.0, opentime="19:00", endtime="22:00")
+    foods = [make(f"餐厅{i}", 120.004, 30.001, "restaurants") for i in range(3)]
+    days = build_days(daytime + [night] + foods, 1, pace="packed")
+    items = days[0]["activities"]
+    meal_index = [i for i, item in enumerate(items) if item.get("kind") == "meal"][-1]
+    night_index = [i for i, item in enumerate(items) if item["name"] == "夜市"][0]
+    assert meal_index < night_index
+    assert items[night_index]["start"] >= "19:00"

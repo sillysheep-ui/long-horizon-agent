@@ -13,8 +13,10 @@ from product.geo import haversine_km, order_nearest, parse_coord, transit_minute
 
 DEFAULT_START_MINUTES = 9 * 60
 DEFAULT_DURATION_MINUTES = 120
-LUNCH_MINUTES = 12 * 60
-DINNER_MINUTES = 18 * 60
+LUNCH_START_MINUTES = 11 * 60 + 30
+DINNER_START_MINUTES = 17 * 60 + 30
+NIGHT_ACTIVITY_MINUTES = 19 * 60
+MIN_DINNER_DAY_MINUTES = 5 * 60
 EAT_MINUTES = 60
 PACE_PER_DAY = {"relaxed": 2, "normal": 3, "packed": 4}
 DAY_END_MINUTES = 21 * 60
@@ -168,8 +170,14 @@ def order_group(group: list[dict[str, Any]], start: tuple[float, float] | None) 
 
 
 def _pick_meal(candidates: list[dict[str, Any]], anchor_point: tuple[float, float] | None,
-               used: set[str]) -> dict[str, Any] | None:
+               used: set[str], at_minutes: int | None = None) -> dict[str, Any] | None:
     meals = [item for item in candidates if _is_food(item) and str(item.get("name")) not in used]
+    if at_minutes is not None:
+        open_now = [item for item in meals
+                    if open_window(item) is None
+                    or open_window(item)[0] <= at_minutes <= open_window(item)[1]]
+        if open_now:
+            meals = open_now
     if not meals:
         return None
     if anchor_point:
@@ -177,6 +185,14 @@ def _pick_meal(candidates: list[dict[str, Any]], anchor_point: tuple[float, floa
     picked = meals[0]
     used.add(str(picked.get("name")))
     return picked
+
+
+def _has_night_activity(items: list[dict[str, Any]]) -> bool:
+    for item in items:
+        window = open_window(item)
+        if window and window[0] >= NIGHT_ACTIVITY_MINUTES:
+            return True
+    return False
 
 
 def build_days(candidates: list[dict[str, Any]], day_count: int, *,
@@ -201,28 +217,40 @@ def build_days(candidates: list[dict[str, Any]], day_count: int, *,
         cursor = DEFAULT_START_MINUTES
         previous = start
         lunch_done = False
+        dinner_done = False
+        sight_minutes = 0
 
-        def add_meal(target: int, activities: list[dict[str, Any]] = activities) -> None:
-            nonlocal cursor, lunch_done
-            if cursor >= DAY_END_MINUTES:
-                return
-            meal = _pick_meal(candidates, coord_of(activities[-1]) if activities else start, used)
+        def insert_meal(target: int, activities: list[dict[str, Any]] = activities) -> bool:
+            nonlocal cursor
+            start_at = max(cursor, target)
+            if start_at >= DAY_END_MINUTES:
+                return False
+            start_at += (5 - start_at % 5) % 5
+            point = coord_of(activities[-1]) if activities else start
+            meal = _pick_meal(candidates, point, used, start_at)
             if meal is None:
-                return
+                return False
             item2 = dict(meal)
             item2["kind"] = "meal"
-            item2["start"] = _hhmm(max(cursor, target))
+            item2["start"] = _hhmm(start_at)
             item2["duration_minutes"] = EAT_MINUTES
             activities.append(item2)
-            cursor = max(cursor, target) + EAT_MINUTES
+            cursor = start_at + EAT_MINUTES
+            return True
 
         for item in day_items:
             coord = coord_of(item)
             transit = transit_minutes(previous, coord) if previous and coord else 0
-            if not lunch_done and cursor + transit >= LUNCH_MINUTES - 30:
-                add_meal(LUNCH_MINUTES)
-                lunch_done = True
-                transit = transit_minutes(previous, coord) if previous and coord else 0
+            if not lunch_done and cursor + transit >= LUNCH_START_MINUTES:
+                if insert_meal(LUNCH_START_MINUTES):
+                    lunch_done = True
+                    transit = transit_minutes(previous, coord) if previous and coord else 0
+            next_window = open_window(item)
+            if (not dinner_done and next_window
+                    and next_window[0] >= NIGHT_ACTIVITY_MINUTES):
+                if insert_meal(DINNER_START_MINUTES):
+                    dinner_done = True
+                    transit = transit_minutes(previous, coord) if previous and coord else 0
             if transit > MAX_DAY_TRANSIT_MINUTES:
                 continue
             cursor += transit
@@ -241,11 +269,13 @@ def build_days(candidates: list[dict[str, Any]], day_count: int, *,
             activities.append(item2)
             used.add(str(item.get("name")))
             cursor += duration
+            sight_minutes += duration
             previous = coord or previous
         if not lunch_done:
-            add_meal(LUNCH_MINUTES)
-        if len(activities) >= 3:
-            add_meal(max(cursor, DINNER_MINUTES))
+            insert_meal(LUNCH_START_MINUTES)
+        span = cursor - DEFAULT_START_MINUTES if activities else 0
+        if not dinner_done and (span >= MIN_DINNER_DAY_MINUTES or day_count > 1):
+            insert_meal(DINNER_START_MINUTES)
         activities.sort(key=lambda item: _minutes(item.get("start"), 23 * 60))
         days.append({"day": index, "activities": activities,
                      "hours": round(sum(item.get("duration_minutes", 0) for item in activities) / 60, 1)})
