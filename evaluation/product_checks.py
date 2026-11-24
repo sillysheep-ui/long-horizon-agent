@@ -34,6 +34,35 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
     return engine_checks(case, result)
 
 
+GATE_CHECKS = frozenset({"complete", "day_count", "evidence_ok", "unique_titles"})
+
+
+def signal_checks(checks: dict[str, bool]) -> dict[str, bool]:
+    """去掉门槛检查后剩下的信号检查。"""
+    return {name: value for name, value in checks.items() if name not in GATE_CHECKS}
+
+
+def signal_pass_rate(checks: dict[str, bool]) -> float | None:
+    """信号检查的通过比例；没有信号检查时返回 None。"""
+    values = list(signal_checks(checks).values())
+    if not values:
+        return None
+    return sum(1 for value in values if value) / len(values)
+
+
+def combined_score_v2(checks: dict[str, bool], rubric: Any, fabrication: bool = False) -> Any:
+    """信号分：门槛只做封顶，分数由信号检查与 rubric 决定。"""
+    if rubric is None:
+        return None
+    rate = signal_pass_rate(checks)
+    if rate is None:
+        return None
+    score = 0.6 * rate + 0.4 * float(rubric) - (0.2 if fabrication else 0.0)
+    if not all(checks.get(gate, True) for gate in GATE_CHECKS):
+        score = min(score, 0.2)
+    return round(max(0.0, min(1.0, score)), 3)
+
+
 def combined_score(checks: dict[str, bool], rubric: Any, fabrication: bool = False) -> Any:
     """0–1 综合分：硬约束 60% + rubric 40%，编造再扣 0.2。"""
     if rubric is None:
@@ -68,6 +97,11 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         "rubric_mean": round(sum(rubrics) / len(rubrics), 3) if rubrics else None,
         "score_mean": round(sum(scores) / len(scores), 3) if scores else None,
         "deliverable": deliverable,
+        "signal_hard_mean": round(sum(signal_pass_rate(r["checks"]) or 0 for r in records) / total, 3) if total else None,
+        "gates_passed": sum(1 for r in records if all(r["checks"].get(g, True) for g in GATE_CHECKS)),
+        "score_signal_mean": round(sum(r["score_signal"] for r in records if r.get("score_signal") is not None)
+                                   / max(1, sum(1 for r in records if r.get("score_signal") is not None)), 3)
+        if any(r.get("score_signal") is not None for r in records) else None,
         "latency_mean": round(sum(r["elapsed"] for r in records) / total, 2) if total else None,
         "stage_latency_mean": _stage_latency_mean(records),
     }

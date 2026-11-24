@@ -21,7 +21,7 @@ from openai import AsyncOpenAI
 from evaluation.contract import CheckRecord, SuiteReport, dataset_version
 from evaluation.metrics import pass_metrics
 from evaluation.metrics import summarize as summarize_metrics
-from evaluation.product_checks import CONSTRAINT_SET, check_result, combined_score, summarize
+from evaluation.product_checks import CONSTRAINT_SET, check_result, combined_score, combined_score_v2, summarize
 from evaluation.product_judge import judge as judge_itinerary
 from evaluation.stage_checks import evaluator_health, summarize_trajectory
 from product.orchestrator import AgentWorkflow
@@ -94,6 +94,7 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
              f"（约束集 v{summary.get('constraint_set')}）",
              f"- rubric 均分：{summary['rubric_mean']}（0–1，10 条清单）",
              f"- 综合分均值：{summary['score_mean']}（0.6×硬检查 + 0.4×rubric − 编造扣分）",
+             f"- 信号分均值：{summary['score_signal_mean']}（门槛检查不计分，失败直接封顶 0.2）",
              f"- 可交付：{summary['deliverable']}/{summary['cases']}",
              f"- 平均耗时：{summary['latency_mean']}s",
              f"- 分段耗时：{_stage_line(summary.get('stage_latency_mean'))}",
@@ -271,6 +272,9 @@ async def main() -> None:
                             if first_rubric is not None and second_rubric is not None else None
                     record["score"] = combined_score(record["checks"], (record.get("judge") or {}).get("rubric"),
                                                      bool((record.get("judge") or {}).get("fabrication")))
+                    record["score_signal"] = combined_score_v2(
+                        record["checks"], (record.get("judge") or {}).get("rubric"),
+                        bool((record.get("judge") or {}).get("fabrication")))
                 records.append(record)
             print(f"[trial {trial + 1}/{trials}] [{index}/{len(cases)}] {case['id']} status={record.get('status')} "
                   f"elapsed={record['elapsed']}s failed={[k for k, v in record['checks'].items() if not v]} "
@@ -319,6 +323,9 @@ async def main() -> None:
         metrics={
             **summarize_metrics(per_case, scores),
             "score_mean": summary["score_mean"],
+            "score_signal_mean": summary["score_signal_mean"],
+            "signal_hard_mean": summary["signal_hard_mean"],
+            "gates_passed": summary["gates_passed"],
             "rubric_mean": summary["rubric_mean"],
             "deliverable": summary["deliverable"],
             "latency_mean": summary["latency_mean"],
