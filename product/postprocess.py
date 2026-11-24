@@ -73,10 +73,13 @@ def _hhmm(minutes: int) -> str:
 
 
 def _schedule_day(activities: list[dict[str, Any]], hours: float,
-                  keep_order: bool = False) -> list[dict[str, Any]]:
+                  keep_order: bool = False, preserve_times: bool = False) -> list[dict[str, Any]]:
     """插入交通时间并裁掉超时活动；keep_order=True 时保留模型给的顺序。"""
     if not activities:
         return []
+    if preserve_times:
+        return sorted((dict(activity) for activity in activities),
+                      key=lambda item: _minutes_of(item.get("start")))
     if not any(parse_coord(activity) for activity in activities):
         return _fit_schedule(activities)
     ordered = (sorted(activities, key=lambda item: _minutes_of(item.get("start")))
@@ -387,7 +390,9 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                    windows: list[dict[str, Any]] | None = None,
                    pace: str = "normal",
                    requested: int | None = None,
-                   keep_order: bool = False) -> list[dict[str, Any]]:
+                   keep_order: bool = False,
+                   preserve_times: bool = False,
+                   backfill: bool = True) -> list[dict[str, Any]]:
     """按天去重、补足到 2 个活动并按时间排序，避免出现空天或倒序。
 
     keep_days 是本次不动、原样保留的日期；只对 plan_days 里的日期做整理。
@@ -409,7 +414,7 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
         hours = day_hours(windows, planned.get("day"))
         low, high = count_bounds(hours, pace, requested)
         floor = max(1, min(requested or 2, high))
-        if len(activities) < floor:
+        if backfill and len(activities) < floor:
             for evidence in good:
                 if not evidence["id"].startswith("d%d-" % planned["day"]):
                     continue
@@ -431,8 +436,10 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
                         break
                 if len(activities) >= floor:
                     break
+        scheduled = (activities if preserve_times else
+                     _schedule_day(activities, hours, keep_order=keep_order))
         entry = {"day": planned["day"], "city": day.get("city") or planned.get("city"),
-                 "activities": _schedule_day(activities, hours, keep_order=keep_order)[:high]}
+                 "activities": scheduled[:high]}
         if day.get("meals"):
             entry["meals"] = day["meals"]
         if day.get("lodging_area"):

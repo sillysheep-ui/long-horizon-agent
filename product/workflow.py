@@ -17,6 +17,7 @@ from product.global_plan import build_skeleton
 from product.memory import build_history
 from product.model_gateway import ModelGateway, call_info, parse_json
 from product.pace import count_bounds, detect_pace, requested_count
+from product.plan_rules import validate_plan
 from product.plancheck import check_day_plan
 from product.planner import (
     PLANNER_SYSTEM_PROMPT,
@@ -73,6 +74,11 @@ from product.trace import (
     _tool_spans,
 )
 from product.transit import add_transfers
+
+
+def _rule_violations(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{"day": issue["day"], "kind": issue["code"], "detail": issue["detail"]}
+            for issue in issues]
 
 
 class AgentWorkflow:
@@ -401,8 +407,9 @@ class AgentWorkflow:
                             {"per_day_ok": [item["covered"] for item in verification["days"]],
                              "uncovered_days": verification["uncovered_days"], "risk": verification["risk"]}))
 
+        plan_mode = os.getenv("PLAN_MODE", "legacy").strip().lower()
         skeleton_info = None
-        if os.getenv("PLAN_MODE", "legacy").strip().lower() == "global":
+        if plan_mode == "global":
             skeleton_started = time.monotonic()
             try:
                 skeleton_info = build_skeleton(constraints, days, evidence)
@@ -462,10 +469,11 @@ class AgentWorkflow:
         except (ValueError, RuntimeError):
             answer_failed = True
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
+        rule_issues = validate_plan(answer.get("days"), good, constraints) if not answer_failed else []
         critique = {"score": None, "verdict": "skipped", "issues": [], "source": "skipped"}
         if not answer_failed:
             critique = await review_itinerary(self.model, answer.get("days"), constraints, calls)
-        hard = check_day_plan(answer.get("days"), constraints)["violations"]
+        hard = check_day_plan(answer.get("days"), constraints)["violations"] + _rule_violations(rule_issues)
         violations = hard + [{"day": item["day"], "kind": item["kind"], "detail": item["detail"]}
                              for item in critique["issues"]]
         plan_repair = {"attempted": False, "before": len(violations), "after": len(violations)}
@@ -487,11 +495,14 @@ class AgentWorkflow:
                     timeout=90)
                 calls.append(call_info(fix_response))
                 candidate = parse_json(fix_response["content"])
-                after = check_day_plan(candidate.get("days"), constraints)["violations"]
+                rules_after = validate_plan(candidate.get("days"), good, constraints)
+                after = check_day_plan(candidate.get("days"), constraints)["violations"] \
+                    + _rule_violations(rules_after)
                 plan_repair.update({"attempted": True, "after": len(after)})
                 if len(after) <= len(violations):
                     answer = candidate
                     violations = after
+                    rule_issues = rules_after
                     plan_repair["applied"] = True
             except (ValueError, RuntimeError, TimeoutError):
                 plan_repair.update({"attempted": True, "error": True})
@@ -555,18 +566,22 @@ class AgentWorkflow:
                 good,
                 [day for day in days if int(day.get("day") or 0) in target_set],
                 keep_days=kept_days, windows=windows, pace=pace,
-                requested=constraints.get("requested_count"), keep_order=plan_ok)
+                requested=constraints.get("requested_count"), keep_order=plan_ok,
+                preserve_times=plan_mode == "model", backfill=plan_mode != "model")
         else:
             cleaned_days = _finalize_days(cleaned_days, good, days, windows=windows, pace=pace,
                                           requested=constraints.get("requested_count"),
-                                          keep_order=plan_ok)
-        if constraints.get("anchor") in ("food", "stay"):
+                                          keep_order=plan_ok,
+                                          preserve_times=plan_mode == "model",
+                                          backfill=plan_mode != "model")
+        if plan_mode != "model":
+            if constraints.get("anchor") in ("food", "stay"):
+                for day in cleaned_days:
+                    picked = pick_meals(day, evidence)
+                    if picked:
+                        day["meals"] = picked
             for day in cleaned_days:
-                picked = pick_meals(day, evidence)
-                if picked:
-                    day["meals"] = picked
-        for day in cleaned_days:
-            repair_meal_times(day)
+                repair_meal_times(day)
         cleaned_days = add_transfers(cleaned_days)
         final_count = sum(len(day.get("activities", [])) for day in cleaned_days)
         fabricated = _fabricated_costs(cleaned_days, evidence)
@@ -628,4 +643,6 @@ class AgentWorkflow:
                       days=cleaned_days, notes=notes, constraints=constraints,
                       plan=plan, evidence=evidence, model_calls=calls, verification=verification,
                       cross_checks=cross, revision_applied=revision_applied,
-                      revision_check=revision_check, skeleton=skeleton_info)
+                      revision_check=revision_check, skeleton=skeleton_info,
+                      plan_rules={"mode": plan_mode, "issues": len(rule_issues),
+                                  "codes": sorted({issue["code"] for issue in rule_issues})})
