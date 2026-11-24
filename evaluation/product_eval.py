@@ -307,10 +307,11 @@ async def main() -> None:
         for record in records
     ]
     scores = [float(record["score"]) for record in records if record.get("score") is not None]
+    judge_ran = summary["score_mean"] is not None
     report = SuiteReport(
         suite=layer,
-        main_metric="score_mean",
-        main_value=summary["score_mean"],
+        main_metric="score_mean" if judge_ran else "checks_macro",
+        main_value=summary["score_mean"] if judge_ran else summary["checks_macro"],
         cases=len(records),
         dataset_version=dataset_version(cases_path),
         evaluator_version=f"constraints-{CONSTRAINT_SET.version}",
