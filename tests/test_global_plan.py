@@ -155,3 +155,15 @@ def test_build_skeleton_reports_insufficient_candidates():
     assert skeleton["ok"] is False
     assert "苏州" in skeleton["reason"]
     assert [day["city"] for day in skeleton["days"]] == ["杭州"]
+
+
+def test_build_days_ignores_lodging_and_only_uses_attractions():
+    candidates = [
+        make("西湖", 120.0, 30.0),
+        make("某酒店", 120.001, 30.001, "accommodations"),
+        make("某餐厅", 120.002, 30.002, "restaurants"),
+    ]
+    days = build_days(candidates, 1, pace="relaxed")
+    titles = [item["name"] for item in days[0]["activities"]]
+    assert "西湖" in titles
+    assert "某酒店" not in titles

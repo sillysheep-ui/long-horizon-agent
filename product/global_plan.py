@@ -89,6 +89,9 @@ def _is_sight(item: dict[str, Any]) -> bool:
     return str(item.get("source_table") or "") == "attractions"
 
 
+MAX_DAY_TRANSIT_MINUTES = 120
+
+
 def _rank_key(item: dict[str, Any], named: set[str], anchor: str) -> tuple[int, float]:
     name = str(item.get("name") or "")
     named_hit = 1 if any(word and word in name for word in named) else 0
@@ -183,10 +186,12 @@ def build_days(candidates: list[dict[str, Any]], day_count: int, *,
     named = [str(word) for word in (named_places or []) if str(word).strip()]
     named_set = set(named)
     per_day = PACE_PER_DAY.get(str(pace or "normal"), PACE_PER_DAY["normal"])
-    sights = [item for item in candidates if not _is_food(item)]
+    sights = [item for item in candidates if _is_sight(item)]
     sights.sort(key=lambda item: _rank_key(item, named_set, anchor), reverse=True)
     named_items = [item for item in sights if any(word in str(item.get("name") or "") for word in named)]
     rest = [item for item in sights if item not in named_items]
+    if start:
+        rest.sort(key=lambda item: haversine_km(start, coord_of(item) or start))
     groups = assign_days(named_items + rest, day_count, per_day)
     used: set[str] = set()
     days: list[dict[str, Any]] = []
@@ -199,6 +204,8 @@ def build_days(candidates: list[dict[str, Any]], day_count: int, *,
 
         def add_meal(target: int, activities: list[dict[str, Any]] = activities) -> None:
             nonlocal cursor, lunch_done
+            if cursor >= DAY_END_MINUTES:
+                return
             meal = _pick_meal(candidates, coord_of(activities[-1]) if activities else start, used)
             if meal is None:
                 return
@@ -216,7 +223,11 @@ def build_days(candidates: list[dict[str, Any]], day_count: int, *,
                 add_meal(LUNCH_MINUTES)
                 lunch_done = True
                 transit = transit_minutes(previous, coord) if previous and coord else 0
+            if transit > MAX_DAY_TRANSIT_MINUTES:
+                continue
             cursor += transit
+            if cursor >= DAY_END_MINUTES:
+                continue
             window = open_window(item)
             if window:
                 open_min, close_min = window
