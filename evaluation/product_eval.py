@@ -193,13 +193,26 @@ async def main() -> None:
     parser.add_argument("--min-score", type=float, default=None, help="综合分低于该值时退出码 1")
     parser.add_argument("--cases", default="", help="用例文件，默认 evaluation/product_cases.json")
     parser.add_argument("--ids", default="", help="只跑指定用例，逗号分隔")
+    parser.add_argument("--spec", default="", help="声明式评测配置（YAML），可用 --cases/--split 覆盖")
     args = parser.parse_args()
     random.seed(args.seed)
 
     os.environ["MODEL_PROFILE"] = args.profile
-    cases_path = Path(args.cases) if args.cases else CASES_PATH
+    spec: dict = {}
+    if args.spec:
+        from evaluation.spec import load_spec, validate
+
+        spec = load_spec(args.spec)
+        problems = validate(spec)
+        if problems:
+            raise SystemExit("评测配置有误：" + "；".join(problems))
+    spec_dataset = (spec.get("dataset") or {}) if spec else {}
+    cases_path = Path(args.cases or spec_dataset.get("path") or "") if (args.cases or spec_dataset) else CASES_PATH
+    split = args.split
+    if split == "all" and spec_dataset.get("split"):
+        split = str(spec_dataset["split"])
     cases = [c for c in json.loads(cases_path.read_text())
-             if args.split == "all" or c.get("split") == args.split]
+             if split == "all" or c.get("split") == split]
     if args.ids:
         wanted = {item.strip() for item in args.ids.split(",") if item.strip()}
         cases = [c for c in cases if c.get("id") in wanted]
@@ -262,14 +275,15 @@ async def main() -> None:
     health = evaluator_health(records)
     summary["evaluator"] = health
     write_report(target, args.profile, summary, records, args.split, health)
-    layer = "sandbox" if any(record.get("pool") == "sandbox" for record in records) else "single_turn"
+    pools = {record.get("pool") for record in records}
+    layer = "sandbox" if pools == {"sandbox"} else "single_turn"
     per_case = [
         [CheckRecord(id=name, ok=value, layer=layer) for name, value in record["checks"].items()]
         for record in records
     ]
     scores = [float(record["score"]) for record in records if record.get("score") is not None]
     report = SuiteReport(
-        suite="single_turn",
+        suite=layer,
         main_metric="score_mean",
         main_value=summary["score_mean"],
         cases=len(records),
@@ -286,7 +300,7 @@ async def main() -> None:
         labels={
             "comparable": False,
             "main_metric_note": "0.6×硬检查 + 0.4×rubric − 0.2×编造",
-            "split": args.split,
+            "split": split,
             "profile": args.profile,
             "pool": layer,
         },
@@ -297,8 +311,11 @@ async def main() -> None:
           f"dataset={report.dataset_version} checks={len(report.checks)}")
     print(json.dumps(summary, ensure_ascii=False))
     print(f"报告：{target/'report.md'}")
-    if args.min_score is not None and float(summary["score_mean"]) < args.min_score:
-        print(f"综合分 {summary['score_mean']} 低于阈值 {args.min_score}")
+    min_score = args.min_score
+    if min_score is None and spec:
+        min_score = (spec.get("thresholds") or {}).get("score_min")
+    if min_score is not None and summary["score_mean"] is not None and float(summary["score_mean"]) < float(min_score):
+        print(f"综合分 {summary['score_mean']} 低于阈值 {min_score}")
         raise SystemExit(1)
 
 

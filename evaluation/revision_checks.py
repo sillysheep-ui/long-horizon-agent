@@ -21,6 +21,24 @@ def _titles(day: dict[str, Any] | None) -> list[str]:
     return [str(activity.get("title") or "") for activity in (day or {}).get("activities") or []]
 
 
+def _squash(text: str) -> str:
+    return "".join(ch for ch in str(text or "") if ch.isalnum())
+
+
+def _same_title(left: str, right: str) -> bool:
+    """标题允许‘本馆/新馆’这类后缀差异，按去标点后的包含关系判等。"""
+    a, b = _squash(left), _squash(right)
+    if not a or not b:
+        return a == b
+    return a == b or (len(a) >= 4 and len(b) >= 4 and (a in b or b in a))
+
+
+def _titles_equal(left: list[str], right: list[str]) -> bool:
+    if len(left) != len(right):
+        return False
+    return all(_same_title(a, b) for a, b in zip(left, right, strict=False))
+
+
 def _all_titles(result: dict[str, Any]) -> list[str]:
     return [title for day in _days(result).values() for title in _titles(day)]
 
@@ -66,10 +84,10 @@ def check_revision(case: dict[str, Any], before: dict[str, Any],
         checks["applied"] = after.get("revision_applied") is True
         keep_days = [day for day in before_days if day not in targets]
         checks["kept_days"] = all(
-            _titles(before_days[day]) == _titles(after_days.get(day)) for day in keep_days
+            _titles_equal(_titles(before_days[day]), _titles(after_days.get(day))) for day in keep_days
         )
         checks["target_changed"] = all(
-            bool(_titles(after_days.get(day))) and _titles(after_days.get(day)) != _titles(before_days.get(day))
+            bool(_titles(after_days.get(day))) and not _titles_equal(_titles(after_days.get(day)), _titles(before_days.get(day)))
             for day in targets
         )
     else:

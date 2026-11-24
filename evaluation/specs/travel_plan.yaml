@@ -1,0 +1,55 @@
+# 声明式评测配置：给“单轮行程生成”这一层。
+# 校验：python3 -m evaluation.spec_check evaluation/specs/travel_plan.yaml
+name: travel-plan-agent
+version: 1
+
+dataset:
+  path: evaluation/product_cases.json
+  split: test
+
+graders:
+  # 确定性约束：行程 JSON 必须满足规则手册
+  - type: constraint_set
+    path: product/constraints/sets/v1.json
+    threshold: 1.0
+    assertions:
+      - "天数在 1–7 之间，且每天活动数符合用户节奏"
+      - "活动时间递增、不重叠，且不超过当天可用时长"
+      - "每个活动标题都能对上证据里的地点名"
+      - "价格里的数字只能来自证据"
+
+  # LLM rubric：二值清单，必须引用原句
+  - type: llm_rubric
+    rubric: evaluation/rubrics/plan_quality.md
+    threshold: 0.7
+    assertions:
+      - "每个活动都写明了开始时间和停留时长"
+      - "未核实的价格与营业时间都标注为未核实"
+      - "用户明确排除的地点没有出现"
+
+  # 状态检查：产物状态自洽
+  - type: state_check
+    assertions:
+      - "status in (complete, needs_clarification, partial)"
+      - "needs_clarification 时 days 为空且 question 非空"
+      - "partial 时 notes 里给出原因"
+
+  # 过程断言（当前 runner 未实现，仅声明）
+  - type: tool_calls
+    required:
+      - {tool: poi_search, min_calls_per_day: 1}
+    optional:
+      - {tool: web_search, max_calls_per_case: 18}
+    note: "现有 runner 只校验计划结构与证据绑定，未断言调用过程"
+
+  # 对话约束
+  - type: transcript
+    max_turns: 60
+
+tracked_metrics:
+  - {type: latency, metrics: [latency_mean, stage_latency_mean]}
+  - {type: tokens, metrics: [prompt_tokens, completion_tokens]}
+
+thresholds:
+  deliverable: 0.7      # rubric ≥ 0.7 且硬检查全过才算可交付
+  score_min: 0.80       # CI 门禁

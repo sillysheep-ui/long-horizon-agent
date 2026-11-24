@@ -87,3 +87,10 @@ def test_clarify_expectation_only_checks_clarification():
     after = {"status": "needs_clarification", "question": "现在的行程是 2 天，第 5 天超出了范围", "days": []}
     checks = check_revision(case, before, after)
     assert checks == {"clarified": True, "applied": True, "days_empty": True}
+
+
+def test_titles_equal_allows_museum_suffix():
+    from evaluation.revision_checks import _titles_equal
+
+    assert _titles_equal(["拙政园", "苏州博物馆"], ["拙政园", "苏州博物馆本馆"])
+    assert not _titles_equal(["拙政园"], ["留园"])

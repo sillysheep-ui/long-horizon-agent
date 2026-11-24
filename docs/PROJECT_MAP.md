@@ -110,7 +110,7 @@ python3 -m evaluation.combined --dir results/product_eval
 2. `docs/ARCHITECTURE.md` / `docs/AGENT_DESIGN.md`
 3. `product/workflow.py` 的 `AgentWorkflow.run`
 4. `product/constraints/sets/v1.json` 与 `docs/CONSTRAINTS.md`
-5. `docs/PRODUCT_EVAL.md` / `docs/EVAL_PLAN.md`
+5. `docs/PRODUCT_EVAL.md` / `docs/EVAL_PLAN.md` / `docs/EVAL_SPEC.md`
 
 ## 10. 最近里程碑
 

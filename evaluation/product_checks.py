@@ -55,7 +55,7 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
                       if r.get("score") is not None
                       and all(r["checks"].values())
                       and (r.get("judge") or {}).get("rubric", 0) >= 0.7
-                      and not (r.get("judge") or {}).get("fabrication"))
+                      and not (r.get("judge") or {}).get("fabrication")) if scores else None
     micro = (sum(sum(1 for value in r["checks"].values() if value) / max(1, len(r["checks"]))
                  for r in records) / total) if total else None
     return {
