@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import re
 import time
 from typing import Any
@@ -12,6 +13,7 @@ from product.coverage import assess_days, build_repair_plan
 from product.critic import review_async as review_itinerary
 from product.crosscheck import cross_checks
 from product.destinations import unknown_destinations
+from product.global_plan import build_skeleton
 from product.memory import build_history
 from product.model_gateway import ModelGateway, call_info, parse_json
 from product.pace import count_bounds, detect_pace, requested_count
@@ -399,6 +401,23 @@ class AgentWorkflow:
                             {"per_day_ok": [item["covered"] for item in verification["days"]],
                              "uncovered_days": verification["uncovered_days"], "risk": verification["risk"]}))
 
+        skeleton_info = None
+        if os.getenv("PLAN_MODE", "legacy").strip().lower() == "global":
+            skeleton_started = time.monotonic()
+            try:
+                skeleton_info = build_skeleton(constraints, days, evidence)
+            except Exception:  # noqa: BLE001 - 骨架是增强路径，失败要走回退而不是打断整单
+                skeleton_info = {"days": [], "candidates": {}, "ok": False,
+                                 "reason": "骨架构建异常", "route_km": 0.0}
+            stages.append(_span("global_plan", "stage", "ok" if skeleton_info["ok"] else "warn",
+                                (time.monotonic() - skeleton_started) * 1000,
+                                {"mode": "global", "days": len(skeleton_info["days"]),
+                                 "candidates": skeleton_info["candidates"],
+                                 "route_km": skeleton_info["route_km"],
+                                 "reason": skeleton_info["reason"]}))
+            if not skeleton_info["ok"]:
+                self._event(job, "planning", "候选点不足，按逐天方案继续", {"reason": skeleton_info["reason"]})
+
         good = [e for e in evidence if e.get("status") == "ok"]
         self._event(job, "verification", "正在检查计划是否有可追溯的地点来源",
                     {"supported_queries": len(good), "total_queries": len(evidence),
@@ -409,7 +428,8 @@ class AgentWorkflow:
             return finish("failed", status="partial",
                           question="地点查询暂不可用，无法给出可信的具体行程。",
                           constraints=constraints, plan=plan, days=[],
-                          evidence=evidence, model_calls=calls, verification=verification)
+                          evidence=evidence, model_calls=calls, verification=verification,
+                          skeleton=skeleton_info)
 
         self._event(job, "answer", "正在根据已核实地点组织行程")
         answer_started = time.monotonic()
@@ -608,4 +628,4 @@ class AgentWorkflow:
                       days=cleaned_days, notes=notes, constraints=constraints,
                       plan=plan, evidence=evidence, model_calls=calls, verification=verification,
                       cross_checks=cross, revision_applied=revision_applied,
-                      revision_check=revision_check)
+                      revision_check=revision_check, skeleton=skeleton_info)

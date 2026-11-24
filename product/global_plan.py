@@ -307,3 +307,72 @@ def skeleton_to_days(skeleton: list[dict[str, Any]],
         if activities:
             days.append({"day": int(day.get("day") or len(days) + 1), "activities": activities})
     return days
+
+
+def _city_key(city: Any) -> str:
+    return str(city or "").strip().removesuffix("市").strip()
+
+
+def same_city(first: Any, second: Any) -> bool:
+    left, right = _city_key(first), _city_key(second)
+    if not left or not right:
+        return False
+    return left == right or left in right or right in left
+
+
+def plan_city_days(plan_days: list[dict[str, Any]],
+                   destinations: list[str] | None = None) -> list[tuple[str, list[int]]]:
+    """把 plan 的每日城市压成连续块：[(城市, [天号...]), ...]。"""
+    fallback = str((destinations or [""])[0])
+    blocks: list[tuple[str, list[int]]] = []
+    for index, day in enumerate(plan_days or [], 1):
+        city = str(day.get("city") or fallback)
+        if blocks and same_city(blocks[-1][0], city):
+            blocks[-1][1].append(index)
+        else:
+            blocks.append((city, [index]))
+    return blocks
+
+
+def _centroid(items: list[dict[str, Any]]) -> tuple[float, float] | None:
+    coords = [coord_of(item) for item in items if coord_of(item)]
+    if not coords:
+        return None
+    return (sum(coord[0] for coord in coords) / len(coords),
+            sum(coord[1] for coord in coords) / len(coords))
+
+
+def build_skeleton(constraints: dict[str, Any], plan_days: list[dict[str, Any]],
+                   evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    """按城市把候选池变成每日骨架；候选不足时返回 ok=False 交给上层回退。"""
+    candidates = candidates_from_evidence(evidence)
+    destinations = [str(city) for city in constraints.get("destinations") or []]
+    blocks = plan_city_days(plan_days, destinations)
+    named = [str(word) for word in constraints.get("named_places") or []]
+    anchor = str(constraints.get("anchor") or "")
+    pace = str(constraints.get("pace") or "normal")
+    windows = {int(window.get("day") or 0): float(window.get("hours") or 0)
+               for window in constraints.get("day_windows") or []
+               if isinstance(window, dict) and window.get("day")}
+    days: list[dict[str, Any]] = []
+    per_city: dict[str, int] = {}
+    reason = ""
+    for city, day_numbers in blocks:
+        pool = [item for item in candidates if same_city(item.get("city"), city)]
+        per_city[city] = len(pool)
+        if len(pool) < 2 * len(day_numbers):
+            reason = reason or "%s 候选不足（%d 个，至少需要 %d 个）" % (
+                city, len(pool), 2 * len(day_numbers))
+            continue
+        city_pace = pace
+        if any(windows.get(number, 24) <= 4.5 for number in day_numbers):
+            city_pace = "relaxed"
+        built = build_days(pool, len(day_numbers), pace=city_pace, anchor=anchor,
+                           named_places=named, start=_centroid(pool))
+        for offset, day in enumerate(built):
+            day["day"] = day_numbers[offset]
+            day["city"] = city
+            days.append(day)
+    days.sort(key=lambda day: int(day.get("day") or 0))
+    return {"days": days, "candidates": per_city, "ok": not reason, "reason": reason,
+            "route_km": total_distance([day.get("activities") or [] for day in days])}

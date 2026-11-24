@@ -113,3 +113,45 @@ def test_skeleton_to_days_outputs_answer_schema():
     assert [item["title"] for item in days[0]["activities"]] == ["西湖", "楼外楼"]
     assert days[0]["activities"][0]["duration"] == "2 小时"
     assert days[0]["activities"][1]["kind"] == "meal"
+
+
+def _pool(city, count, prefix):
+    items = [{"name": f"{prefix}{i}", "coordinates": [120.0 + i * 0.01, 30.0],
+              "source_table": "attractions", "city": city} for i in range(count)]
+    items.append({"name": f"{prefix}食", "coordinates": [120.02, 30.01],
+                  "source_table": "restaurants", "city": city})
+    return {"id": f"e-{prefix}", "status": "ok", "city": city, "items": items}
+
+
+def test_plan_city_days_groups_consecutive_cities():
+    from product.global_plan import plan_city_days
+
+    blocks = plan_city_days([{"day": 1, "city": "杭州"}, {"day": 2, "city": "杭州市"},
+                             {"day": 3, "city": "苏州"}], ["杭州"])
+    assert blocks == [("杭州", [1, 2]), ("苏州", [3])]
+
+
+def test_build_skeleton_assigns_blocks_by_city():
+    from product.global_plan import build_skeleton
+
+    evidence = [_pool("杭州", 6, "H"), _pool("苏州", 3, "S")]
+    constraints = {"destinations": ["杭州", "苏州"], "pace": "normal", "named_places": []}
+    plan_days = [{"day": 1, "city": "杭州"}, {"day": 2, "city": "杭州"}, {"day": 3, "city": "苏州"}]
+    skeleton = build_skeleton(constraints, plan_days, evidence)
+    assert skeleton["ok"] is True
+    assert [day["day"] for day in skeleton["days"]] == [1, 2, 3]
+    assert [day["city"] for day in skeleton["days"]] == ["杭州", "杭州", "苏州"]
+    assert skeleton["candidates"] == {"杭州": 7, "苏州": 4}
+    assert skeleton["route_km"] > 0
+
+
+def test_build_skeleton_reports_insufficient_candidates():
+    from product.global_plan import build_skeleton
+
+    evidence = [_pool("杭州", 8, "H"), _pool("苏州", 1, "S")]
+    constraints = {"destinations": ["杭州", "苏州"], "pace": "normal"}
+    plan_days = [{"day": 1, "city": "杭州"}, {"day": 2, "city": "苏州"}, {"day": 3, "city": "苏州"}]
+    skeleton = build_skeleton(constraints, plan_days, evidence)
+    assert skeleton["ok"] is False
+    assert "苏州" in skeleton["reason"]
+    assert [day["city"] for day in skeleton["days"]] == ["杭州"]
