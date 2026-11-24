@@ -33,6 +33,10 @@ from product.postprocess import (
     clean_lodging,
     clean_meals,
     clean_named_places,
+    clean_people,
+    clean_room_type,
+    clean_rooms,
+    clean_transport,
     day_hours,
     detect_day_windows,
     latin_hints,
@@ -255,6 +259,16 @@ class AgentWorkflow:
             constraints["pace"] = detect_pace(intake_query, revision_text)
             anchor = detect_anchor(intake_query, revision_text)
             constraints["anchor"] = anchor["anchor"]
+            constraints["people"] = clean_people(constraints.get("people"))
+            constraints["rooms"] = clean_rooms(constraints.get("rooms"))
+            constraints["room_type"] = clean_room_type(constraints.get("room_type"))
+            constraints["transport"] = clean_transport(constraints.get("transport"))
+            if constraints["people"]:
+                self._event(job, "intake", "同行 %d 人%s%s" % (
+                    constraints["people"],
+                    "，%d 间%s" % (constraints["rooms"], constraints["room_type"] or "房")
+                    if constraints["rooms"] else "",
+                    "，城际交通：%s" % constraints["transport"] if constraints["transport"] else ""))
             if anchor["anchor"] != "sight":
                 self._event(job, "intake", "行程锚定：%s" % (
                     "饮食优先" if anchor["anchor"] == "food" else "住宿优先"))

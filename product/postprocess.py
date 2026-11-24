@@ -441,3 +441,47 @@ def _finalize_days(cleaned_days: list[dict[str, Any]], good: list[dict[str, Any]
     result.extend(kept)
     result.sort(key=lambda item: int(item.get("day") or 0))
     return result
+
+
+ROOM_TYPES = ("大床房", "双床房", "标间", "标准间", "家庭房", "单人房", "多人间")
+TRANSPORT_WORDS = {
+    "高铁": ("高铁", "动车", "g字头"),
+    "飞机": ("飞机", "航班", "机票", "飞过去", "坐飞机"),
+    "火车": ("火车", "卧铺", "普快"),
+    "自驾": ("自驾", "开车", "租车"),
+}
+
+
+def clean_people(value: Any) -> int:
+    """同行人数：只接受 1–30 的整数，模型给字符串也能转。"""
+    match = re.search(r"\d+", str(value))
+    if not match:
+        return 0
+    count = int(match.group())
+    return count if 1 <= count <= 30 else 0
+
+
+def clean_rooms(value: Any) -> int:
+    """房间数：1–10 的整数；没提就是 0。"""
+    match = re.search(r"\d+", str(value))
+    if not match:
+        return 0
+    count = int(match.group())
+    return count if 1 <= count <= 10 else 0
+
+
+def clean_room_type(text: Any) -> str:
+    source = str(text or "").strip()
+    canonical = {"标准间": "标间", "双床间": "双床房", "大床": "大床房", "家庭间": "家庭房"}
+    for name in ROOM_TYPES:
+        if name and name in source:
+            return canonical.get(name, name)
+    return ""
+
+
+def clean_transport(text: Any) -> str:
+    source = str(text or "").strip().lower()
+    for name, words in TRANSPORT_WORDS.items():
+        if any(word in source for word in words):
+            return name
+    return ""
