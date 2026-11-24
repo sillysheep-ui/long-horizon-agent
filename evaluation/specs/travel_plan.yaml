@@ -1,55 +1,120 @@
-# 声明式评测配置：给“单轮行程生成”这一层。
+# 单轮行程生成：一句中文需求 → 一份 1–7 天、带证据的行程。
 # 校验：python3 -m evaluation.spec_check evaluation/specs/travel_plan.yaml
-name: travel-plan-agent
-version: 1
+name: travel-plan-single-turn
+version: 2
+suite: single_turn
+description: 评价单次生成的结构、约束、事实边界与可执行性。
 
 dataset:
   path: evaluation/product_cases.json
   split: test
+  cases: 110
+  version_strategy: sha256_prefix8
+
+environment:
+  model_profile: api_only
+  poi_provider: live          # 离线跑法见 sandbox.yaml
+  seed: 7
+  travel_db: /tmp/product-eval-spec.db
+
+judge:
+  model: deepseek-v4-flash
+  temperature: 0
+  repeats: 1                  # 设 2 可估方差，代价翻倍
+  max_tokens: 12000
+  truncation_policy: retry_once
 
 graders:
-  # 确定性约束：行程 JSON 必须满足规则手册
-  - type: constraint_set
+  # 1) 确定性约束：由规则手册逐条求值
+  - id: hard_constraints
+    type: constraint_set
     path: product/constraints/sets/v1.json
+    severity: blocking
+    weight: 0.6
     threshold: 1.0
     assertions:
-      - "天数在 1–7 之间，且每天活动数符合用户节奏"
-      - "活动时间递增、不重叠，且不超过当天可用时长"
-      - "每个活动标题都能对上证据里的地点名"
-      - "价格里的数字只能来自证据"
+      - {id: complete, text: "状态为 complete；该追问的用例必须追问"}
+      - {id: day_count, text: "天数与需求一致"}
+      - {id: density, text: "每天活动数符合节奏与可用时长"}
+      - {id: time_order, text: "开始时间严格递增"}
+      - {id: no_overlap, text: "活动与用餐时间不重叠"}
+      - {id: day_load, text: "单日总时长不超过可用时长"}
+      - {id: unique_titles, text: "跨天不重复同一地点"}
+      - {id: title_clean, text: "标题不含攻略/门票/图片等噪声词"}
+      - {id: title_matches_evidence, text: "标题落在证据地点名上"}
+      - {id: city_coverage, text: "覆盖用户点名的城市"}
+      - {id: evidence_ok, text: "每个活动都绑定 ok 证据"}
+      - {id: periods, text: "覆盖至少两个时段"}
+      - {id: activity_length, text: "单活动时长落在节奏区间"}
+      - {id: free_time, text: "留白比例落在节奏区间"}
+      - {id: no_fabricated_cost, text: "价格数字来自证据"}
+      - {id: opening_hours, text: "排期落在营业时间内"}
+      - {id: named_places_covered, text: "用户点名地点全部出现"}
+      - {id: fields_filled, text: "时间/时长/交通/费用非空"}
+      - {id: meal_grounded, text: "餐饮名对得上证据"}
+      - {id: anchor_satisfied, text: "锚定 food/stay 时槽位齐全"}
 
-  # LLM rubric：二值清单，必须引用原句
-  - type: llm_rubric
+  # 2) 软质量：二值清单，每条必须引用原句
+  - id: plan_quality
+    type: llm_rubric
     rubric: evaluation/rubrics/plan_quality.md
+    severity: scored
+    weight: 0.4
     threshold: 0.7
     assertions:
-      - "每个活动都写明了开始时间和停留时长"
-      - "未核实的价格与营业时间都标注为未核实"
-      - "用户明确排除的地点没有出现"
+      - {id: c1, weight: 1, text: "每个活动写了开始时间与停留时长"}
+      - {id: c2, weight: 1, text: "每个活动写了具体做什么，不是空话"}
+      - {id: f1, weight: 1, text: "同一天转场时间走得通"}
+      - {id: f2, weight: 1, text: "单日不超可用时长，没有硬塞"}
+      - {id: p1, weight: 1, text: "用户提到的偏好都有对应安排"}
+      - {id: p2, weight: 1, text: "用户排除的地点没有出现"}
+      - {id: b1, weight: 1, text: "未核实的价格/时间/班次明确标注"}
+      - {id: b2, weight: 3, text: "没有编造证据外的价格/时间/评分", veto: true}
+      - {id: r1, weight: 1, text: "不同日期活动有明显差异"}
+      - {id: r2, weight: 1, text: "每天有主次，不是原样堆满"}
 
-  # 状态检查：产物状态自洽
-  - type: state_check
+  # 3) 状态自洽：产物本身前后一致
+  - id: state
+    type: state_check
     assertions:
-      - "status in (complete, needs_clarification, partial)"
-      - "needs_clarification 时 days 为空且 question 非空"
-      - "partial 时 notes 里给出原因"
+      - {path: status, in: [complete, needs_clarification, partial], text: "状态是三态之一"}
+      - {path: days, when: "status == complete", min_items: 1, text: "complete 时至少一天"}
+      - {path: days, when: "status == needs_clarification", max_items: 0, text: "追问时 days 为空"}
+      - {path: question, when: "status == needs_clarification", non_empty: true, text: "追问时 question 非空"}
+      - {path: "evidence[*].status", when_used_by: "days[*].activities[*].evidence_id", equals: ok,
+         text: "被活动引用的证据状态必须是 ok"}
+    note: 前四条由 runner 现算；按 evidence_id 反查证据状态的部分待实现
 
-  # 过程断言（当前 runner 未实现，仅声明）
-  - type: tool_calls
+  # 4) 过程断言：工具调用不变量（当前 runner 未执行，仅声明）
+  - id: tools
+    type: tool_calls
     required:
-      - {tool: poi_search, min_calls_per_day: 1}
-    optional:
-      - {tool: web_search, max_calls_per_case: 18}
-    note: "现有 runner 只校验计划结构与证据绑定，未断言调用过程"
+      - {tool: poi_search, min_calls_per_day: 1, params: {city: "$case.cities[0]"}}
+      - {tool: poi_search, params_contains: {query: "$named_places[*]"}, match: all}
+    allowed: [poi_search, web_search]
+    forbidden:
+      - {tool: flights_search, unless: "case.mode == flight"}
+      - {tool: train_tickets_search, unless: "case.mode == train"}
+    max_calls_per_case: 18
+    note: 现有 runner 只校验计划结构与证据绑定，未断言调用序列
 
-  # 对话约束
-  - type: transcript
+  # 5) 对话形态
+  - id: transcript
+    type: transcript
     max_turns: 60
+    max_tool_calls: 18
+    max_tokens: 60000
 
 tracked_metrics:
-  - {type: latency, metrics: [latency_mean, stage_latency_mean]}
-  - {type: tokens, metrics: [prompt_tokens, completion_tokens]}
+  - type: latency
+    metrics: [latency_mean, latency_p95, stage_latency_mean]
+    thresholds: {latency_p95: 30}
+  - type: tokens
+    metrics: [prompt_tokens_mean, completion_tokens_mean]
+  - type: transcript
+    metrics: [n_turns, n_tool_calls]
 
 thresholds:
-  deliverable: 0.7      # rubric ≥ 0.7 且硬检查全过才算可交付
-  score_min: 0.80       # CI 门禁
+  deliverable: {rubric_min: 0.7, hard_all_pass: true, fabrication_forbidden: true}
+  score_min: 0.80
+  regression: {paired: true, max_drop: 0.02, bootstrap: 2000}

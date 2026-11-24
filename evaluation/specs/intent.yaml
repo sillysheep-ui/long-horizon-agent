@@ -1,0 +1,26 @@
+# 意图路由：只判分类，不看行程。
+name: travel-plan-intent
+version: 1
+suite: intent
+description: 新行程/改行程/提问/闲聊/不确定五分类。
+
+dataset:
+  path: evaluation/intent_holdout.json
+  cases: 40
+  note: holdout 未参与规则调整；dev 100 条只用于回归
+
+graders:
+  - id: classification
+    type: state_check
+    assertions:
+      - {path: final, in: [new_trip, revise_trip, ask, chat, unclear], text: "预测意图是五类之一"}
+      - {path: final, equals: "$case.expect", text: "预测意图等于标注意图"}
+    threshold: 1.0
+
+tracked_metrics:
+  - {type: transcript, metrics: [n_turns]}
+  - {type: latency, metrics: [elapsed_mean]}
+
+thresholds:
+  final_accuracy: 0.95
+  fallback_rate_max: 0.40
