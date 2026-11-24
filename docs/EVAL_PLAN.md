@@ -144,7 +144,8 @@ score = 0.6 × 硬检查通过率 + 0.4 × rubric 得分 − 0.2 × 编造惩罚
 - 联合报告：`python3 -m evaluation.combined --dir results` 生成一张表，并在 CI 的 eval job 里作为 artifact 上传（`results/combined.md`）。
 - 例外：多轮那套的 9 项检查仍是 `evaluation/revision_checks.py` 的自定义实现，没有复用约束引擎；原因是它包含 `kept_days`/`target_changed` 这类“修改前后对比”检查，不属于单份行程的约束。已在 `docs/PRODUCT_EVAL.md` 标注，不阻塞发布。
 - 待用户操作：仓库 Settings → Secrets 配置 `DEEPSEEK_API_KEY`，否则 eval job 一直走跳过分支。
-- 未做且暂不做：裁判重复跑取方差、`comparable=true` 的跨 suite 比较、人工金标准。
+- 已补：回归/能力两套 spec（`regression.yaml` / `capability.yaml`）；`--trials N` 多次采样与 `pass@1`/`pass@N`/`pass^N`；回归 job 用 `--min-pass-rate 1.0` 硬门禁。
+- 仍未做：裁判重复跑取方差、`comparable=true` 的跨 suite 比较、参考解、人工金标准与 transcript 分诊。
 
 ## 9. 三个月路线
 

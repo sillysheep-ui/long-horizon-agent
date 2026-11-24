@@ -26,14 +26,14 @@ jobs:
       - name: Install eval dependencies
         if: env.HAS_KEY != ''
         run: python -m pip install fastapi httpx python-dotenv openai
-      - name: Run dev smoke (12 cases)
+      - name: Run regression suite (dev 12, 2 trials)
         if: env.HAS_KEY != ''
         run: |
           python -m evaluation.product_eval \
-            --profile api_only --split dev --limit 12 --seed 7 \
-            --judge-model deepseek-v4-flash \
-            --db /tmp/eval-smoke.db --out results/ci-eval \
-            --min-score 0.80
+            --profile api_only --spec evaluation/specs/regression.yaml \
+            --seed 7 --trials 2 --skip-judge \
+            --db /tmp/eval-regression.db --out results/ci-eval \
+            --min-pass-rate 1.0
       - name: Combined report
         if: env.HAS_KEY != ''
         run: python -m evaluation.combined --dir results --out results/combined.md

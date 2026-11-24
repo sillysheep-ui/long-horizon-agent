@@ -1,0 +1,35 @@
+# 回归评测：每次 push 跑，要求确定性检查 100% 通过。
+# 这一套不追分数，只回答“以前能过的现在还过不过”。
+name: travel-plan-regression
+version: 1
+suite: regression
+
+dataset:
+  path: evaluation/product_cases.json
+  split: dev
+  cases: 12
+
+judge:
+  model: deepseek-v4-flash
+  status: disabled
+  reason: 回归只卡硬检查，避免裁判方差造成假红
+
+graders:
+  - id: hard_constraints
+    type: constraint_set
+    status: implemented
+    path: product/constraints/sets/v1.json
+    severity: blocking
+    weight: 1.0
+    threshold: 1.0
+    assertions:
+      - {id: complete, text: "状态与用例预期一致"}
+      - {id: day_count, text: "天数与需求一致"}
+      - {id: time_order, text: "开始时间严格递增"}
+      - {id: no_overlap, text: "活动与用餐时间不重叠"}
+      - {id: evidence_ok, text: "每个活动绑定 ok 证据"}
+      - {id: no_fabricated_cost, text: "价格来自证据"}
+
+thresholds:
+  pass_rate_min: 1.0
+  score_min: null

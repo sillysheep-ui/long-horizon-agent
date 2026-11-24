@@ -19,6 +19,7 @@ from typing import Any
 from openai import AsyncOpenAI
 
 from evaluation.contract import CheckRecord, SuiteReport, dataset_version
+from evaluation.metrics import pass_metrics
 from evaluation.metrics import summarize as summarize_metrics
 from evaluation.product_checks import CONSTRAINT_SET, check_result, combined_score, summarize
 from evaluation.product_judge import judge as judge_itinerary
@@ -101,6 +102,12 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
              f" / 联网 {summary.get('pools', {}).get('live', 0)} 条（全过 {summary.get('pool_pass', {}).get('live')}）",
              f"- 沙盒数据：{summary.get('sandbox_data', {}).get('tables') or '未加载'}", "",
              "## 检查通过率", "", "| 检查 | 通过率 |", "|---|---|"]
+    if summary.get("pass_metrics"):
+        metrics = summary["pass_metrics"]
+        count = metrics["trials"]
+        lines.insert(-1, f"- 多次采样：{count} trials，pass@1 {metrics['pass_at_1']} / "
+                         f"pass@{count} {metrics['pass_at_k']} / pass^{count} {metrics['pass_hat_k']}"
+                         f"（逐 trial {metrics['per_trial_pass']}）")
     lines += [f"| {name} | {rate:.0%} |" for name, rate in summary["check_pass_rate"].items()]
     lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | rubric | 综合分 | 判定 |",
               "|---|---|---|---|---|---|---|"]
@@ -194,6 +201,8 @@ async def main() -> None:
     parser.add_argument("--cases", default="", help="用例文件，默认 evaluation/product_cases.json")
     parser.add_argument("--ids", default="", help="只跑指定用例，逗号分隔")
     parser.add_argument("--spec", default="", help="声明式评测配置（YAML），可用 --cases/--split 覆盖")
+    parser.add_argument("--trials", type=int, default=1, help="同一批用例重复采样次数，>1 时报告 pass@k / pass^k")
+    parser.add_argument("--min-pass-rate", type=float, default=None, help="确定性检查全过比例低于该值时退出码 1")
     args = parser.parse_args()
     random.seed(args.seed)
 
@@ -227,32 +236,39 @@ async def main() -> None:
             case["pool"] = "sandbox" if cities <= sandbox_cities else "live"
 
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
-    Path(db_path).unlink(missing_ok=True)
-
-    store = Store(db_path)
-    workflow = AgentWorkflow(store)
+    trials = max(1, int(args.trials))
     client = AsyncOpenAI(base_url=os.environ.get("OPENAI_BASE_URL"), api_key=os.environ.get("OPENAI_API_KEY"),
                          timeout=120)
     judge_model = args.judge_model or os.environ.get("JUDGE_MODEL_ID") or "deepseek-chat"
 
-    records = []
-    for index, case in enumerate(cases, 1):
-        record = await run_case(workflow, store, case)
-        if not args.skip_judge and record.get("result") and case.get("expect") != "needs_clarification":
-            record["judge"] = await judge_itinerary(client, judge_model, case, record["result"])
-            if args.judge2_model:
-                second = await judge_itinerary(client, args.judge2_model, case, record["result"])
-                first_rubric = record["judge"].get("rubric")
-                second_rubric = second.get("rubric")
-                record["judge"]["second_rubric"] = second_rubric
-                record["judge"]["agreement"] = round(abs(first_rubric - second_rubric), 3) \
-                    if first_rubric is not None and second_rubric is not None else None
-            record["score"] = combined_score(record["checks"], (record.get("judge") or {}).get("rubric"),
-                                             bool((record.get("judge") or {}).get("fabrication")))
-        records.append(record)
-        print(f"[{index}/{len(cases)}] {case['id']} status={record.get('status')} "
-              f"elapsed={record['elapsed']}s failed={[k for k, v in record['checks'].items() if not v]} "
-              f"rubric={(record.get('judge') or {}).get('rubric')} score={record.get('score')}")
+    records: list[dict[str, Any]] = []
+    per_case_trials: dict[str, list[bool]] = {case["id"]: [] for case in cases}
+    for trial in range(trials):
+        trial_db = db_path if trial == 0 else db_path.replace(".db", f"-t{trial}.db")
+        Path(trial_db).unlink(missing_ok=True)
+        if trial:
+            random.seed(args.seed + trial)
+        store = Store(trial_db)
+        workflow = AgentWorkflow(store)
+        for index, case in enumerate(cases, 1):
+            record = await run_case(workflow, store, case)
+            per_case_trials[case["id"]].append(bool(record["checks"]) and all(record["checks"].values()))
+            if trial == 0:
+                if not args.skip_judge and record.get("result") and case.get("expect") != "needs_clarification":
+                    record["judge"] = await judge_itinerary(client, judge_model, case, record["result"])
+                    if args.judge2_model:
+                        second = await judge_itinerary(client, args.judge2_model, case, record["result"])
+                        first_rubric = record["judge"].get("rubric")
+                        second_rubric = second.get("rubric")
+                        record["judge"]["second_rubric"] = second_rubric
+                        record["judge"]["agreement"] = round(abs(first_rubric - second_rubric), 3) \
+                            if first_rubric is not None and second_rubric is not None else None
+                    record["score"] = combined_score(record["checks"], (record.get("judge") or {}).get("rubric"),
+                                                     bool((record.get("judge") or {}).get("fabrication")))
+                records.append(record)
+            print(f"[trial {trial + 1}/{trials}] [{index}/{len(cases)}] {case['id']} status={record.get('status')} "
+                  f"elapsed={record['elapsed']}s failed={[k for k, v in record['checks'].items() if not v]} "
+                  f"rubric={(record.get('judge') or {}).get('rubric')} score={record.get('score')}")
 
     summary = summarize(records)
     summary["seed"] = args.seed
@@ -265,6 +281,9 @@ async def main() -> None:
                         if record.get("pool") == pool and all(record["checks"].values()))
                     / max(1, summary["pools"][pool]), 3)
         for pool in ("sandbox", "live")}
+    if trials > 1:
+        summary["trials"] = trials
+        summary["pass_metrics"] = pass_metrics(list(per_case_trials.values()))
     summary["sandbox_data"] = {
         "cities": sorted(sandbox_cities),
         "tables": {name: len(sandbox_data._table(name)) for name in sandbox_data._TABLES},
@@ -296,6 +315,7 @@ async def main() -> None:
             "rubric_mean": summary["rubric_mean"],
             "deliverable": summary["deliverable"],
             "latency_mean": summary["latency_mean"],
+            "pass_metrics": summary.get("pass_metrics"),
         },
         labels={
             "comparable": False,
@@ -311,6 +331,22 @@ async def main() -> None:
           f"dataset={report.dataset_version} checks={len(report.checks)}")
     print(json.dumps(summary, ensure_ascii=False))
     print(f"报告：{target/'report.md'}")
+    if summary.get("pass_metrics"):
+        metrics = summary["pass_metrics"]
+        print(f"多次采样 {metrics['trials']} trials：pass@1 {metrics['pass_at_1']} / "
+              f"pass@{metrics['trials']} {metrics['pass_at_k']} / pass^{metrics['trials']} {metrics['pass_hat_k']}"
+              f"（逐 trial {metrics['per_trial_pass']}）")
+    min_pass_rate = args.min_pass_rate
+    if min_pass_rate is None and spec:
+        min_pass_rate = (spec.get("thresholds") or {}).get("pass_rate_min")
+    if min_pass_rate is not None:
+        if summary.get("pass_metrics"):
+            rate = summary["pass_metrics"]["pass_hat_k"]
+        else:
+            rate = summary["all_checks_passed"] / max(1, summary["cases"])
+        if rate < float(min_pass_rate):
+            print(f"确定性检查全过 {rate:.3f} 低于阈值 {min_pass_rate}")
+            raise SystemExit(1)
     min_score = args.min_score
     if min_score is None and spec:
         min_score = (spec.get("thresholds") or {}).get("score_min")

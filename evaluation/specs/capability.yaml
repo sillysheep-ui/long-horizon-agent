@@ -1,0 +1,43 @@
+# 能力评测：衡量“还能不能做到”，允许未通过，不用来卡合并。
+# 结果用于画分数曲线与观察饱和；holdout 40 条只在这里用。
+name: travel-plan-capability
+version: 1
+suite: capability
+
+dataset:
+  path: evaluation/product_cases.json
+  split: holdout
+  cases: 40
+
+judge:
+  model: deepseek-v4-flash
+  status: implemented
+
+graders:
+  - id: hard_constraints
+    type: constraint_set
+    status: implemented
+    path: product/constraints/sets/v1.json
+    severity: blocking
+    weight: 0.6
+    threshold: 1.0
+    assertions:
+      - {id: complete, text: "状态与用例预期一致"}
+      - {id: day_count, text: "天数与需求一致"}
+      - {id: density, text: "每天活动数符合节奏与可用时长"}
+      - {id: time_order, text: "开始时间严格递增"}
+      - {id: no_overlap, text: "活动与用餐时间不重叠"}
+      - {id: evidence_ok, text: "每个活动绑定 ok 证据"}
+      - {id: no_fabricated_cost, text: "价格来自证据"}
+
+  - id: plan_quality
+    type: llm_rubric
+    status: implemented
+    rubric: evaluation/rubrics/plan_quality.md
+    severity: scored
+    weight: 0.4
+    assertions:
+      - {id: b2, weight: 3, veto: true, text: "没有编造证据外的价格/时间/评分"}
+
+thresholds:
+  score_min: null

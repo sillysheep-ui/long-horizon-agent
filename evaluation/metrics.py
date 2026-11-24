@@ -45,6 +45,30 @@ def bootstrap_ci(values: list[float], n: int = 2000, seed: int = 7) -> tuple[flo
     return (round(low, 3), round(high, 3))
 
 
+def pass_metrics(per_case_trials: list[list[bool]]) -> dict[str, Any]:
+    """多次采样的 pass@k / pass^k：per_case_trials[i] 是第 i 题各 trial 是否全过。"""
+    rows = [row for row in per_case_trials if row]
+    if not rows:
+        return {}
+    trials = min(len(row) for row in rows)
+    if trials < 1:
+        return {}
+    first = [1.0 if row[0] else 0.0 for row in rows]
+    at_k = [1.0 if any(row[:trials]) else 0.0 for row in rows]
+    hat_k = [1.0 if all(row[:trials]) else 0.0 for row in rows]
+    per_trial = []
+    for index in range(trials):
+        values = [row[index] for row in rows]
+        per_trial.append(round(sum(values) / len(values), 3))
+    return {
+        "trials": trials,
+        "pass_at_1": round(sum(first) / len(rows), 3),
+        "pass_at_k": round(sum(at_k) / len(rows), 3),
+        "pass_hat_k": round(sum(hat_k) / len(rows), 3),
+        "per_trial_pass": per_trial,
+    }
+
+
 def summarize(per_case: list[list[CheckRecord]], scores: list[float] | None = None) -> dict[str, Any]:
     flat = [item for group in per_case for item in group]
     payload: dict[str, Any] = {"checks_micro": micro(flat), "checks_macro": macro(per_case)}

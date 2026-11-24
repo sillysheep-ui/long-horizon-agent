@@ -5,7 +5,7 @@
 - `implemented`：runner 真的会执行；
 - `declared`：只是契约，runner 尚未执行。
 
-## 四份配置
+## 六份配置
 
 | 文件 | 层 | 已实现 | 仅声明 |
 |---|---|---|---|
@@ -13,6 +13,24 @@
 | `sandbox.yaml` | 沙盒 36 | 硬约束（不跑裁判） | 裁判开关 |
 | `revision.yaml` | 多轮 30 | 6 项修改检查 | — |
 | `intent.yaml` | 意图 40 | 五分类准确率 | — |
+| `regression.yaml` | dev 12 | 硬约束、`pass_rate_min: 1.0`、每次 push | — |
+| `capability.yaml` | holdout 40 | 硬约束 + rubric，只记录、不卡合并 | — |
+
+## 回归 vs 能力
+
+- 回归（`regression.yaml`）：只跑 dev 12，只卡确定性检查，要求 100% 通过；失败即退出码 1，CI 用它拦合并。
+- 能力（`capability.yaml`）：holdout 40，带裁判，允许不满分；用于画能力曲线、观察饱和，不拦合并。
+- 多次采样：`product_eval --trials N`。每个 trial 用独立 DB、独立 seed；报告 `pass@1`（单次平均）、
+  `pass@N`（至少一次通过）、`pass^N`（N 次全过）与逐 trial 通过率，用来区分真回归和模型抖动。
+
+```bash
+# 回归：CI 跑法（2 次采样，必须全过）
+python3 -m evaluation.product_eval --spec evaluation/specs/regression.yaml \
+  --trials 2 --skip-judge --min-pass-rate 1.0
+
+# 能力：手动/每周跑，只看曲线
+python3 -m evaluation.product_eval --spec evaluation/specs/capability.yaml --seed 7
+```
 
 ## 字段，以及谁在读
 
