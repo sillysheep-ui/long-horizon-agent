@@ -10,6 +10,7 @@ from typing import Any
 
 GRADER_TYPES = {"constraint_set", "llm_rubric", "state_check", "tool_calls", "transcript"}
 SEVERITIES = {"blocking", "scored", "info"}
+GRADER_STATUS = {"implemented", "declared"}
 METRIC_TYPES = {"latency", "tokens", "transcript"}
 SPLITS = {"all", "dev", "test", "holdout"}
 
@@ -116,7 +117,11 @@ def validate(payload: dict[str, Any], base: Path | None = None) -> list[str]:
 
     judge = payload.get("judge")
     if judge is not None:
-        if not isinstance(judge, dict) or not judge.get("model"):
+        if not isinstance(judge, dict):
+            errors.append("judge 必须是对象")
+        elif judge.get("enabled") is False:
+            pass
+        elif not judge.get("model"):
             errors.append("judge.model 必须存在")
         else:
             repeats = judge.get("repeats", 1)
@@ -151,6 +156,9 @@ def validate(payload: dict[str, Any], base: Path | None = None) -> list[str]:
         severity = grader.get("severity")
         if severity is not None and severity not in SEVERITIES:
             errors.append(f"{where}.severity 非法：{severity}")
+        status = grader.get("status")
+        if status not in GRADER_STATUS:
+            errors.append(f"{where}.status 必须是 implemented 或 declared")
         _check_assertions(grader, where, errors)
         if kind == "constraint_set":
             path = root / str(grader.get("path") or "")
@@ -167,8 +175,10 @@ def validate(payload: dict[str, Any], base: Path | None = None) -> list[str]:
                 errors.append(f"{where}.assertions 不能为空")
         if kind == "transcript":
             turns = grader.get("max_turns")
-            if not isinstance(turns, int) or turns <= 0:
+            if turns is not None and (not isinstance(turns, int) or turns <= 0):
                 errors.append(f"{where}.max_turns 必须是正整数")
+            if grader.get("status") == "implemented" and not isinstance(turns, int):
+                errors.append(f"{where}.max_turns 在 implemented 时必填")
         if kind == "tool_calls":
             for item in grader.get("required") or []:
                 if not (item or {}).get("tool"):
@@ -206,6 +216,7 @@ def describe(payload: dict[str, Any]) -> dict[str, Any]:
                 "type": grader.get("type"),
                 "assertions": len(grader.get("assertions") or []),
                 "severity": grader.get("severity"),
+                "status": grader.get("status"),
             }
             for grader in graders
         ],

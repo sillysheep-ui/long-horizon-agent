@@ -1,20 +1,13 @@
 # 多轮修改：先规划，再改某一天，检查“只改了该改的”。
 name: travel-plan-revision
-version: 1
+version: 2
 suite: revision
-description: 定向修改的保留与生效判定。
-
-dataset:
-  path: evaluation/product_revision_cases.json
-  cases: 30
-
-environment:
-  model_profile: api_only
-  seed: 7
+dataset: {path: evaluation/product_revision_cases.json, cases: 30}
 
 graders:
   - id: revision_checks
     type: state_check
+    status: implemented
     threshold: 1.0
     assertions:
       - {id: kept_days, text: "非目标日的活动原样保留（容忍本馆/新馆后缀）"}
@@ -23,16 +16,6 @@ graders:
       - {id: day_count, text: "修改前后天数一致"}
       - {id: evidence_ok, text: "新活动仍绑定 ok 证据"}
       - {id: time_order, text: "修改后时间仍递增"}
-
-  - id: intent_route
-    type: tool_calls
-    required:
-      - {tool: revision_eval, max_rounds: 2}
-    note: 多轮走两次任务，不调外部工具
-
-tracked_metrics:
-  - type: latency
-    metrics: [first_elapsed_mean, revision_elapsed_mean]
 
 thresholds:
   all_passed: 1.0

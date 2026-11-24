@@ -50,3 +50,12 @@ def test_duplicate_grader_id_is_reported(tmp_path):
         "  - {id: a, type: transcript, max_turns: 5}\n", encoding="utf-8")
     errors = validate(load_spec(path))
     assert any("id 重复" in item for item in errors)
+
+
+def test_grader_requires_status(tmp_path):
+    path = tmp_path / "nostatus.yaml"
+    path.write_text(
+        "name: x\nversion: 1\ndataset: {path: evaluation/product_cases.json}\n"
+        "graders: [{id: a, type: transcript, max_turns: 5}]\n", encoding="utf-8")
+    errors = validate(load_spec(path))
+    assert any("status" in item for item in errors)

@@ -1,28 +1,14 @@
-# 沙盒离线评测：固定 10 城数据，可复现，不依赖外网。
+# 沙盒离线评测：固定 10 城数据，只跑硬约束。
 name: travel-plan-sandbox
-version: 1
+version: 2
 suite: sandbox
-description: 用 ChinaTravel 沙盒替换 POI 数据源，只测单次生成的结构与事实约束。
-
-dataset:
-  path: evaluation/product_cases.json
-  split: test
-  filters: {pool: sandbox}     # 用例城市 ⊆ 沙盒 10 城
-  cases: 36
-
-environment:
-  model_profile: api_only
-  poi_provider: sandbox
-  sandbox_dir: data/sandbox
-  seed: 7
-
-judge:
-  enabled: false               # 先跑硬约束；需要 rubric 时再打开
-  model: deepseek-v4-flash
+dataset: {path: evaluation/product_cases.json, split: test, cases: 36}
+judge: {enabled: false, status: declared}
 
 graders:
   - id: hard_constraints
     type: constraint_set
+    status: implemented
     path: product/constraints/sets/v1.json
     severity: blocking
     threshold: 1.0
@@ -32,8 +18,5 @@ graders:
       - {id: named_places_covered, text: "点名地点全部出现"}
       - {id: evidence_ok, text: "每个活动绑定沙盒证据"}
 
-tracked_metrics:
-  - {type: latency, metrics: [latency_mean, stage_latency_mean]}
-
 thresholds:
-  score_min: null              # 沙盒没有 rubric 分，只看硬约束
+  score_min: null
