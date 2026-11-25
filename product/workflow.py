@@ -63,6 +63,7 @@ from product.revision import (
     split_by_targets,
 )
 from product.revparse import ATTRIBUTE_LABELS, parse_revision
+from product.schemas import parse_answer, parse_intake, parse_plan
 from product.store import Store
 from product.tool_adapters import ResearchTools
 from product.tool_runtime import ResearchExecutor
@@ -79,6 +80,12 @@ from product.transit import add_transfers
 def _rule_violations(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{"day": issue["day"], "kind": issue["code"], "detail": issue["detail"]}
             for issue in issues]
+
+
+def _schema_stage(stages: list[dict[str, Any]], name: str, issues: list[str]) -> None:
+    """结构问题只记录不阻断：数据已经归一成安全形状，语义校验在后面照常跑。"""
+    if issues:
+        stages.append(_span("schema:%s" % name, "stage", "warn", 0.0, {"issues": issues[:6]}))
 
 
 class AgentWorkflow:
@@ -227,7 +234,8 @@ class AgentWorkflow:
                 self._event(job, "intake", "参考了已记住的长期偏好")
             intake = await self.model.complete("需求 Agent", intake_system, intake_query, max_tokens=500)
             calls.append(call_info(intake))
-            constraints = parse_json(intake["content"])
+            constraints, schema_issues = parse_intake(parse_json(intake["content"]))
+            _schema_stage(stages, "intake", schema_issues)
             hints = latin_hints(intake_query)
             if not _as_list(constraints.get("destinations"), 4) and hints.get("destinations"):
                 constraints["destinations"] = hints["destinations"]
@@ -328,7 +336,8 @@ class AgentWorkflow:
                 {"days": targets, "instruction": revision_text} if targets else None),
             max_tokens=1000)
         calls.append(call_info(plan_response))
-        plan = parse_json(plan_response["content"])
+        plan, schema_issues = parse_plan(parse_json(plan_response["content"]))
+        _schema_stage(stages, "planning", schema_issues)
         if targets and prior.get("plan"):
             previous_plan = prior["plan"]
             if all(queries_for_day(plan, day) == queries_for_day(previous_plan, day) for day in targets):
@@ -339,7 +348,8 @@ class AgentWorkflow:
                                           "note": "上一次的查询词与原方案相同，请换用不同的地点关键词以体现修改意见"}),
                     max_tokens=1000)
                 calls.append(call_info(retry_response))
-                retry_plan = parse_json(retry_response["content"])
+                retry_plan, retry_issues = parse_plan(parse_json(retry_response["content"]))
+                _schema_stage(stages, "planning_retry", retry_issues)
                 if not all(queries_for_day(retry_plan, day) == queries_for_day(previous_plan, day)
                            for day in targets):
                     plan = retry_plan
@@ -465,7 +475,8 @@ class AgentWorkflow:
             answer_response = await self.model.complete("回答 Agent", answer_system,
                 json.dumps(answer_payload, ensure_ascii=False), max_tokens=3000)
             calls.append(call_info(answer_response))
-            answer = parse_json(answer_response["content"])
+            answer, schema_issues = parse_answer(parse_json(answer_response["content"]))
+            _schema_stage(stages, "answer", schema_issues)
         except (ValueError, RuntimeError):
             answer_failed = True
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
@@ -494,12 +505,13 @@ class AgentWorkflow:
                                         json.dumps(fix_payload, ensure_ascii=False), max_tokens=3000),
                     timeout=90)
                 calls.append(call_info(fix_response))
-                candidate = parse_json(fix_response["content"])
+                candidate, candidate_issues = parse_answer(parse_json(fix_response["content"]))
+                _schema_stage(stages, "answer_repair", candidate_issues)
                 rules_after = validate_plan(candidate.get("days"), good, constraints)
                 after = check_day_plan(candidate.get("days"), constraints)["violations"] \
                     + _rule_violations(rules_after)
                 plan_repair.update({"attempted": True, "after": len(after)})
-                if len(after) <= len(violations):
+                if not candidate_issues and len(after) <= len(violations):
                     answer = candidate
                     violations = after
                     rule_issues = rules_after
