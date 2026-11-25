@@ -298,7 +298,7 @@ flowchart TD
 `product/` 与 `web/` 是同一套 Agent 的网页入口：对话式多轮、按天行程、来源与核实级别、覆盖度提示。
 
 - 启动方式、会话接口与模型路由：`product/README.md`
-- 行程质量评测（152 条固定场景 + 结构检查 + 裁判打分）：`docs/PRODUCT_EVAL.md`
+- 行程质量评测（172 条固定场景：test 120 / holdout 40 / dev 12；结构检查 + 裁判打分）：`docs/PRODUCT_EVAL.md`
 - 完整评测规划（数据集、指标、可信度、节奏与门禁）：`docs/EVAL_PLAN.md`
 - Docker 部署：`docs/DEPLOY.md`（`docker compose up -d --build`）
 
