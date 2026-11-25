@@ -13,6 +13,7 @@ long-horizon-agent
 ├─ product/          产品线：网页 + HTTP API（能跑）
 │   ├─ api.py        FastAPI 入口
 │   ├─ workflow.py   需求 → 规划 → 查询 → 核验 → 回答 → 收尾
+│   │                 排期默认由模型决定（PLAN_MODE=model），代码只做规则校验；legacy 为代码排期回退
 │   ├─ intent.py     新行程 / 改行程 / 提问 / 闲聊
 │   ├─ store.py      SQLite：会话、行程版本、任务、偏好
 │   ├─ memory.py     会话摘要、长期偏好

@@ -407,7 +407,7 @@ class AgentWorkflow:
                             {"per_day_ok": [item["covered"] for item in verification["days"]],
                              "uncovered_days": verification["uncovered_days"], "risk": verification["risk"]}))
 
-        plan_mode = os.getenv("PLAN_MODE", "legacy").strip().lower()
+        plan_mode = os.getenv("PLAN_MODE", "model").strip().lower()
         skeleton_info = None
         if plan_mode == "global":
             skeleton_started = time.monotonic()
