@@ -553,7 +553,9 @@ class AgentWorkflow:
         plan_repair = {"attempted": False, "before": len(violations), "after": len(violations)}
         semantic = [issue for issue in critique["issues"]]
         critique_score = critique.get("score")
-        should_repair = bool(hard) or (
+        advisory = {"transit_short"}
+        repairable = [item for item in hard if item.get("kind") not in advisory]
+        should_repair = bool(repairable) or (
             bool(semantic) and (critique_score is None or critique_score < 6.5))
         if should_repair and answer_payload:
             self._event(job, "answer", "模型排期有 %d 处硬伤，让它自己重排一次" % len(violations))
@@ -579,8 +581,10 @@ class AgentWorkflow:
                     rules_after = validate_plan(cand_days, good, constraints)
                     after = check_day_plan(cand_days, constraints)["violations"] \
                         + _rule_violations(rules_after)
-                plan_repair.update({"attempted": True, "after": len(after)})
-                if cand_days and not after:
+                after_repairable = [item for item in after if item.get("kind") not in advisory]
+                plan_repair.update({"attempted": True, "after": len(after),
+                                    "after_repairable": len(after_repairable)})
+                if cand_days and not after_repairable:
                     answer = candidate
                     cleaned_days = cand_days
                     raw_count, grounded_count = cand_raw, cand_grounded

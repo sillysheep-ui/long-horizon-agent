@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from product.global_plan import coord_of, haversine_km, open_window
+from product.names import clean_place_name
 
 DAY_START_MINUTES = 9 * 60
 DAY_END_MINUTES = 21 * 60
@@ -52,7 +53,7 @@ def _place_index(evidence: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     places: dict[str, dict[str, Any]] = {}
     for entry in evidence:
         for item in entry.get("items", []):
-            name = str(item.get("name") or "").strip()
+            name = clean_place_name(str(item.get("name") or ""))
             if name:
                 places.setdefault(name, {**item, "_evidence_id": entry.get("id")})
     return places
@@ -64,7 +65,7 @@ def _timeline(day: dict[str, Any], places: dict[str, dict[str, Any]]) -> list[di
         for entry in day.get(key, []) or []:
             if not isinstance(entry, dict):
                 continue
-            name = str(entry.get("title") or "").strip()
+            name = clean_place_name(str(entry.get("title") or ""))
             place = places.get(name) or {}
             items.append({**place, **entry, "_kind": kind})
     return items
@@ -90,7 +91,7 @@ def validate_plan(days: Any, evidence: list[dict[str, Any]],
                                   "一天排了 %d 个活动，超过 %d 个" % (len(activities), MAX_ACTIVITIES)))
         entries = _timeline(day, places)
         for item in entries:
-            if str(item.get("title") or "") not in places:
+            if clean_place_name(str(item.get("title") or "")) not in places:
                 issues.append(_detail("unknown_place", number, str(item.get("title") or ""),
                                       "不在本次核实到的地点里"))
         timed: list[tuple[int, int, dict[str, Any]]] = []

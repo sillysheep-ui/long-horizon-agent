@@ -86,3 +86,10 @@ def test_meal_closed_detected():
                     [{"title": "楼外楼", "start": "21:00"}])
     codes = [issue["code"] for issue in validate_plan(days, EVIDENCE)]
     assert "closed" in codes
+
+
+def test_place_name_suffix_does_not_trigger_unknown_place():
+    evidence = [{"id": "d1-p1", "items": [{"name": "文殊院(地铁站)", "coordinates": "104.07,30.67"}]}]
+    days = [{"day": 1, "city": "成都", "activities": [{"title": "文殊院", "start": "10:00",
+                                                       "duration": "1.5 小时"}]}]
+    assert "unknown_place" not in {issue["code"] for issue in validate_plan(days, evidence, {})}
