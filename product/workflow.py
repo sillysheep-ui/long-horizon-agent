@@ -44,6 +44,7 @@ from product.postprocess import (
     detect_day_windows,
     latin_hints,
     match_activity,
+    resolve_meal_overlaps,
     update_constraints,
 )
 from product.profile import profile_block
@@ -540,6 +541,7 @@ class AgentWorkflow:
         if not any(d["activities"] for d in cleaned_days):
             answer_failed = True
             cleaned_days = fallback_days()
+        meal_fixes = resolve_meal_overlaps(cleaned_days)
 
         rule_issues = validate_plan(cleaned_days, good, constraints) if not answer_failed else []
         critique = {"score": None, "verdict": "skipped", "issues": [], "source": "skipped"}
@@ -563,12 +565,13 @@ class AgentWorkflow:
                     violations, ensure_ascii=False)
                 fix_response = await asyncio.wait_for(
                     self.model.complete("回答 Agent", fix_system,
-                                        json.dumps(fix_payload, ensure_ascii=False), max_tokens=3000),
+                                        json.dumps(fix_payload, ensure_ascii=False), max_tokens=1800),
                     timeout=90)
                 calls.append(call_info(fix_response))
                 candidate, candidate_issues = parse_answer(parse_json(fix_response["content"]))
                 _schema_stage(stages, "answer_repair", candidate_issues)
                 cand_days, cand_raw, cand_grounded = clean_days(candidate)
+                cand_meal_fixes = resolve_meal_overlaps(cand_days)
                 if candidate_issues or not any(d["activities"] for d in cand_days):
                     rules_after = []
                     after = violations
@@ -577,12 +580,13 @@ class AgentWorkflow:
                     after = check_day_plan(cand_days, constraints)["violations"] \
                         + _rule_violations(rules_after)
                 plan_repair.update({"attempted": True, "after": len(after)})
-                if cand_days and len(after) <= len(violations):
+                if cand_days and not after:
                     answer = candidate
                     cleaned_days = cand_days
                     raw_count, grounded_count = cand_raw, cand_grounded
                     violations = after
                     rule_issues = rules_after
+                    meal_fixes = cand_meal_fixes
                     plan_repair["applied"] = True
             except (ValueError, RuntimeError, TimeoutError):
                 plan_repair.update({"attempted": True, "error": True})
@@ -678,4 +682,5 @@ class AgentWorkflow:
                       cross_checks=cross, revision_applied=revision_applied,
                       revision_check=revision_check, skeleton=skeleton_info,
                       plan_rules={"mode": plan_mode, "issues": len(rule_issues),
-                                  "codes": sorted({issue["code"] for issue in rule_issues})})
+                                  "codes": sorted({issue["code"] for issue in rule_issues}),
+                                  "meal_fixes": meal_fixes})

@@ -72,6 +72,70 @@ def _hhmm(minutes: int) -> str:
     return "%02d:%02d" % (minutes // 60, minutes % 60)
 
 
+MEAL_SLOT_MINUTES = 60
+DAY_START_MINUTES = 9 * 60
+DAY_END_MINUTES = 21 * 60
+
+
+def _overlaps(start: int, end: int, blocks: list[tuple[int, int]]) -> bool:
+    return any(start < block_end and block_start < end for block_start, block_end in blocks)
+
+
+def _next_free_slot(blocks: list[tuple[int, int]], preferred: int, length: int) -> int | None:
+    """从偏好时刻往后找第一个放得下的空档，限定在 09:00–21:00。"""
+    candidates = {DAY_START_MINUTES}
+    for block_start, block_end in blocks:
+        candidates.add(block_end)
+        candidates.add(block_start - length)
+    for slot in sorted(candidates):
+        if slot < preferred or slot < DAY_START_MINUTES or slot + length > DAY_END_MINUTES:
+            continue
+        if not _overlaps(slot, slot + length, blocks):
+            return slot
+    return None
+
+
+def resolve_meal_overlaps(days: list[dict[str, Any]]) -> int:
+    """把和活动撞时间的餐挪到当天空档，挪不开就删掉这一餐。
+
+    这是确定性兜底：只动餐、不动活动，避免为“餐压活动”再调一次模型重排。
+    """
+    changed = 0
+    for day in days:
+        if not isinstance(day, dict):
+            continue
+        meals = day.get("meals")
+        if not isinstance(meals, list) or not meals:
+            continue
+        blocks = []
+        for activity in day.get("activities") or []:
+            if not isinstance(activity, dict):
+                continue
+            start = _minutes_of(str(activity.get("start") or ""))
+            blocks.append((start, start + _duration_minutes(activity.get("duration"))))
+        kept = []
+        for meal in meals:
+            if not isinstance(meal, dict):
+                continue
+            start = _minutes_of(str(meal.get("start") or ""))
+            length = _duration_minutes(meal.get("duration")) or MEAL_SLOT_MINUTES
+            if not _overlaps(start, start + length, blocks):
+                kept.append(meal)
+                continue
+            slot = _next_free_slot(blocks, start, length)
+            if slot is None:
+                changed += 1
+                continue
+            blocks.append((slot, slot + length))
+            kept.append({**meal, "start": _hhmm(slot)})
+            changed += 1
+        if kept:
+            day["meals"] = kept
+        else:
+            day.pop("meals", None)
+    return changed
+
+
 def _schedule_day(activities: list[dict[str, Any]], hours: float,
                   keep_order: bool = False, preserve_times: bool = False) -> list[dict[str, Any]]:
     """插入交通时间并裁掉超时活动；keep_order=True 时保留模型给的顺序。"""
