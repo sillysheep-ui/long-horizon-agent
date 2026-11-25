@@ -480,11 +480,72 @@ class AgentWorkflow:
         except (ValueError, RuntimeError):
             answer_failed = True
             self._event(job, "answer", "回答格式不符合协议，正在使用来源数据构造保守方案")
-        rule_issues = validate_plan(answer.get("days"), good, constraints) if not answer_failed else []
+        valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
+        valid_coords = {(e["id"], item["name"]): item.get("coordinates")
+                        for e in good for item in e.get("items", [])
+                        if item.get("name") and item.get("coordinates")}
+        evidence_by_id = {e["id"]: e for e in evidence}
+
+        def clean_days(obj: dict[str, Any]) -> tuple[list[dict[str, Any]], int, int]:
+            """把模型原始天数清洗成最终结构；清洗后的结果才是要校验、要交付的行程。"""
+            cleaned: list[dict[str, Any]] = []
+            raw_total = 0
+            grounded_total = 0
+            seen_titles: set[str] = set()
+            for day in obj.get("days", []) if isinstance(obj.get("days"), list) else []:
+                raw_activities = day.get("activities", []) if isinstance(day, dict) else []
+                raw_total += sum(1 for activity in raw_activities if isinstance(activity, dict))
+                matched_activities = []
+                for activity in raw_activities:
+                    if not isinstance(activity, dict):
+                        continue
+                    matched = match_activity(activity, valid_names)
+                    if not matched or matched[1] in seen_titles:
+                        continue
+                    seen_titles.add(matched[1])
+                    grounded_total += 1
+                    matched_activities.append({**activity, "evidence_id": matched[0],
+                                               "title": matched[1],
+                                               "coordinates": valid_coords.get((matched[0], matched[1]))})
+                hours_for_day = day_hours(windows, day.get("day"))
+                entry = {"day": day.get("day"), "city": day.get("city"),
+                         "activities": _clean_activities(
+                             matched_activities,
+                             limit=count_bounds(hours_for_day, pace,
+                                                constraints.get("requested_count"))[1],
+                             evidence=evidence_by_id)}
+                meals = clean_meals(day.get("meals"), evidence_by_id)
+                if meals:
+                    entry["meals"] = meals
+                lodging = clean_lodging(day.get("lodging_area"))
+                if lodging:
+                    entry["lodging_area"] = lodging
+                cleaned.append(entry)
+            return cleaned, raw_total, grounded_total
+
+        def fallback_days() -> list[dict[str, Any]]:
+            result = []
+            for day in days:
+                day_evidence = [e for e in good
+                                if e["id"].startswith("d%d-" % day["day"]) and e.get("items")]
+                activities = _clean_activities([{
+                    "title": e["items"][0]["name"], "evidence_id": e["id"],
+                    "coordinates": e["items"][0].get("coordinates"),
+                    "description": "可作为当天的候选地点；请通过来源页面核对地址、开放时间和交通。",
+                    "transport": "交通未核实", "cost": "未核实"} for e in day_evidence])
+                result.append({"day": day["day"], "city": day["city"], "activities": activities})
+            return result
+
+        cleaned_days, raw_count, grounded_count = clean_days(answer)
+        if not any(d["activities"] for d in cleaned_days):
+            answer_failed = True
+            cleaned_days = fallback_days()
+
+        rule_issues = validate_plan(cleaned_days, good, constraints) if not answer_failed else []
         critique = {"score": None, "verdict": "skipped", "issues": [], "source": "skipped"}
         if not answer_failed:
-            critique = await review_itinerary(self.model, answer.get("days"), constraints, calls)
-        hard = check_day_plan(answer.get("days"), constraints)["violations"] + _rule_violations(rule_issues)
+            critique = await review_itinerary(self.model, cleaned_days, constraints, calls)
+        hard = check_day_plan(cleaned_days, constraints)["violations"] + _rule_violations(rule_issues)
         violations = hard + [{"day": item["day"], "kind": item["kind"], "detail": item["detail"]}
                              for item in critique["issues"]]
         plan_repair = {"attempted": False, "before": len(violations), "after": len(violations)}
@@ -507,65 +568,25 @@ class AgentWorkflow:
                 calls.append(call_info(fix_response))
                 candidate, candidate_issues = parse_answer(parse_json(fix_response["content"]))
                 _schema_stage(stages, "answer_repair", candidate_issues)
-                rules_after = validate_plan(candidate.get("days"), good, constraints)
-                after = check_day_plan(candidate.get("days"), constraints)["violations"] \
-                    + _rule_violations(rules_after)
+                cand_days, cand_raw, cand_grounded = clean_days(candidate)
+                if candidate_issues or not any(d["activities"] for d in cand_days):
+                    rules_after = []
+                    after = violations
+                else:
+                    rules_after = validate_plan(cand_days, good, constraints)
+                    after = check_day_plan(cand_days, constraints)["violations"] \
+                        + _rule_violations(rules_after)
                 plan_repair.update({"attempted": True, "after": len(after)})
-                if not candidate_issues and len(after) <= len(violations):
+                if cand_days and len(after) <= len(violations):
                     answer = candidate
+                    cleaned_days = cand_days
+                    raw_count, grounded_count = cand_raw, cand_grounded
                     violations = after
                     rule_issues = rules_after
                     plan_repair["applied"] = True
             except (ValueError, RuntimeError, TimeoutError):
                 plan_repair.update({"attempted": True, "error": True})
-        plan_ok = not check_day_plan(answer.get("days"), constraints)["violations"]
-        valid_names = {e["id"]: {item["name"] for item in e.get("items", [])} for e in good}
-        valid_coords = {(e["id"], item["name"]): item.get("coordinates")
-                        for e in good for item in e.get("items", [])
-                        if item.get("name") and item.get("coordinates")}
-        cleaned_days = []
-        evidence_by_id = {e["id"]: e for e in evidence}
-        seen_titles = set()
-        raw_count = 0
-        grounded_count = 0
-        for day in answer.get("days", []) if isinstance(answer.get("days"), list) else []:
-            raw_activities = day.get("activities", []) if isinstance(day, dict) else []
-            raw_count += sum(1 for activity in raw_activities if isinstance(activity, dict))
-            matched_activities = []
-            for activity in raw_activities:
-                if not isinstance(activity, dict):
-                    continue
-                matched = match_activity(activity, valid_names)
-                if not matched or matched[1] in seen_titles:
-                    continue
-                seen_titles.add(matched[1])
-                grounded_count += 1
-                matched_activities.append({**activity, "evidence_id": matched[0], "title": matched[1],
-                                           "coordinates": valid_coords.get((matched[0], matched[1]))})
-            hours_for_day = day_hours(windows, day.get("day"))
-            entry = {"day": day.get("day"), "city": day.get("city"),
-                     "activities": _clean_activities(
-                         matched_activities,
-                         limit=count_bounds(hours_for_day, pace, constraints.get("requested_count"))[1],
-                         evidence=evidence_by_id)}
-            meals = clean_meals(day.get("meals"), evidence_by_id)
-            if meals:
-                entry["meals"] = meals
-            lodging = clean_lodging(day.get("lodging_area"))
-            if lodging:
-                entry["lodging_area"] = lodging
-            cleaned_days.append(entry)
-        if not any(d["activities"] for d in cleaned_days):
-            answer_failed = True
-            cleaned_days = []
-            for day in days:
-                day_evidence = [e for e in good if e["id"].startswith("d%d-" % day["day"]) and e.get("items")]
-                activities = _clean_activities([{
-                    "title": e["items"][0]["name"], "evidence_id": e["id"],
-                    "coordinates": e["items"][0].get("coordinates"),
-                    "description": "可作为当天的候选地点；请通过来源页面核对地址、开放时间和交通。",
-                    "transport": "交通未核实", "cost": "未核实"} for e in day_evidence])
-                cleaned_days.append({"day": day["day"], "city": day["city"], "activities": activities})
+        plan_ok = not check_day_plan(cleaned_days, constraints)["violations"]
         order_ok = _time_order_ok(cleaned_days)
         if targets:
             cleaned_days = merge_days(prior_days, cleaned_days, targets)

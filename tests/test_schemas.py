@@ -133,3 +133,34 @@ def test_workflow_survives_loose_json_and_records_schema_warnings(tmp_path):
     intake_span = next(child for child in trace["children"] if child.get("name") == "schema:intake")
     assert any("destinations" in issue for issue in intake_span["attributes"]["issues"])
     assert "schema:planning" in names
+
+
+class _LooseModelWithUnknownPlace(_LooseModel):
+    async def complete(self, role, system, user, max_tokens=1200):
+        response = await super().complete(role, system, user, max_tokens)
+        if role != "行程评审" and "days" in response["content"]:
+            import json as _json
+            payload = _json.loads(response["content"])
+            if payload.get("days") and isinstance(payload["days"], list):
+                payload["days"][0].setdefault("activities", []).append({
+                    "title": "不存在的地方", "start": "10:00", "duration": "1 小时",
+                    "evidence_id": "d1-p1",
+                })
+            response = {**response, "content": _json.dumps(payload, ensure_ascii=False)}
+        return response
+
+
+def test_plan_rules_validate_cleaned_itinerary(tmp_path):
+    """不存在的点会在清洗阶段被丢掉，校验器不应再对已丢弃的点报 unknown_place。"""
+    store = Store(str(tmp_path / "schema2.db"))
+    workflow = AgentWorkflow(store, _LooseModelWithUnknownPlace(), _StructuredTools())
+    conversation = store.create_conversation("新对话")
+    store.continue_conversation(conversation["conversation_id"], "去杭州玩两天，预算1500")
+    job = store.claim()
+
+    result = asyncio.run(workflow.run(job))
+
+    rules = result.get("plan_rules") or {}
+    assert "unknown_place" not in rules.get("codes", [])
+    titles = [activity["title"] for day in result["days"] for activity in day["activities"]]
+    assert "不存在的地方" not in titles

@@ -43,6 +43,10 @@ def _compact(result: dict[str, Any]) -> dict[str, Any]:
                 "transport": a.get("transport"), "cost": a.get("cost"),
                 "evidence_id": a.get("evidence_id"),
             } for a in day.get("activities") or []],
+            "meals": [{
+                "start": m.get("start"), "duration": m.get("duration"),
+                "title": m.get("title"), "evidence_id": m.get("evidence_id"),
+            } for m in day.get("meals") or [] if isinstance(m, dict)],
         })
     evidence = result.get("evidence") or []
     return {
