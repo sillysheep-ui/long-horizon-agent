@@ -140,7 +140,7 @@ python3 -m evaluation.product_eval --profile api_only --judge2-model deepseek-ch
 |---|---|---|---|---|---|
 | test 120，模型排期（默认 `PLAN_MODE=model`） | 55/120 | 0.850 | 0.871 | 40/120 | 18.75s |
 
-上下文：`pools = {sandbox: 41, live: 77, unknown: 2}`，裁判 `deepseek-v4-flash`，约束集 1.3.0。
+上下文：分池通过率：`sandbox 0.61（25/41）`、`live 0.364`；`pools = {sandbox: 41, live: 77, unknown: 2}`，裁判 `deepseek-v4-flash`，约束集 1.3.0。
 
 该基线早于用餐冲突的确定性修复（`2f9a6e7`），修复后尚未重跑；引用时请注明。
 
