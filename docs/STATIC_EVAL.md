@@ -79,6 +79,23 @@ python3 -m evaluation.product_eval --static --spec evaluation/specs/static.yaml 
 - **当前只验证到 Qwen3.5-0.8B**：5 条全 pass、rubric 1.0，明显偏松；rubric 仍不进静态主数字，
   换 4B 以上模型并做人工校准后才谈口径。
 
+## 人工校准 rubric
+
+裁判分不能直接信，先导出一份人工评分清单：
+
+```bash
+python3 -m evaluation.calibration export \
+  --records /tmp/calib50/records.json \
+  --cases evaluation/static_cases.json \
+  --out /tmp/calib50/review
+# 填 review.csv 的 human_score（1–5）
+python3 -m evaluation.calibration compare \
+  --records /tmp/calib50/records.json --labels /tmp/calib50/review/review.csv
+```
+
+`compare` 输出一致率（人工 ≥4 与裁判 rubric ≥0.7 是否一致）、Cohen's kappa 与均值差。
+当前只有 Qwen3.5-0.8B 与 Qwen3-4B 的临时结果，样本未标完，不对外引用。
+
 ## 下一步
 
 1. 补多城与修订类静态用例（当前以单城为主）；
