@@ -142,6 +142,8 @@ python3 -m evaluation.product_eval --profile api_only --judge2-model deepseek-ch
 
 上下文：`pools = {sandbox: 41, live: 77, unknown: 2}`，裁判 `deepseek-v4-flash`，约束集 1.3.0。
 
+该基线早于用餐冲突的确定性修复（`2f9a6e7`），修复后尚未重跑；引用时请注明。
+
 这版数字比旧的 110 条基线低，主要原因不是模型退化，而是 **`no_overlap` 把用餐和活动放进了同一条时间线**：
 
 - 112 条可判用例里，`no_overlap` 通过率 0.491，57 条失败；

@@ -64,10 +64,10 @@ python3 -m evaluation.product_eval --profile api_only --split test \
   --judge-model deepseek-v4-flash --seed 0
 ```
 
-- `--split dev|test|holdout`：日常迭代用 `dev`（12 条），对外报告用 `test`（100 条），`holdout`（40 条）只在发布前跑
+- `--split dev|test|holdout`：日常迭代用 `dev`（12 条），对外报告用 `test`（120 条），`holdout`（40 条）只在发布前跑
 - `--seed`：写入报告，便于对齐
 - 裁判模型会写进 `report.md`；换裁判等于换尺子，不要跨模型比较分数
-- 典型耗时：`test` 100 条约 30–60 分钟（含裁判）
+- 典型耗时：`test` 120 条约 40–80 分钟（含裁判）
 
 多轮修改评测：
 
