@@ -18,6 +18,7 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
+from evaluation import data_quality
 from evaluation.contract import CheckRecord, SuiteReport, dataset_version
 from evaluation.metrics import pass_metrics
 from evaluation.metrics import summarize as summarize_metrics
@@ -111,6 +112,13 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
              f"- 分池：沙盒 {summary.get('pools', {}).get('sandbox', 0)} 条（全过 {summary.get('pool_pass', {}).get('sandbox')}）"
              f" / 联网 {summary.get('pools', {}).get('live', 0)} 条（全过 {summary.get('pool_pass', {}).get('live')}）",
              f"- 沙盒数据：{summary.get('sandbox_data', {}).get('tables') or '未加载'}"]
+    if summary.get("data_quality"):
+        totals = summary["data_quality"].get("totals", {})
+        parts = [f"{name} {stat['rows']} 行（坐标 {stat['coords']:.0%}，营业时间 {stat['hours']:.0%}，价格 {stat['price']:.0%}）"
+                 for name, stat in totals.items()]
+        lines.append(f"- 数据质量：{'；'.join(parts) or '未加载'}")
+        problems = summary.get("data_quality_problems") or []
+        lines.append(f"- 数据质量门禁：{'未通过（' + '；'.join(problems) + '）' if problems else '通过'}")
     if summary.get("static_eval"):
         fingerprint = summary["static_eval"]
         lines.append(f"- 静态评测：开（POI={fingerprint.get('poi_provider')}，"
@@ -228,6 +236,8 @@ async def main() -> None:
     parser.add_argument("--min-pass-rate", type=float, default=None, help="确定性检查全过比例低于该值时退出码 1")
     parser.add_argument("--static", action="store_true",
                         help="静态评测：锁定沙盒快照、禁止外部检索、报告写数据指纹")
+    parser.add_argument("--no-data-quality-gate", action="store_true",
+                        help="静态评测时跳过快照数据质量门禁")
     args = parser.parse_args()
     random.seed(args.seed)
     if args.static:
@@ -273,6 +283,10 @@ async def main() -> None:
         cases = [case for case in cases if case.get("pool") == pool]
         if not cases:
             raise SystemExit(f"没有 pool={pool} 的用例")
+    quality = data_quality.audit()
+    quality_problems = data_quality.gate(quality, cases)
+    if args.static and quality_problems and not args.no_data_quality_gate:
+        raise SystemExit("静态数据质量门禁未通过：" + "；".join(quality_problems))
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
     trials = max(1, int(args.trials))
     client = AsyncOpenAI(base_url=os.environ.get("OPENAI_BASE_URL"), api_key=os.environ.get("OPENAI_API_KEY"),
@@ -312,6 +326,8 @@ async def main() -> None:
                   f"rubric={(record.get('judge') or {}).get('rubric')} score={record.get('score')}")
 
     summary = summarize(records)
+    summary["data_quality"] = data_quality.summary(quality)
+    summary["data_quality_problems"] = quality_problems
     summary["seed"] = args.seed
     summary["judge_model"] = judge_model
     summary["constraint_set"] = CONSTRAINT_SET.version

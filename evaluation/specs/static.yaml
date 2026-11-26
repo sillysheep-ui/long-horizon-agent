@@ -1,0 +1,45 @@
+# 静态评测套件：只跑沙盒快照，冻结 20 条 holdout。
+# 用途是回答“同一份快照下，提示词/流水线改动的方向对不对”，不是对外质量分。
+name: travel-plan-static
+version: 1
+suite: static
+
+dataset:
+  path: evaluation/static_cases.json
+  split: test
+  cases: 80
+
+judge:
+  model: deepseek-v4-flash
+  status: disabled
+  reason: 静态套件先只卡确定性检查；本地裁判在第 4 步接入
+
+graders:
+  - id: hard_constraints
+    type: constraint_set
+    status: implemented
+    path: product/constraints/sets/v1.json
+    severity: blocking
+    weight: 1.0
+    threshold: 1.0
+    assertions:
+      - {id: complete, text: "状态为 complete"}
+      - {id: day_count, text: "天数与需求一致"}
+      - {id: density, text: "每天活动数符合节奏与可用时长"}
+      - {id: time_order, text: "开始时间严格递增"}
+      - {id: no_overlap, text: "活动与用餐时间不重叠"}
+      - {id: day_load, text: "单日总时长不超过可用时长"}
+      - {id: unique_titles, text: "跨天不重复同一地点"}
+      - {id: city_coverage, text: "覆盖用户点名的城市"}
+      - {id: evidence_ok, text: "每个活动都绑定 ok 证据"}
+      - {id: periods, text: "覆盖至少两个时段"}
+      - {id: activity_length, text: "单活动时长落在节奏区间"}
+      - {id: free_time, text: "留白比例落在节奏区间"}
+      - {id: no_fabricated_cost, text: "价格数字来自证据；无数字记未知"}
+      - {id: opening_hours, text: "排期落在营业时间内；占位时间记未知"}
+      - {id: named_places_covered, text: "用户点名地点全部出现"}
+      - {id: title_matches_evidence, text: "标题落在证据地点名上"}
+
+thresholds:
+  pass_rate_min: 0.0
+  score_min: null

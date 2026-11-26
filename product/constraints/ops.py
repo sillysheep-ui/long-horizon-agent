@@ -619,14 +619,19 @@ def cost_grounded(view: ItineraryView, constraint: Constraint) -> Finding:
     """行程里的价格数字必须能在证据原文或描述里找到。"""
     evidence = _evidence_map(view.evidence)
     bad: list[str] = []
+    checked = 0
     for day in view.days:
         for item in view.activities(day):
             numbers = _DIGITS.findall(str(item.get("cost") or ""))
             if not numbers:
                 continue
+            checked += 1
             source = _evidence_text(evidence.get(str(item.get("evidence_id") or "")) or {}) + str(item.get("description") or "")
             if any(number not in source for number in numbers):
                 bad.append(f"第{day.get('day')}天「{item.get('title') or '活动'}」{item.get('cost')}")
+    if not checked:
+        return Finding(id=constraint.id, ok=True, detail="没有可核验的价格数字", category=constraint.category,
+                       severity=constraint.severity, meta={"skip": True, "known": 0})
     ok = not bad
     return Finding(
         id=constraint.id,
@@ -636,6 +641,7 @@ def cost_grounded(view: ItineraryView, constraint: Constraint) -> Finding:
         actual=_examples(bad),
         category=constraint.category,
         severity=constraint.severity,
+        meta={"known": checked},
     )
 
 

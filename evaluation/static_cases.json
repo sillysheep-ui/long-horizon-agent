@@ -1,0 +1,1422 @@
+[
+ {
+  "id": "static-beijing-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去北京，想去故宫博物院和八达岭长城，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在北京待一天，想逛南锣鼓巷和什刹海，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去北京三天，以历史古迹为主，想去颐和园，预算4000元。",
+  "days": 3,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去北京吃历史古迹，待两天，顺路逛前门大街，预算1200元。",
+  "days": 2,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去北京玩三天，想去故宫博物院，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去北京两天，想去八达岭长城和南锣鼓巷，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在北京多留一天，想看看故宫博物院和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "北京深度游三天，想走街串巷，逛什刹海、南锣鼓巷和簋街，预算2000元。",
+  "days": 3,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹"
+  ]
+ },
+ {
+  "id": "static-beijing-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去北京两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹",
+   "free"
+  ]
+ },
+ {
+  "id": "static-beijing-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去北京两天，想拍照看夜景，去南锣鼓巷和什刹海，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "北京"
+  ],
+  "tags": [
+   "static",
+   "历史古迹",
+   "night"
+  ]
+ },
+ {
+  "id": "static-shanghai-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去上海，想去豫园和上海迪士尼度假区，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在上海待一天，想逛外滩和武康路，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去上海三天，以城市漫步为主，想去东方明珠，预算4000元。",
+  "days": 3,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去上海吃城市漫步，待两天，顺路逛田子坊，预算1200元。",
+  "days": 2,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去上海玩三天，想去豫园，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去上海两天，想去上海迪士尼度假区和外滩，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在上海多留一天，想看看豫园和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "上海深度游三天，想走街串巷，逛武康路、外滩和城隍庙，预算2000元。",
+  "days": 3,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步"
+  ]
+ },
+ {
+  "id": "static-shanghai-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去上海两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步",
+   "free"
+  ]
+ },
+ {
+  "id": "static-shanghai-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去上海两天，想拍照看夜景，去外滩和武康路，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "上海"
+  ],
+  "tags": [
+   "static",
+   "城市漫步",
+   "night"
+  ]
+ },
+ {
+  "id": "static-hangzhou-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去杭州，想去灵隐寺和西溪国家湿地公园，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在杭州待一天，想逛河坊街和南宋御街，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去杭州三天，以自然风光为主，想去浙江省博物馆，预算4000元。",
+  "days": 3,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去杭州吃自然风光，待两天，顺路逛九溪烟树，预算1200元。",
+  "days": 2,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去杭州玩三天，想去灵隐寺，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去杭州两天，想去西溪国家湿地公园和河坊街，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在杭州多留一天，想看看灵隐寺和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "杭州深度游三天，想走街串巷，逛南宋御街、河坊街和胜利河美食街，预算2000元。",
+  "days": 3,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光"
+  ]
+ },
+ {
+  "id": "static-hangzhou-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去杭州两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光",
+   "free"
+  ]
+ },
+ {
+  "id": "static-hangzhou-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去杭州两天，想拍照看夜景，去河坊街和南宋御街，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "杭州"
+  ],
+  "tags": [
+   "static",
+   "自然风光",
+   "night"
+  ]
+ },
+ {
+  "id": "static-chengdu-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去成都，想去成都大熊猫繁育研究基地和武侯祠，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在成都待一天，想逛宽窄巷子和锦里古街，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去成都三天，以美食为主，想去青城山，预算4000元。",
+  "days": 3,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去成都吃美食，待两天，顺路逛玉林路，预算1200元。",
+  "days": 2,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去成都玩三天，想去成都大熊猫繁育研究基地，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去成都两天，想去武侯祠和宽窄巷子，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在成都多留一天，想看看成都大熊猫繁育研究基地和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "成都深度游三天，想走街串巷，逛锦里古街、宽窄巷子和建设路，预算2000元。",
+  "days": 3,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食"
+  ]
+ },
+ {
+  "id": "static-chengdu-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去成都两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食",
+   "free"
+  ]
+ },
+ {
+  "id": "static-chengdu-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去成都两天，想拍照看夜景，去宽窄巷子和锦里古街，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "成都"
+  ],
+  "tags": [
+   "static",
+   "美食",
+   "night"
+  ]
+ },
+ {
+  "id": "static-chongqing-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去重庆，想去洪崖洞和长江索道，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在重庆待一天，想逛磁器口古镇和山城步道，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去重庆三天，以夜景为主，想去三峡博物馆，预算4000元。",
+  "days": 3,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去重庆吃夜景，待两天，顺路逛观音桥步行街，预算1200元。",
+  "days": 2,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去重庆玩三天，想去洪崖洞，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去重庆两天，想去长江索道和磁器口古镇，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在重庆多留一天，想看看洪崖洞和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "重庆深度游三天，想走街串巷，逛山城步道、磁器口古镇和八一路好吃街，预算2000元。",
+  "days": 3,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景"
+  ]
+ },
+ {
+  "id": "static-chongqing-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去重庆两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景",
+   "free"
+  ]
+ },
+ {
+  "id": "static-chongqing-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去重庆两天，想拍照看夜景，去磁器口古镇和山城步道，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "重庆"
+  ],
+  "tags": [
+   "static",
+   "夜景",
+   "night"
+  ]
+ },
+ {
+  "id": "static-guangzhou-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去广州，想去广州塔和陈家祠，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在广州待一天，想逛沙面和永庆坊，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去广州三天，以早茶为主，想去白云山，预算4000元。",
+  "days": 3,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去广州吃早茶，待两天，顺路逛上下九步行街，预算1200元。",
+  "days": 2,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去广州玩三天，想去广州塔，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去广州两天，想去陈家祠和沙面，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在广州多留一天，想看看广州塔和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "广州深度游三天，想走街串巷，逛永庆坊、沙面和北京路步行街，预算2000元。",
+  "days": 3,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶"
+  ]
+ },
+ {
+  "id": "static-guangzhou-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去广州两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶",
+   "free"
+  ]
+ },
+ {
+  "id": "static-guangzhou-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去广州两天，想拍照看夜景，去沙面和永庆坊，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "广州"
+  ],
+  "tags": [
+   "static",
+   "早茶",
+   "night"
+  ]
+ },
+ {
+  "id": "static-shenzhen-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去深圳，想去世界之窗和深圳欢乐谷，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在深圳待一天，想逛华侨城创意文化园和南头古城，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去深圳三天，以海边为主，想去深圳湾公园，预算4000元。",
+  "days": 3,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去深圳吃海边，待两天，顺路逛东门老街，预算1200元。",
+  "days": 2,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去深圳玩三天，想去世界之窗，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去深圳两天，想去深圳欢乐谷和华侨城创意文化园，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在深圳多留一天，想看看世界之窗和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "深圳深度游三天，想走街串巷，逛南头古城、华侨城创意文化园和东门老街，预算2000元。",
+  "days": 3,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边"
+  ]
+ },
+ {
+  "id": "static-shenzhen-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去深圳两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边",
+   "free"
+  ]
+ },
+ {
+  "id": "static-shenzhen-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去深圳两天，想拍照看夜景，去华侨城创意文化园和南头古城，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "深圳"
+  ],
+  "tags": [
+   "static",
+   "海边",
+   "night"
+  ]
+ },
+ {
+  "id": "static-nanjing-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去南京，想去中山陵景区和南京总统府，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在南京待一天，想逛夫子庙和老门东，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去南京三天，以历史为主，想去南京博物院，预算4000元。",
+  "days": 3,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去南京吃历史，待两天，顺路逛玄武湖，预算1200元。",
+  "days": 2,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去南京玩三天，想去中山陵景区，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去南京两天，想去南京总统府和夫子庙，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在南京多留一天，想看看中山陵景区和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "南京深度游三天，想走街串巷，逛老门东、夫子庙和狮子桥美食街，预算2000元。",
+  "days": 3,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史"
+  ]
+ },
+ {
+  "id": "static-nanjing-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去南京两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史",
+   "free"
+  ]
+ },
+ {
+  "id": "static-nanjing-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去南京两天，想拍照看夜景，去夫子庙和老门东，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "南京"
+  ],
+  "tags": [
+   "static",
+   "历史",
+   "night"
+  ]
+ },
+ {
+  "id": "static-suzhou-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去苏州，想去拙政园和留园，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在苏州待一天，想逛平江路历史街区和山塘街，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去苏州三天，以园林为主，想去苏州博物馆，预算4000元。",
+  "days": 3,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去苏州吃园林，待两天，顺路逛观前街，预算1200元。",
+  "days": 2,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去苏州玩三天，想去拙政园，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去苏州两天，想去留园和平江路历史街区，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在苏州多留一天，想看看拙政园和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "苏州深度游三天，想走街串巷，逛山塘街、平江路历史街区和观前街，预算2000元。",
+  "days": 3,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林"
+  ]
+ },
+ {
+  "id": "static-suzhou-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去苏州两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林",
+   "free"
+  ]
+ },
+ {
+  "id": "static-suzhou-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去苏州两天，想拍照看夜景，去平江路历史街区和山塘街，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "苏州"
+  ],
+  "tags": [
+   "static",
+   "园林",
+   "night"
+  ]
+ },
+ {
+  "id": "static-wuhan-01",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "第一次去武汉，想去黄鹤楼和武汉大学，安排两天，情侣，预算1800元。",
+  "days": 2,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-02",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "在武汉待一天，想逛户部巷和昙华林，吃当地小吃，一个人，预算600元。",
+  "days": 1,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-03",
+  "split": "test",
+  "difficulty": "medium",
+  "query": "暑假带家人去武汉三天，以江景为主，想去湖北省博物馆，预算4000元。",
+  "days": 3,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-04",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "和朋友去武汉吃江景，待两天，顺路逛汉口江滩，预算1200元。",
+  "days": 2,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-05",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带父母去武汉玩三天，想去黄鹤楼，节奏慢一点，别太赶，预算3000元。",
+  "days": 3,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-06",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "带孩子去武汉两天，想去武汉大学和户部巷，预算2500元，别安排太满。",
+  "days": 2,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-07",
+  "split": "test",
+  "difficulty": "easy",
+  "query": "出差在武汉多留一天，想看看黄鹤楼和老街，一个人，预算800元。",
+  "days": 1,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-08",
+  "split": "test",
+  "difficulty": "hard",
+  "query": "武汉深度游三天，想走街串巷，逛昙华林、户部巷和户部巷，预算2000元。",
+  "days": 3,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景"
+  ]
+ },
+ {
+  "id": "static-wuhan-09",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "预算有限，一个人去武汉两天，主要逛免费的老街和公园，预算900元。",
+  "days": 2,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景",
+   "free"
+  ]
+ },
+ {
+  "id": "static-wuhan-10",
+  "split": "holdout",
+  "difficulty": "medium",
+  "query": "春天去武汉两天，想拍照看夜景，去户部巷和昙华林，情侣，预算1600元。",
+  "days": 2,
+  "cities": [
+   "武汉"
+  ],
+  "tags": [
+   "static",
+   "江景",
+   "night"
+  ]
+ }
+]
