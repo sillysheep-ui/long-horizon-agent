@@ -25,11 +25,12 @@ python3 -m evaluation.product_eval --spec evaluation/specs/regression.yaml \
 python3 -m evaluation.revision_eval
 python3 -m evaluation.intent_eval
 
-# 离线沙盒（不依赖高德）
+# 静态评测（沙盒快照 + 禁外部检索 + 数据指纹）
 python3 scripts/fetch_sandbox.py
-POI_PROVIDER=sandbox python3 -m evaluation.product_eval \
-  --spec evaluation/specs/travel_plan.yaml --pool sandbox --skip-judge
+python3 -m evaluation.product_eval --static --skip-judge
 ```
+
+静态模式的判定口径、检查分类与当前边界见 `docs/STATIC_EVAL.md`。
 
 沙盒只覆盖 10 城（北京、上海、广州、深圳、成都、杭州、重庆、武汉、南京、苏州），其余城市走联网。
 
@@ -50,6 +51,7 @@ POI_PROVIDER=sandbox python3 -m evaluation.product_eval \
 - 高德 key 无效：联网模式降级网页搜索，POI 名称/地址/营业时间质量下降；live 池通过率明显低于沙盒池。
 - 无人工金标准：裁判未校准，rubric 不进对外数字。
 - 用餐重叠已改为本地确定性修复、重排只在清零时接受，但没有全量复测。
+- 静态评测模式已加（`--static`），但用例仍 41 条、未扩到 100+，也没有冻结静态 holdout。
 - 两套校验器（`plan_rules` / `constraints`）未合并；`evidence_id` 是查询级不是地点级。
 - 全局选点只到骨架（`PLAN_MODE=global`），回答阶段仍是逐天生成。
 - 单 worker 串行、无任务级取消/断点续跑；无鉴权、限流、监控。

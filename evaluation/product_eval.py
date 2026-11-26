@@ -21,9 +21,10 @@ from openai import AsyncOpenAI
 from evaluation.contract import CheckRecord, SuiteReport, dataset_version
 from evaluation.metrics import pass_metrics
 from evaluation.metrics import summarize as summarize_metrics
-from evaluation.product_checks import CONSTRAINT_SET, check_result, combined_score, combined_score_v2, summarize
+from evaluation.product_checks import CONSTRAINT_SET, check_details, combined_score, combined_score_v2, summarize
 from evaluation.product_judge import judge as judge_itinerary
 from evaluation.stage_checks import evaluator_health, summarize_trajectory
+from product import static_eval
 from product.orchestrator import AgentWorkflow
 from product.store import Store
 from tools import sandbox as sandbox_data
@@ -76,9 +77,13 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: dict[str, Any]) 
         trace = result.get("trace") or {}
         trajectory["latency_ms"] = {child.get("name"): child.get("latency_ms") or 0
                                     for child in trace.get("children") or []}
+        details = check_details(case, result)
+        checks = {name: bool(info["ok"]) for name, info in details.items()
+                  if info["status"] == "judged"}
         return {"id": case["id"], "query": case["query"], "status": result.get("status"),
                 "pool": case.get("pool", "unknown"), "result": _compact(result),
-                "checks": check_result(case, result), "trajectory": trajectory, "elapsed": elapsed}
+                "checks": checks, "check_details": details,
+                "trajectory": trajectory, "elapsed": elapsed}
     except Exception as error:
         return {"id": case["id"], "query": case["query"], "pool": case.get("pool", "unknown"),
                 "error": str(error)[:300], "checks": {}, "elapsed": 0.0}
@@ -105,15 +110,26 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
              f"- 随机种子：{summary.get('seed')} / 裁判模型：{summary.get('judge_model')}",
              f"- 分池：沙盒 {summary.get('pools', {}).get('sandbox', 0)} 条（全过 {summary.get('pool_pass', {}).get('sandbox')}）"
              f" / 联网 {summary.get('pools', {}).get('live', 0)} 条（全过 {summary.get('pool_pass', {}).get('live')}）",
-             f"- 沙盒数据：{summary.get('sandbox_data', {}).get('tables') or '未加载'}", "",
-             "## 检查通过率", "", "| 检查 | 通过率 |", "|---|---|"]
+             f"- 沙盒数据：{summary.get('sandbox_data', {}).get('tables') or '未加载'}"]
+    if summary.get("static_eval"):
+        fingerprint = summary["static_eval"]
+        lines.append(f"- 静态评测：开（POI={fingerprint.get('poi_provider')}，"
+                     f"用例哈希 {fingerprint.get('cases_sha256')}，约束集 v{fingerprint.get('constraint_set')}）")
+    if summary.get("static_coverage") is not None:
+        lines.append(f"- 静态可判覆盖：{summary['static_coverage']:.0%}"
+                     f"（快照缺字段 unknown {summary.get('static_unknown', 0)} 项次，不计入通过率分母）")
     if summary.get("pass_metrics"):
         metrics = summary["pass_metrics"]
         count = metrics["trials"]
-        lines.insert(-1, f"- 多次采样：{count} trials，pass@1 {metrics['pass_at_1']} / "
-                         f"pass@{count} {metrics['pass_at_k']} / pass^{count} {metrics['pass_hat_k']}"
-                         f"（逐 trial {metrics['per_trial_pass']}）")
-    lines += [f"| {name} | {rate:.0%} |" for name, rate in summary["check_pass_rate"].items()]
+        lines.append(f"- 多次采样：{count} trials，pass@1 {metrics['pass_at_1']} / "
+                     f"pass@{count} {metrics['pass_at_k']} / pass^{count} {metrics['pass_hat_k']}"
+                     f"（逐 trial {metrics['per_trial_pass']}）")
+    lines += ["", "## 检查通过率", "", "| 检查 | 类别 | 判了 | 未知 | 通过率 |", "|---|---|---|---|---|"]
+    lines += [f"| {name} | {summary.get('check_class', {}).get(name, 'static')} | "
+              f"{summary.get('check_examined', {}).get(name, '-')} | "
+              f"{summary.get('check_unknown', {}).get(name, 0)} | "
+              f"{('—' if rate is None else f'{rate:.0%}')} |"
+              for name, rate in summary["check_pass_rate"].items()]
     lines += ["", "## 逐条结果", "", "| 用例 | 状态 | 耗时 | 未通过检查 | rubric | 综合分 | 判定 |",
               "|---|---|---|---|---|---|---|"]
     for record in records:
@@ -210,8 +226,16 @@ async def main() -> None:
     parser.add_argument("--spec", default="", help="声明式评测配置（YAML），可用 --cases/--split 覆盖")
     parser.add_argument("--trials", type=int, default=1, help="同一批用例重复采样次数，>1 时报告 pass@k / pass^k")
     parser.add_argument("--min-pass-rate", type=float, default=None, help="确定性检查全过比例低于该值时退出码 1")
+    parser.add_argument("--static", action="store_true",
+                        help="静态评测：锁定沙盒快照、禁止外部检索、报告写数据指纹")
     args = parser.parse_args()
     random.seed(args.seed)
+    if args.static:
+        os.environ["STATIC_EVAL"] = "1"
+    try:
+        static_eval.configure()
+    except static_eval.StaticEvalError as error:
+        raise SystemExit(str(error)) from error
 
     os.environ["MODEL_PROFILE"] = args.profile
     spec: dict = {}
@@ -242,10 +266,13 @@ async def main() -> None:
         else:
             case["pool"] = "sandbox" if cities <= sandbox_cities else "live"
 
-    if args.pool:
-        cases = [case for case in cases if case.get("pool") == args.pool]
+    if args.static and args.pool and args.pool != "sandbox":
+        raise SystemExit("静态评测只能跑 sandbox 池")
+    pool = args.pool or ("sandbox" if args.static else "")
+    if pool:
+        cases = [case for case in cases if case.get("pool") == pool]
         if not cases:
-            raise SystemExit(f"没有 pool={args.pool} 的用例")
+            raise SystemExit(f"没有 pool={pool} 的用例")
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
     trials = max(1, int(args.trials))
     client = AsyncOpenAI(base_url=os.environ.get("OPENAI_BASE_URL"), api_key=os.environ.get("OPENAI_API_KEY"),
@@ -291,9 +318,9 @@ async def main() -> None:
     summary["pools"] = {pool: sum(1 for record in records if record.get("pool") == pool)
                         for pool in ("sandbox", "live", "unknown")}
     summary["pool_pass"] = {
-        pool: round(sum(1 for record in records
+        pool: (round(sum(1 for record in records
                         if record.get("pool") == pool and all(record["checks"].values()))
-                    / max(1, summary["pools"][pool]), 3)
+                    / summary["pools"][pool], 3) if summary["pools"][pool] else None)
         for pool in ("sandbox", "live")}
     if trials > 1:
         summary["trials"] = trials
@@ -303,6 +330,8 @@ async def main() -> None:
         "tables": {name: len(sandbox_data._table(name)) for name in sandbox_data._TABLES},
         "version": sandbox_data.version(),
     } if sandbox_cities else {}
+    if args.static:
+        summary["static_eval"] = static_eval.fingerprint(cases_path)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = Path(args.out or f"results/product_eval/{stamp}-{args.profile}")
     health = evaluator_health(records)
@@ -341,6 +370,8 @@ async def main() -> None:
             "split": split,
             "profile": args.profile,
             "pool": layer,
+            "static": bool(args.static),
+            "static_fingerprint": summary.get("static_eval"),
         },
         health=health,
     )

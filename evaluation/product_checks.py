@@ -34,6 +34,64 @@ def check_result(case: dict[str, Any], result: dict[str, Any]) -> dict[str, bool
     return engine_checks(case, result)
 
 
+# 检查项的分类：static 只依赖行程本身；snapshot 需要快照里的可选字段；
+# case 是“这个用例本来就不适用”（没锚定、没点名），不算缺数据。
+CHECK_CLASSES: dict[str, str] = {
+    "complete": "static",
+    "day_count": "static",
+    "density": "static",
+    "time_order": "static",
+    "no_overlap": "static",
+    "day_load": "static",
+    "unique_titles": "static",
+    "title_clean": "static",
+    "city_coverage": "static",
+    "evidence_ok": "static",
+    "periods": "static",
+    "activity_length": "static",
+    "free_time": "static",
+    "fields_filled": "static",
+    "title_matches_evidence": "static",
+    "no_fabricated_cost": "snapshot",
+    "opening_hours": "snapshot",
+    "meal_grounded": "case",
+    "anchor_satisfied": "case",
+    "named_places_covered": "case",
+    "clarification": "case",
+}
+
+# 快照类检查依赖的字段，缺这些字段时检查会记为 unknown 而不是通过。
+CHECK_SNAPSHOT_NEEDS: dict[str, tuple[str, ...]] = {
+    "no_fabricated_cost": ("price",),
+    "opening_hours": ("opentime",),
+}
+
+
+def check_details(case: dict[str, Any], result: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """逐项检查明细：判了 / 未知（缺快照字段）/ 不适用（用例本来不涉及）。"""
+    if case.get("expect") == "needs_clarification":
+        ok = result.get("status") == "needs_clarification"
+        return {"clarification": {"class": "case", "status": "judged", "ok": ok, "detail": ""}}
+    findings = evaluate(build_view(result, case), CONSTRAINT_SET, include_skipped=True)
+    details: dict[str, dict[str, Any]] = {}
+    for finding in findings:
+        cls = CHECK_CLASSES.get(finding.id, "static")
+        skipped = bool(finding.meta.get("skip"))
+        if skipped and cls == "case":
+            status = "not_applicable"
+        elif skipped:
+            status = "unknown"
+        else:
+            status = "judged"
+        details[finding.id] = {
+            "class": cls,
+            "status": status,
+            "ok": finding.ok if status == "judged" else None,
+            "detail": finding.detail,
+        }
+    return details
+
+
 GATE_CHECKS = frozenset({"complete", "day_count", "evidence_ok", "unique_titles"})
 
 
@@ -73,10 +131,29 @@ def combined_score(checks: dict[str, bool], rubric: Any, fabrication: bool = Fal
 
 def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
     """把逐条记录汇总成通过率、平均分与延迟。"""
-    check_names = sorted({name for r in records for name in r["checks"]})
-    passed = {name: sum(1 for r in records if r["checks"].get(name)) for name in check_names}
-    applicable = {name: sum(1 for r in records if name in r["checks"]) for name in check_names}
+    details = [record.get("check_details") or {} for record in records]
+    check_names = sorted({name for detail in details for name in detail}
+                         | {name for record in records for name in record["checks"]})
+    passed = {name: sum(1 for detail in details if (detail.get(name) or {}).get("ok"))
+              for name in check_names}
+    examined = {name: sum(1 for detail in details
+                          if (detail.get(name) or {}).get("status") == "judged")
+                for name in check_names}
+    unknown = {name: sum(1 for detail in details
+                         if (detail.get(name) or {}).get("status") == "unknown")
+               for name in check_names}
+    applicable = {name: sum(1 for record in records if name in record["checks"])
+                  for name in check_names}
+    if not any(details):
+        # 没有明细的旧记录：退回“出现在 checks 里就算判了”。
+        examined = dict(applicable)
+        passed = {name: sum(1 for record in records if record["checks"].get(name))
+                  for name in check_names}
     total = len(records)
+    judged_cells = sum(1 for detail in details for item in detail.values()
+                       if item["status"] == "judged" and item["class"] in ("static", "snapshot"))
+    unknown_cells = sum(1 for detail in details for item in detail.values()
+                        if item["status"] == "unknown")
     rubrics = [(r.get("judge") or {}).get("rubric") for r in records]
     rubrics = [float(value) for value in rubrics if value is not None]
     scores = [r["score"] for r in records if r.get("score") is not None]
@@ -89,7 +166,14 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
                  for r in records) / total) if total else None
     return {
         "cases": total,
-        "check_pass_rate": {name: round(passed[name] / applicable[name], 3) for name in check_names},
+        "check_pass_rate": {name: (round(passed[name] / examined[name], 3) if examined[name] else None)
+                            for name in check_names},
+        "check_examined": examined,
+        "check_unknown": unknown,
+        "check_class": {name: CHECK_CLASSES.get(name, "static") for name in check_names},
+        "static_coverage": (round(judged_cells / (judged_cells + unknown_cells), 3)
+                            if judged_cells + unknown_cells else None),
+        "static_unknown": unknown_cells,
         "checks_micro": round(micro, 3) if micro is not None else None,
         "checks_macro": round(sum(1 for r in records if all(r["checks"].values())) / total, 3) if total else None,
         "all_checks_passed": sum(1 for r in records if all(r["checks"].values())),

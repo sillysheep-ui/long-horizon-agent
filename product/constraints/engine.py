@@ -20,8 +20,13 @@ def build_view(result: dict[str, Any], case: dict[str, Any] | None = None) -> It
     )
 
 
-def evaluate(view: ItineraryView, constraint_set: ConstraintSet) -> list[Finding]:
-    """按约束集顺序求值；未知算子直接报错，不静默跳过。"""
+def evaluate(view: ItineraryView, constraint_set: ConstraintSet, *,
+             include_skipped: bool = False) -> list[Finding]:
+    """按约束集顺序求值；未知算子直接报错，不静默跳过。
+
+    include_skipped=True 时把因数据不足而跳过的约束也返回（meta["skipped"]=True），
+    供报告统计“判了多少、缺了多少”，不影响正常通过率。
+    """
     findings: list[Finding] = []
     for constraint in constraint_set.constraints:
         operator = OPERATORS.get(constraint.type)
@@ -29,7 +34,9 @@ def evaluate(view: ItineraryView, constraint_set: ConstraintSet) -> list[Finding
             raise KeyError(f"未知约束算子：{constraint.type}（约束 {constraint.id}）")
         finding = operator(view, constraint)
         if finding.meta.get("skip"):
-            continue
+            finding.meta["skipped"] = True
+            if not include_skipped:
+                continue
         findings.append(finding)
     return findings
 

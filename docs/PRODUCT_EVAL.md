@@ -117,6 +117,9 @@ set -a; . "/Users/sheep/work/study/项目三/代码/travel_agentic_rl/.env"; set
 # 云端基线
 python3 -m evaluation.product_eval --profile api_only
 
+# 静态评测（只跑沙盒池，禁外部检索，报告写数据指纹）
+python3 -m evaluation.product_eval --static --skip-judge
+
 # 本地 Qwen3-4B
 LOCAL_MODEL_BASE_URL=http://127.0.0.1:8080/v1 \
 LOCAL_MODEL_NAME="<checkpoint 绝对路径>" \
@@ -133,6 +136,8 @@ python3 -m evaluation.product_eval --profile api_only --judge2-model deepseek-ch
 - `records.json`：逐条原始记录（含 rubric 明细），方便复查和二次分析
 
 `--limit N` 只跑前 N 条，`--skip-judge` 只跑确定性检查（不花钱）。
+
+静态模式还会在检查表里给出 `判了 / 未知 / 通过率`：快照缺字段的检查记 `unknown`，不进分母；口径见 `docs/STATIC_EVAL.md`。
 
 ## 当前基线（2026-11-25）
 

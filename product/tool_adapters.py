@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from product import static_eval
 from product.names import clean_place_name, dedupe_names, looks_like_place
 from product.provenance import build_evidence
 from tools.poi import search_pois
@@ -52,6 +53,10 @@ class ResearchTools:
 
     async def web_search(self, keyword: str, city: str, evidence_id: str) -> dict[str, Any]:
         """网页搜索：复用 tools.web 的多 provider 实现。"""
+        if static_eval.enabled():
+            return build_evidence(evidence_id, "web", keyword, city, "unavailable",
+                                  source="静态评测", source_kind="none",
+                                  reason="静态评测禁止外部检索")
         query = (city + " " + keyword + " 地点介绍 地址")[:128]
         try:
             hits = await search_web(query, limit=8)
@@ -70,7 +75,7 @@ class ResearchTools:
 
     async def poi(self, keyword: str, city: str, evidence_id: str) -> dict[str, Any]:
         """POI 查询：沙盒（离线评测）/ 高德 / 网页搜索。"""
-        if os.getenv("POI_PROVIDER", "").strip().lower() == "sandbox":
+        if static_eval.enabled() or os.getenv("POI_PROVIDER", "").strip().lower() == "sandbox":
             items = search_sandbox(city, keyword) if sandbox_available() else []
             return build_evidence(evidence_id, "poi", keyword, city,
                                   "ok" if items else "empty", items=items,
