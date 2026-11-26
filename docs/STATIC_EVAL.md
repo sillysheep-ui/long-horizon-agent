@@ -76,8 +76,10 @@ python3 -m evaluation.product_eval --static --spec evaluation/specs/static.yaml 
 - 生成仍走 `MODEL_PROFILE` 路由；要全链路离线，再加 `MODEL_PROFILE=local_only`（质量会降）。
 - 本地服务默认 `max_tokens=4096`；小模型开思考会截断 JSON，可加
   `MLX_CHAT_TEMPLATE_ARGS='{"enable_thinking": false}'`。
-- **当前只验证到 Qwen3.5-0.8B**：5 条全 pass、rubric 1.0，明显偏松；rubric 仍不进静态主数字，
-  换 4B 以上模型并做人工校准后才谈口径。
+- **实测结论（2026-11-26）**：0.8B 5 条全 rubric 1.0，偏松；4B（Qwen3-4B-Instruct-2507-4bit）
+  在 5 条正常样例上 rubric 0.98、在 3 条已知弱样例上 0.867，看起来有区分度，但**抓不到注入的编造价格**：
+  把“门票改成 999 元/人（已核实）”后，4B 仍判 rubric 1.0、fabrication=false；同一输入 API 裁判判 0.5、
+  fabrication=true。结论：本地 4B 只用于离线冒烟/回归，不用于对外分数；rubric 校准应针对 API 裁判。
 
 ## 人工校准 rubric
 
