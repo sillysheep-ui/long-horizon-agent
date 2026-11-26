@@ -5,7 +5,8 @@
 ## 怎么开
 
 ```bash
-python3 -m evaluation.product_eval --static --skip-judge
+# 静态套件（80 条 test；20 条 holdout 冻结，发布前才跑）
+python3 -m evaluation.product_eval --static --spec evaluation/specs/static.yaml --skip-judge
 ```
 
 等价于 `STATIC_EVAL=1 POI_PROVIDER=sandbox`，并额外：
@@ -28,21 +29,59 @@ python3 -m evaluation.product_eval --static --skip-judge
 
 报告里每条检查都给出：`判了 / 未知 / 通过率`，并汇总一行“静态可判覆盖”。这样 41 条沙盒不会再用“全过”掩盖 `opening_hours` 被跳过。
 
+## 套件结构
+
+`evaluation/static_cases.json` 共 100 条，10 城 × 10 条：
+
+| 划分 | 条数 | 用途 |
+|---|---|---|
+| `test` | 80 | 日常回归与提示词迭代 |
+| `holdout` | 20 | 冻结，发布前才跑 |
+
+用例按“点名景点 / 只逛老街 / 亲子 / 带父母 / 预算紧 / 夜游”分主题，覆盖快照缺营业时间
+（老街类 POI 的 `00:00–24:00` 占位）与缺价格两类分支。
+
+## 数据质量门禁
+
+跑静态套件前会先审计快照：用例依赖的城市必须有足够景点、坐标覆盖 ≥95%。审计结果写进报告
+（三张表的行数、坐标/营业时间/价格覆盖），门禁不通过直接退出。当前快照：
+
+| 表 | 行数 | 坐标 | 营业时间 | 价格 |
+|---|---|---|---|---|
+| attractions | 3413 | 100% | 67.4% | 27.8% |
+| restaurants | 4655 | 100% | 95.3% | 100% |
+| accommodations | 3866 | 100% | 0% | 100% |
+
 ## 当前边界
 
-- 41 条用例、10 城，覆盖 test 的 34%，难度偏 easy；
-- 快照缺陷（地址 0%、景点价格 27.8%、景点营业时间 67.8% 非占位）会体现为 `unknown`，不是通过；
+- 100 条用例、10 城；难度按 easy/medium/hard 分层，但仍偏 easy；
+- 快照缺陷（地址 0%、景点价格 27.8%、景点营业时间 67.4%）会体现为 `unknown`，不是通过；
 - 实时营业、排队、临时闭馆属于动态能力，不进静态套件，另做 dynamic smoke；
 - judge 仍是外部模型，rubric 不进静态主数字。
 
 ## 下一步
 
-1. 扩到 100–120 条（10 城 × 难度分层 × 多天/多城/锚点/修订）；
-2. 冻结 20 条静态 holdout；
-3. 跑之前做数据质量门禁：字段不够的检查标 not-applicable；
-4. judge 本地化后再把 rubric 纳入静态口径。
+1. 补多城与修订类静态用例（当前以单城为主）；
+2. judge 本地化后再把 rubric 纳入静态口径；
+3. 动态能力单独做 smoke，不与静态套件混算。
 
-## 首轮结果（2026-11-26）
+## 首轮结果（2026-11-26，80 条 test）
+
+| 全过 | micro | macro | 静态可判覆盖 | 未知项次 | 耗时 |
+|---|---|---|---|---|---|
+| 76/80（0.950） | 0.995 | 0.950 | 99.2% | 11 | 15.25s |
+
+失败 4 条：`static-hangzhou-08` 编造价格、`static-chengdu-03` 节奏过满（density/day_load/periods/free_time）、
+`static-chongqing-08` 与 `static-shenzhen-08` 营业时间冲突。未知集中在“只逛老街”的用例（营业时间占位）
+与无数字价格的行程，说明 unknown 口径开始生效。
+
+20 条 holdout 已冻结，发布前单独跑：
+
+```bash
+python3 -m evaluation.product_eval --static --cases evaluation/static_cases.json --split holdout --skip-judge
+```
+
+## 旧首轮结果（2026-11-26，59 条）
 
 | 范围 | 全过 | micro | 未知 | 耗时 |
 |---|---|---|---|---|

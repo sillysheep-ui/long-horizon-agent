@@ -5,7 +5,7 @@
 - `implemented`：runner 真的会执行；
 - `declared`：只是契约，runner 尚未执行。
 
-## 五份配置
+## 六份配置
 
 | 文件 | 层 | 已实现 | 仅声明 |
 |---|---|---|---|
@@ -14,6 +14,7 @@
 | `intent.yaml` | 意图 40 | 五分类准确率 | — |
 | `regression.yaml` | 回归 8（历史 bug） | 硬约束、`pass_rate_min: 1.0`、每次 push | — |
 | `capability.yaml` | holdout 40 | 硬约束 + rubric，只记录、不卡合并 | — |
+| `static.yaml` | 静态 80（另 20 条冻结） | 沙盒快照、禁外呼、数据质量门禁 | 本地裁判 |
 
 ## 回归 vs 能力
 
@@ -24,6 +25,9 @@
   `pass@N`（至少一次通过）、`pass^N`（N 次全过）与逐 trial 通过率，用来区分真回归和模型抖动。
 
 ```bash
+# 静态：只跑沙盒快照（80 条 test，20 条 holdout 冻结）
+python3 -m evaluation.product_eval --static --spec evaluation/specs/static.yaml --skip-judge
+
 # 回归：CI 跑法（2 次采样，必须全过）
 python3 -m evaluation.product_eval --spec evaluation/specs/regression.yaml \
   --trials 2 --skip-judge --min-pass-rate 1.0

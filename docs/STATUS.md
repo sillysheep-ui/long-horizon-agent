@@ -40,7 +40,7 @@ python3 -m evaluation.product_eval --static --skip-judge
 |---|---|---|
 | test 120 | 全过 55/120，可交付 40/120，rubric 0.850，18.75s | **用餐冲突修复（2f9a6e7）之前的基线，修复后尚未重跑** |
 | 沙盒 41 | 旧口径 40/41；纳入用餐重叠后 25/41（0.61），修复前 | 两次口径不同；静态模式实测见下 |
-| 静态评测（`--static`） | test 41 条全过 36/41（0.878）；全沙盒 59 条 53/59（0.898）、16.6s、unknown 0 | 用餐修复后首轮；59 条含 dev/holdout |
+| 静态套件（`--static`） | test 80 条全过 76/80（0.950）、micro 0.995、未知 11 项次、15.25s；另有 20 条 holdout 冻结 | 快照 10 城；见 `docs/STATIC_EVAL.md` |
 | 回归 8 | 8/8，pass^2 1.0 | 修复前 |
 | 多轮 30 | 30/30 | 模型排期默认化之前 |
 | 意图 60 | holdout 模型优先 100%，规则兜底 30% | — |
@@ -52,7 +52,7 @@ python3 -m evaluation.product_eval --static --skip-judge
 - 高德 key 无效：联网模式降级网页搜索，POI 名称/地址/营业时间质量下降；live 池通过率明显低于沙盒池。
 - 无人工金标准：裁判未校准，rubric 不进对外数字。
 - 用餐重叠已改为本地确定性修复、重排只在清零时接受，但没有全量复测。
-- 静态评测模式已加（`--static`），但用例仍 41 条、未扩到 100+，也没有冻结静态 holdout。
+- 静态套件 100 条（80 test + 20 冻结 holdout），judge 尚未本地化，rubric 不进静态主数字。
 - 两套校验器（`plan_rules` / `constraints`）未合并；`evidence_id` 是查询级不是地点级。
 - 全局选点只到骨架（`PLAN_MODE=global`），回答阶段仍是逐天生成。
 - 单 worker 串行、无任务级取消/断点续跑；无鉴权、限流、监控。
