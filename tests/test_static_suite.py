@@ -1,12 +1,16 @@
 """静态评测套件：用例规模、冻结范围、数据质量门禁。"""
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from evaluation import data_quality
 from evaluation.product_checks import check_details
+from evaluation.product_eval import judge_client_for
 from evaluation.spec import load_spec, validate
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +42,22 @@ class StaticCasesTest(unittest.TestCase):
 def _write_table(folder: Path, name: str, rows: list[dict]) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     (folder / name).write_text("\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n")
+
+
+class JudgeBackendTest(unittest.TestCase):
+    def test_local_backend_uses_local_endpoint(self):
+        args = SimpleNamespace(judge_backend="local", judge_model="")
+        with patch.dict(os.environ, {"LOCAL_MODEL_BASE_URL": "http://127.0.0.1:9/v1",
+                                     "LOCAL_MODEL_NAME": "tiny-judge"}, clear=False):
+            client, model = judge_client_for(args)
+        self.assertEqual(model, "tiny-judge")
+        self.assertIn("127.0.0.1:9", str(client.base_url))
+
+    def test_api_backend_stays_default(self):
+        args = SimpleNamespace(judge_backend="api", judge_model="judge-x")
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
+            client, model = judge_client_for(args)
+        self.assertEqual(model, "judge-x")
 
 
 class CostUnknownTest(unittest.TestCase):

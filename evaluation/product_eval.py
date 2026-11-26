@@ -90,6 +90,18 @@ async def run_case(workflow: AgentWorkflow, store: Store, case: dict[str, Any]) 
                 "error": str(error)[:300], "checks": {}, "elapsed": 0.0}
 
 
+def judge_client_for(args: argparse.Namespace) -> tuple[AsyncOpenAI, str]:
+    """裁判后端：默认外部 API；local 走 LOCAL_MODEL_BASE_URL 的 OpenAI 兼容服务。"""
+    if args.judge_backend == "local":
+        base = os.environ.get("LOCAL_MODEL_BASE_URL", "http://127.0.0.1:8080/v1")
+        key = os.environ.get("LOCAL_MODEL_API_KEY", "local")
+        model = args.judge_model or os.environ.get("LOCAL_MODEL_NAME") or "local-qwen3-4b"
+        return AsyncOpenAI(base_url=base, api_key=key, timeout=600), model
+    client = AsyncOpenAI(base_url=os.environ.get("OPENAI_BASE_URL"),
+                         api_key=os.environ.get("OPENAI_API_KEY"), timeout=120)
+    return client, args.judge_model or os.environ.get("JUDGE_MODEL_ID") or "deepseek-chat"
+
+
 def _stage_line(stages: dict[str, float] | None) -> str:
     if not stages:
         return "未记录"
@@ -108,7 +120,8 @@ def write_report(target: Path, profile: str, summary: dict[str, Any], records: l
              f"- 可交付：{summary['deliverable']}/{summary['cases']}",
              f"- 平均耗时：{summary['latency_mean']}s",
              f"- 分段耗时：{_stage_line(summary.get('stage_latency_mean'))}",
-             f"- 随机种子：{summary.get('seed')} / 裁判模型：{summary.get('judge_model')}",
+             f"- 随机种子：{summary.get('seed')} / 裁判模型：{summary.get('judge_model')}"
+             f"（后端 {summary.get('judge_backend', 'api')}）",
              f"- 分池：沙盒 {summary.get('pools', {}).get('sandbox', 0)} 条（全过 {summary.get('pool_pass', {}).get('sandbox')}）"
              f" / 联网 {summary.get('pools', {}).get('live', 0)} 条（全过 {summary.get('pool_pass', {}).get('live')}）",
              f"- 沙盒数据：{summary.get('sandbox_data', {}).get('tables') or '未加载'}"]
@@ -225,6 +238,8 @@ async def main() -> None:
     parser.add_argument("--split", default="all", choices=["all", "dev", "test", "holdout"])
     parser.add_argument("--judge2-model", default="", help="第二裁判模型，用于估计裁判一致性")
     parser.add_argument("--judge-model", default="", help="覆盖 JUDGE_MODEL_ID")
+    parser.add_argument("--judge-backend", default="api", choices=["api", "local"],
+                        help="裁判后端：api 用外部模型，local 用 LOCAL_MODEL_BASE_URL")
     parser.add_argument("--seed", type=int, default=0, help="随机种子，写入报告便于复现")
     parser.add_argument("--min-score", type=float, default=None, help="综合分低于该值时退出码 1")
     parser.add_argument("--cases", default="", help="用例文件，默认 evaluation/product_cases.json")
@@ -289,9 +304,7 @@ async def main() -> None:
         raise SystemExit("静态数据质量门禁未通过：" + "；".join(quality_problems))
     db_path = args.db or f"/tmp/product-eval-{args.profile}.db"
     trials = max(1, int(args.trials))
-    client = AsyncOpenAI(base_url=os.environ.get("OPENAI_BASE_URL"), api_key=os.environ.get("OPENAI_API_KEY"),
-                         timeout=120)
-    judge_model = args.judge_model or os.environ.get("JUDGE_MODEL_ID") or "deepseek-chat"
+    client, judge_model = judge_client_for(args)
 
     records: list[dict[str, Any]] = []
     per_case_trials: dict[str, list[bool]] = {case["id"]: [] for case in cases}
@@ -352,6 +365,7 @@ async def main() -> None:
     target = Path(args.out or f"results/product_eval/{stamp}-{args.profile}")
     health = evaluator_health(records)
     summary["evaluator"] = health
+    summary["judge_backend"] = args.judge_backend
     write_report(target, args.profile, summary, records, args.split, health)
     pools = {record.get("pool") for record in records}
     layer = "sandbox" if pools == {"sandbox"} else "single_turn"
@@ -388,6 +402,7 @@ async def main() -> None:
             "pool": layer,
             "static": bool(args.static),
             "static_fingerprint": summary.get("static_eval"),
+            "judge_backend": args.judge_backend,
         },
         health=health,
     )

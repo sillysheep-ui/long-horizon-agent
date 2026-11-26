@@ -26,4 +26,6 @@ exec env MLX_MPI_LIBNAME="${MLX_MPI_LIBNAME:-libmpi_not_here.dylib}" \
   --model "$MODEL_DIR" \
   --host 127.0.0.1 \
   --port "${PORT:-8080}" \
+  --max-tokens "${MLX_MAX_TOKENS:-4096}" \
+  ${MLX_CHAT_TEMPLATE_ARGS:+--chat-template-args "$MLX_CHAT_TEMPLATE_ARGS"} \
   --log-level WARNING
