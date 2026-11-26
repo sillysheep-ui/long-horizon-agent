@@ -59,10 +59,30 @@ python3 -m evaluation.product_eval --static --spec evaluation/specs/static.yaml 
 - 实时营业、排队、临时闭馆属于动态能力，不进静态套件，另做 dynamic smoke；
 - judge 仍是外部模型，rubric 不进静态主数字。
 
+## 本地裁判（可选）
+
+裁判可以走本地 OpenAI 兼容服务，不依赖外部 API：
+
+```bash
+# 1) 起服务（模型目录必须是真实文件，不能是 HF 缓存里的符号链接）
+scripts/serve_local_model.sh /path/to/Qwen3-4B
+
+# 2) 跑静态套件，加分裁判
+LOCAL_MODEL_BASE_URL=http://127.0.0.1:8080/v1 \
+python3 -m evaluation.product_eval --static --spec evaluation/specs/static.yaml \
+  --judge-backend local --judge-model /path/to/Qwen3-4B
+```
+
+- 生成仍走 `MODEL_PROFILE` 路由；要全链路离线，再加 `MODEL_PROFILE=local_only`（质量会降）。
+- 本地服务默认 `max_tokens=4096`；小模型开思考会截断 JSON，可加
+  `MLX_CHAT_TEMPLATE_ARGS='{"enable_thinking": false}'`。
+- **当前只验证到 Qwen3.5-0.8B**：5 条全 pass、rubric 1.0，明显偏松；rubric 仍不进静态主数字，
+  换 4B 以上模型并做人工校准后才谈口径。
+
 ## 下一步
 
 1. 补多城与修订类静态用例（当前以单城为主）；
-2. judge 本地化后再把 rubric 纳入静态口径；
+2. 换更强的本地裁判并做人工校准，再把 rubric 纳入静态口径；
 3. 动态能力单独做 smoke，不与静态套件混算。
 
 ## 首轮结果（2026-11-26，80 条 test）

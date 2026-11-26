@@ -14,7 +14,7 @@
 | `intent.yaml` | 意图 40 | 五分类准确率 | — |
 | `regression.yaml` | 回归 8（历史 bug） | 硬约束、`pass_rate_min: 1.0`、每次 push | — |
 | `capability.yaml` | holdout 40 | 硬约束 + rubric，只记录、不卡合并 | — |
-| `static.yaml` | 静态 80（另 20 条冻结） | 沙盒快照、禁外呼、数据质量门禁 | 本地裁判 |
+| `static.yaml` | 静态 80（另 20 条冻结） | 沙盒快照、禁外呼、数据质量门禁、本地裁判可选 | 人工校准 |
 
 ## 回归 vs 能力
 

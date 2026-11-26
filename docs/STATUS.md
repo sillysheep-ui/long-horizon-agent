@@ -52,7 +52,7 @@ python3 -m evaluation.product_eval --static --skip-judge
 - 高德 key 无效：联网模式降级网页搜索，POI 名称/地址/营业时间质量下降；live 池通过率明显低于沙盒池。
 - 无人工金标准：裁判未校准，rubric 不进对外数字。
 - 用餐重叠已改为本地确定性修复、重排只在清零时接受，但没有全量复测。
-- 静态套件 100 条（80 test + 20 冻结 holdout），judge 尚未本地化，rubric 不进静态主数字。
+- 静态套件 100 条（80 test + 20 冻结 holdout）；本地裁判后端已接，但 0.8B 偏松、rubric 不进静态主数字。
 - 两套校验器（`plan_rules` / `constraints`）未合并；`evidence_id` 是查询级不是地点级。
 - 全局选点只到骨架（`PLAN_MODE=global`），回答阶段仍是逐天生成。
 - 单 worker 串行、无任务级取消/断点续跑；无鉴权、限流、监控。
